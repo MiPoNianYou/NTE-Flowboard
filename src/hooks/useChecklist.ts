@@ -3,6 +3,7 @@ import type { ChecklistData, ResetConfig, TabType } from '../types'
 import {
   loadData,
   saveData,
+  saveDataImmediate,
   shouldResetDaily,
   shouldResetWeekly,
   resetItems,
@@ -30,6 +31,13 @@ export function useChecklist() {
   // Persist on change (saveData has built-in 300ms debounce)
   useEffect(() => {
     saveData(data)
+  }, [data])
+
+  // 页面关闭时立即写入，防止防抖导致数据丢失
+  useEffect(() => {
+    const handleBeforeUnload = () => saveDataImmediate(data)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [data])
 
   // Periodic reset check + visibility handling

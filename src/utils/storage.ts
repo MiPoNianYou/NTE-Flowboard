@@ -230,6 +230,19 @@ export function saveData(data: ChecklistData): void {
   }, 300)
 }
 
+/** 立即写入 localStorage，绕过防抖。用于 beforeunload 等必须同步完成的场景。 */
+export function saveDataImmediate(data: ChecklistData): void {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+    saveTimeout = null
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch {
+    // silent
+  }
+}
+
 export function exportData(data: ChecklistData): string {
   return JSON.stringify(
     {
