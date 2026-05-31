@@ -2,7 +2,7 @@ import { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronRight } from 'lucide-react'
 import type { ChecklistItem, TabType } from '../types'
-import { getTagColor } from './TagInput'
+import { getTagColor } from '../utils/tagColors'
 
 interface HiddenSectionProps {
   hiddenItems: ChecklistItem[]

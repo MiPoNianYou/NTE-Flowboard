@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
 import type { ChecklistItem, TabType } from '../types'
 import { cn } from '../utils/cn'
-import { TagInput, getTagColor } from './TagInput'
+import { TagInput } from './TagInput'
+import { getTagColor } from '../utils/tagColors'
 
 interface Props {
   item: ChecklistItem
