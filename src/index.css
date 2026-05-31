@@ -1,0 +1,149 @@
+@import 'tailwindcss';
+
+@custom-variant dark (.dark &);
+
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+
+  /* Font size scale — 6-step hierarchy */
+  --text-2xs: 0.6875rem; /* 11px - caption, tags */
+  --text-xs: 0.8125rem; /* 13px - secondary text */
+  --text-sm: 0.9375rem; /* 15px - body text */
+  --text-base: 1.0625rem; /* 17px - small heading */
+  --text-lg: 1.25rem; /* 20px - section heading */
+  --text-xl: 1.5rem; /* 24px - page heading */
+
+  /* Shadow tokens */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.06), 0 12px 40px rgba(0, 0, 0, 0.04);
+
+  /* Focus & selection */
+  --focus-ring: rgba(99, 102, 241, 0.5);
+  --selection-bg: rgba(99, 102, 241, 0.2);
+
+  /* Tag color palette — 8-color system */
+  --color-tag-blue: #3b82f6;
+  --color-tag-blue-soft: #93c5fd;
+  --color-tag-purple: #8b5cf6;
+  --color-tag-purple-soft: #c4b5fd;
+  --color-tag-amber: #f59e0b;
+  --color-tag-amber-soft: #fcd34d;
+  --color-tag-red: #ef4444;
+  --color-tag-red-soft: #fca5a5;
+  --color-tag-green: #10b981;
+  --color-tag-green-soft: #6ee7b7;
+  --color-tag-teal: #14b8a6;
+  --color-tag-teal-soft: #5eead4;
+  --color-tag-indigo: #6366f1;
+  --color-tag-indigo-soft: #a5b4fc;
+  --color-tag-pink: #ec4899;
+  --color-tag-pink-soft: #f9a8d4;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #d1d5db;
+  --scrollbar-thumb-dark: #4b5563;
+}
+
+/* Dark mode */
+.dark {
+  --scrollbar-thumb-dark: #38383a;
+}
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar - WebKit */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-dark);
+}
+
+/* Custom scrollbar - Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+.dark * {
+  scrollbar-color: var(--scrollbar-thumb-dark) transparent;
+}
+
+/* Theme transition - smooth color changes */
+* {
+  transition-property: background-color, border-color;
+  transition-timing-function: ease;
+  transition-duration: 0.3s;
+}
+/* Exclude elements that need instant transitions */
+button, a, [role='button'] {
+  transition-duration: 0.15s;
+}
+
+/* Mobile safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Grid expand/collapse animation helpers */
+.collapse-closed {
+  grid-template-rows: 0fr;
+}
+.collapse-open {
+  grid-template-rows: 1fr;
+}
+
+/* Focus-visible ring */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+:focus-visible:is(button, [role='button']) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Text selection */
+::selection {
+  background: var(--selection-bg);
+  color: inherit;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .blur-3xl {
+    display: none;
+  }
+}
+
+/* Dark mode select dropdown fix */
+.dark select option {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+.dark select option:checked {
+  background-color: #374151;
+}
+
