@@ -47,7 +47,8 @@ export function useNextResetLabel({ activeTab, resetConfig }: UseNextResetLabelP
       return `${days}天${remainHours}小时后重置`
     }
     return `${hours}小时${mins}分钟后重置`
-  }, [activeTab, resetConfig, now])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` is a trigger, not used directly
+  }, [activeTab, resetConfig.serverRegion, now]) // now triggers minute-by-minute recalculation
 
   return nextResetLabel
 }

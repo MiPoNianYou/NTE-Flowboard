@@ -20,11 +20,7 @@ interface CloudSyncSectionProps {
   syncError: string | null
   isConfigured: boolean
   isLocked: boolean
-  onSetupSupabase: (
-    projectId: string,
-    anonKey: string,
-    syncKey: string,
-  ) => Promise<void>
+  onSetupSupabase: (projectId: string, anonKey: string, syncKey: string) => Promise<void>
   onUnlock: (syncKey: string) => Promise<boolean>
   onTriggerSync: () => Promise<void>
   onRequestDisconnect: () => void
@@ -150,16 +146,11 @@ export const CloudSyncSection = memo(function CloudSyncSection({
   }
 
   const handleSetup = async () => {
-    if (!projectIdInput.trim() || !keyInput.trim() || !syncKeyInput.trim())
-      return
+    if (!projectIdInput.trim() || !keyInput.trim() || !syncKeyInput.trim()) return
     setIsConnecting(true)
     setLocalError(null)
     try {
-      await onSetupSupabase(
-        projectIdInput.trim(),
-        keyInput.trim(),
-        syncKeyInput.trim(),
-      )
+      await onSetupSupabase(projectIdInput.trim(), keyInput.trim(), syncKeyInput.trim())
     } catch {
       setLocalError('连接失败，请检查配置')
     } finally {
@@ -358,10 +349,7 @@ export const CloudSyncSection = memo(function CloudSyncSection({
           <button
             onClick={handleSetup}
             disabled={
-              !projectIdInput.trim() ||
-              !keyInput.trim() ||
-              !syncKeyInput.trim() ||
-              isConnecting
+              !projectIdInput.trim() || !keyInput.trim() || !syncKeyInput.trim() || isConnecting
             }
             className="w-full px-4 py-2.5 rounded-lg text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-[0.97] flex items-center justify-center gap-1.5"
           >
@@ -433,10 +421,10 @@ export const CloudSyncSection = memo(function CloudSyncSection({
                 <p>
                   Project Settings → API Keys → Legacy anon, service_role API keys → anon public
                 </p>
-                <p className="font-medium text-gray-500 dark:text-gray-400 pt-1">
-                  5. 设置同步密钥
+                <p className="font-medium text-gray-500 dark:text-gray-400 pt-1">5. 设置同步密钥</p>
+                <p>
+                  自定义一个密钥，所有需要同步的设备使用相同密钥。密钥同时用于加密本地配置和验证云端访问。
                 </p>
-                <p>自定义一个密钥，所有需要同步的设备使用相同密钥。密钥同时用于加密本地配置和验证云端访问。</p>
               </div>
             )}
           </div>

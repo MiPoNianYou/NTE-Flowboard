@@ -23,11 +23,7 @@ export interface CloudSyncProps {
   syncError: string | null
   isConfigured: boolean
   isLocked: boolean
-  onSetupSupabase: (
-    projectId: string,
-    anonKey: string,
-    syncKey: string,
-  ) => Promise<void>
+  onSetupSupabase: (projectId: string, anonKey: string, syncKey: string) => Promise<void>
   onUnlock: (syncKey: string) => Promise<boolean>
   onTriggerSync: () => Promise<void>
   onRequestDisconnect: () => void
@@ -170,7 +166,13 @@ export function SettingsContent({
                 onClick={() => setSubPage(null)}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-white/10 transition-colors active:scale-[0.97]"
               >
-                <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  className="size-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
@@ -322,9 +324,7 @@ function MenuItem({
         {icon}
       </div>
       <span className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200">{label}</span>
-      {value && (
-        <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">{value}</span>
-      )}
+      {value && <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">{value}</span>}
       <ChevronRight className="size-4 text-gray-300 dark:text-gray-600" />
     </button>
   )

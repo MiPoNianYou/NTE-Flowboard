@@ -28,9 +28,7 @@ function buildSupabaseUrl(projectId: string): string {
  * Uses syncKey as the decryption key (dual-purpose: RLS + encryption).
  * For legacy plaintext migration, returns the raw values.
  */
-export async function loadSupabaseConfig(
-  syncKey?: string,
-): Promise<SupabaseConfig | null> {
+export async function loadSupabaseConfig(syncKey?: string): Promise<SupabaseConfig | null> {
   const raw = localStorage.getItem(CONFIG_KEY)
   if (!raw) return null
 
@@ -53,17 +51,12 @@ export async function loadSupabaseConfig(
     }
 
     // Legacy plaintext format (migration path)
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      'pid' in parsed &&
-      'key' in parsed
-    ) {
+    if (typeof parsed === 'object' && parsed !== null && 'pid' in parsed && 'key' in parsed) {
       const obj = parsed as Record<string, unknown>
       return {
         projectId: (obj.pid as string) || '',
         anonKey: (obj.key as string) || '',
-        syncKey: (typeof obj.syncKey === 'string' ? obj.syncKey : ''),
+        syncKey: typeof obj.syncKey === 'string' ? obj.syncKey : '',
       }
     }
   } catch {
@@ -76,10 +69,7 @@ export async function loadSupabaseConfig(
  * Save Supabase config encrypted with the sync key.
  * The sync key is dual-purpose: encrypts credentials locally + validates access server-side.
  */
-export async function saveSupabaseConfig(
-  config: SupabaseConfig,
-  syncKey: string,
-): Promise<void> {
+export async function saveSupabaseConfig(config: SupabaseConfig, syncKey: string): Promise<void> {
   const json = JSON.stringify({
     projectId: config.projectId,
     anonKey: config.anonKey,
@@ -119,7 +109,11 @@ let client: SupabaseClient | null = null
 let cachedConfig: SupabaseConfig | null = null
 
 function getSupabaseClient(config: SupabaseConfig): SupabaseClient {
-  if (!client || cachedConfig?.projectId !== config.projectId || cachedConfig?.anonKey !== config.anonKey) {
+  if (
+    !client ||
+    cachedConfig?.projectId !== config.projectId ||
+    cachedConfig?.anonKey !== config.anonKey
+  ) {
     client = createClient(buildSupabaseUrl(config.projectId), config.anonKey)
     cachedConfig = config
   }
@@ -162,10 +156,7 @@ export class SyncError extends Error {
 }
 
 /** Validate Supabase config by checking connectivity */
-export async function validateConfig(
-  projectId: string,
-  anonKey: string,
-): Promise<boolean> {
+export async function validateConfig(projectId: string, anonKey: string): Promise<boolean> {
   try {
     const url = buildSupabaseUrl(projectId)
     const sb = createClient(url, anonKey)
@@ -183,10 +174,7 @@ export async function validateConfig(
 }
 
 /** Push local data via RPC (sync_key validated server-side) */
-export async function pushData(
-  config: SupabaseConfig,
-  data: ChecklistData,
-): Promise<string> {
+export async function pushData(config: SupabaseConfig, data: ChecklistData): Promise<string> {
   const sb = getSupabaseClient(config)
   const { data: result, error } = await sb.rpc('upsert_sync', {
     p_sync_key: config.syncKey,

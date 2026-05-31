@@ -21,7 +21,7 @@ export function ProgressRing({ completed, total }: Props) {
       return { duration: 0 }
     }
     return { type: 'spring' as const, stiffness: 120, damping: 18 }
-  }, [percentage])
+  }, [])
 
   return (
     <div className="relative inline-flex items-center justify-center">

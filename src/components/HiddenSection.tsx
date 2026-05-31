@@ -10,7 +10,11 @@ interface HiddenSectionProps {
   onShowItem: (tab: TabType, order: number) => void
 }
 
-export const HiddenSection = memo(function HiddenSection({ hiddenItems, activeTab, onShowItem }: HiddenSectionProps) {
+export const HiddenSection = memo(function HiddenSection({
+  hiddenItems,
+  activeTab,
+  onShowItem,
+}: HiddenSectionProps) {
   const [showHidden, setShowHidden] = useState(false)
 
   if (hiddenItems.length === 0) return null

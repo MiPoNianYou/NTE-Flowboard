@@ -79,14 +79,14 @@ export function SettingsPanel({
     }
   }, [open])
 
-  const handleConfirmReset = () => {
+  const handleConfirmReset = useCallback(() => {
     if (confirmTarget) {
       onManualReset(confirmTarget)
       setConfirmTarget(null)
     }
-  }
+  }, [confirmTarget, onManualReset])
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     const json = exportData(data)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -97,36 +97,39 @@ export function SettingsPanel({
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }
+  }, [data])
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImportError('')
-    setImportSuccess(false)
+  const handleImportFile = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      setImportError('')
+      setImportSuccess(false)
 
-    const MAX_FILE_SIZE = 1024 * 1024 // 1MB
-    if (file.size > MAX_FILE_SIZE) {
-      setImportError('文件过大，请选择小于 1MB 的文件')
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string
-      const parsed = importData(text)
-      if (parsed) {
-        onImport(parsed)
-        setImportSuccess(true)
-        setTimeout(() => setImportSuccess(false), 2000)
-      } else {
-        setImportError('无效的数据文件')
+      const MAX_FILE_SIZE = 1024 * 1024 // 1MB
+      if (file.size > MAX_FILE_SIZE) {
+        setImportError('文件过大，请选择小于 1MB 的文件')
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        return
       }
-    }
-    reader.readAsText(file)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
+
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string
+        const parsed = importData(text)
+        if (parsed) {
+          onImport(parsed)
+          setImportSuccess(true)
+          setTimeout(() => setImportSuccess(false), 2000)
+        } else {
+          setImportError('无效的数据文件')
+        }
+      }
+      reader.readAsText(file)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    },
+    [onImport],
+  )
 
   const cloudSyncProps = useMemo(
     () =>

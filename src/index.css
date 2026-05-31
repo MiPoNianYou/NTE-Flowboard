@@ -86,7 +86,9 @@ body {
   transition-duration: 0.3s;
 }
 /* Exclude elements that need instant transitions */
-button, a, [role='button'] {
+button,
+a,
+[role='button'] {
   transition-duration: 0.15s;
 }
 
@@ -146,4 +148,3 @@ button, a, [role='button'] {
 .dark select option:checked {
   background-color: #374151;
 }
-

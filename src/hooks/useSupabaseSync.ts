@@ -15,7 +15,13 @@ import {
   SyncError,
 } from '../utils/supabase'
 
-export type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error' | 'locked'
+export type SyncStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'syncing'
+  | 'error'
+  | 'locked'
 
 interface UseSupabaseSyncOptions {
   data: ChecklistData
@@ -28,11 +34,7 @@ interface UseSupabaseSyncReturn {
   syncStatus: SyncStatus
   lastSyncTime: string | null
   syncError: string | null
-  setupSupabase: (
-    projectId: string,
-    anonKey: string,
-    syncKey: string,
-  ) => Promise<void>
+  setupSupabase: (projectId: string, anonKey: string, syncKey: string) => Promise<void>
   unlock: (syncKey: string) => Promise<boolean>
   triggerSync: () => Promise<void>
   disconnect: () => void
@@ -51,7 +53,9 @@ export function useSupabaseSync({
       if (parsed && typeof parsed === 'object' && ('s' in parsed || 'pid' in parsed)) {
         return 'locked'
       }
-    } catch {}
+    } catch {
+      // Corrupted config — treat as disconnected
+    }
     return 'disconnected'
   })
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => loadLastSyncTime())
@@ -96,16 +100,6 @@ export function useSupabaseSync({
     }
   }, [syncStatus])
 
-  // --- Error handler ---
-  const handleError = useCallback((e: unknown) => {
-    if (e instanceof SyncError) {
-      setSyncError(e.message)
-    } else {
-      setSyncError('同步失败')
-    }
-    setSyncStatus('error')
-  }, [])
-
   // --- Pull sync ---
   const pullSync = useCallback(async () => {
     const config = configRef.current
@@ -138,30 +132,37 @@ export function useSupabaseSync({
       setSyncStatus('connected')
       setSyncError(null)
     } catch (e) {
-      handleError(e)
+      if (e instanceof SyncError) {
+        setSyncError(e.message)
+      } else {
+        setSyncError('同步失败')
+      }
+      setSyncStatus('error')
     } finally {
       isPullingRef.current = false
     }
-  }, [handleError])
+  }, [])
 
   // --- Push sync ---
-  const pushSync = useCallback(
-    async (dataToPush: ChecklistData) => {
-      const config = configRef.current
-      if (!config || isPullingRef.current) return
+  const pushSync = useCallback(async (dataToPush: ChecklistData) => {
+    const config = configRef.current
+    if (!config || isPullingRef.current) return
 
-      try {
-        const updatedAt = await pushData(config, dataToPush)
-        saveLastSyncTime(updatedAt)
-        setLastSyncTime(updatedAt)
-        setSyncStatus('connected')
-        setSyncError(null)
-      } catch (e) {
-        handleError(e)
+    try {
+      const updatedAt = await pushData(config, dataToPush)
+      saveLastSyncTime(updatedAt)
+      setLastSyncTime(updatedAt)
+      setSyncStatus('connected')
+      setSyncError(null)
+    } catch (e) {
+      if (e instanceof SyncError) {
+        setSyncError(e.message)
+      } else {
+        setSyncError('同步失败')
       }
-    },
-    [handleError],
-  )
+      setSyncStatus('error')
+    }
+  }, [])
 
   // --- Startup pull ---
   useEffect(() => {
@@ -278,11 +279,7 @@ export function useSupabaseSync({
 
   // --- Setup: validate, encrypt and save ---
   const setupSupabase = useCallback(
-    async (
-      projectId: string,
-      anonKey: string,
-      syncKey: string,
-    ) => {
+    async (projectId: string, anonKey: string, syncKey: string) => {
       setSyncStatus('connecting')
       setSyncError(null)
       try {
@@ -304,12 +301,16 @@ export function useSupabaseSync({
         setSyncStatus('syncing')
         await pullSync()
       } catch (e) {
-        handleError(e)
+        if (e instanceof SyncError) {
+          setSyncError(e.message)
+        } else {
+          setSyncError('同步失败')
+        }
         setSyncStatus('disconnected')
         setIsConfigured(false)
       }
     },
-    [pullSync, handleError],
+    [pullSync],
   )
 
   // --- Manual sync trigger ---

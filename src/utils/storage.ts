@@ -56,7 +56,14 @@ function isEUDST(date: Date): boolean {
   const octLastSunday = 31 - ((oct31.getDay() + 6) % 7)
   const dstEnd = new Date(Date.UTC(year, 9, octLastSunday, 1, 0, 0))
 
-  const nowUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds())
+  const nowUTC = Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+  )
   return nowUTC >= dstStart.getTime() && nowUTC < dstEnd.getTime()
 }
 
@@ -296,7 +303,9 @@ export function shouldResetDaily(data: ChecklistData): boolean {
 
   // Convert todayReset back to UTC for comparison with lastReset
   const offset = getServerUTCOffset(region)
-  const todayResetUTC = new Date(todayReset.getTime() - (offset * 3600000 + now.getTimezoneOffset() * 60000))
+  const todayResetUTC = new Date(
+    todayReset.getTime() - (offset * 3600000 + now.getTimezoneOffset() * 60000),
+  )
 
   return last < todayResetUTC
 }
@@ -327,7 +336,9 @@ export function shouldResetWeekly(data: ChecklistData): boolean {
 
   // Convert thisWeekReset back to UTC for comparison with lastReset
   const offset = getServerUTCOffset(region)
-  const thisWeekResetUTC = new Date(thisWeekReset.getTime() - (offset * 3600000 + now.getTimezoneOffset() * 60000))
+  const thisWeekResetUTC = new Date(
+    thisWeekReset.getTime() - (offset * 3600000 + now.getTimezoneOffset() * 60000),
+  )
 
   return last < thisWeekResetUTC
 }

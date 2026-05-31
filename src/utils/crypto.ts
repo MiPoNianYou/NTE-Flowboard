@@ -89,9 +89,5 @@ export async function decrypt(payload: EncryptedPayload, password: string): Prom
 export function isEncryptedPayload(val: unknown): val is EncryptedPayload {
   if (val === null || typeof val !== 'object') return false
   const obj = val as Record<string, unknown>
-  return (
-    typeof obj.s === 'string' &&
-    typeof obj.i === 'string' &&
-    typeof obj.d === 'string'
-  )
+  return typeof obj.s === 'string' && typeof obj.i === 'string' && typeof obj.d === 'string'
 }
