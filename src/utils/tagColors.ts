@@ -9,12 +9,14 @@ const TAG_COLORS = [
   'bg-tag-pink/10 text-tag-pink dark:bg-tag-pink/15 dark:text-tag-pink-soft',
 ]
 
-const tagColorMap = new Map<string, string>()
-let cacheIndex = 0
+function hashString(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0
+  }
+  return Math.abs(hash)
+}
 
 export function getTagColor(tag: string): string {
-  if (tagColorMap.has(tag)) return tagColorMap.get(tag)!
-  tagColorMap.set(tag, TAG_COLORS[cacheIndex % TAG_COLORS.length])
-  cacheIndex++
-  return tagColorMap.get(tag)!
+  return TAG_COLORS[hashString(tag) % TAG_COLORS.length]
 }
