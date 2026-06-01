@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { X, Plus } from 'lucide-react'
-import { getTagColor } from '../utils/tagColors'
+import { Plus } from 'lucide-react'
+import { TagPill } from './TagPill'
 
 interface Props {
   tags: string[]
@@ -42,19 +42,7 @@ export function TagInput({ tags, onChange }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 lg:gap-1.5">
       {tags.map((tag) => (
-        <span
-          key={tag}
-          className={`inline-flex items-center gap-1 text-2xs px-2 py-0.5 rounded-lg font-medium ${getTagColor(tag)}`}
-        >
-          {tag}
-          <button
-            type="button"
-            onClick={() => removeTag(tag)}
-            className="hover:opacity-70 transition-opacity"
-          >
-            <X className="size-[10px] lg:size-[12px]" />
-          </button>
-        </span>
+        <TagPill key={tag} tag={tag} onRemove={() => removeTag(tag)} />
       ))}
       {showInput ? (
         <input

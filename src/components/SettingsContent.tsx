@@ -13,6 +13,8 @@ import type { TabType, ResetConfig } from '../types'
 import { CloudSyncSection } from './CloudSyncSection'
 import { SettingsServer } from './SettingsServer'
 import { SettingsData } from './SettingsData'
+import { ConfirmDialog } from './ConfirmDialog'
+import { SettingsSubPage } from './SettingsSubPage'
 import type { SyncStatus } from '../hooks/useSupabaseSync'
 import { cn } from '../utils/cn'
 import { SERVER_REGIONS } from '../utils/storage'
@@ -153,35 +155,11 @@ export function SettingsContent({
           />
         )}
         {subPage === 'cloud' && cloudSyncProps && (
-          <motion.div
-            key="cloud"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-            className="absolute inset-0 flex flex-col bg-white/90 dark:bg-gray-900/95 backdrop-blur-xl z-10"
-          >
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200/60 dark:border-white/10 flex-shrink-0">
-              <button
-                onClick={() => setSubPage(null)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-white/10 transition-colors active:scale-[0.97]"
-              >
-                <svg
-                  className="size-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">云同步</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto overscroll-contain p-5">
+          <SettingsSubPage key="cloud" title="云同步" onBack={() => setSubPage(null)}>
+            <div className="p-5">
               <CloudSyncSection {...cloudSyncProps} />
             </div>
-          </motion.div>
+          </SettingsSubPage>
         )}
         {subPage === 'data' && (
           <SettingsData
@@ -199,104 +177,40 @@ export function SettingsContent({
       {/* Confirm reset overlay */}
       <AnimatePresence>
         {confirmTarget && (
-          <motion.div
+          <ConfirmDialog
             key="confirm-reset"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 flex items-center justify-center z-20"
-          >
-            <div
-              className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-              onClick={() => onConfirmTarget(null)}
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="relative w-full max-w-xs bg-white/95 dark:bg-gray-800/90 rounded-2xl p-5 space-y-4 border border-gray-200/50 dark:border-white/10 shadow-elevated mx-4"
-            >
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-2.5 rounded-full bg-red-100 dark:bg-red-900/40">
-                  <AlertTriangle className="size-5 text-red-600 dark:text-red-400" />
-                </div>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                  {confirmTarget === 'daily' ? '重置每日清单' : '重置每周清单'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {confirmTarget === 'daily'
-                    ? '所有每日任务的完成状态将被清除，此操作不可撤销。'
-                    : '所有每周任务的完成状态将被清除，此操作不可撤销。'}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onConfirmTarget(null)}
-                  className="flex-1 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors active:scale-[0.97]"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={onConfirmReset}
-                  className="flex-1 py-2 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition-colors active:scale-[0.97]"
-                >
-                  确认重置
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+            open
+            onCancel={() => onConfirmTarget(null)}
+            onConfirm={onConfirmReset}
+            icon={<AlertTriangle className="size-5 text-red-600 dark:text-red-400" />}
+            iconBg="bg-red-100 dark:bg-red-900/40"
+            title={confirmTarget === 'daily' ? '重置每日清单' : '重置每周清单'}
+            description={
+              confirmTarget === 'daily'
+                ? '所有每日任务的完成状态将被清除，此操作不可撤销。'
+                : '所有每周任务的完成状态将被清除，此操作不可撤销。'
+            }
+            confirmLabel="确认重置"
+            confirmColor="bg-red-500 hover:bg-red-600"
+          />
         )}
       </AnimatePresence>
 
       {/* Disconnect cloud sync overlay */}
       <AnimatePresence>
         {cloudSyncProps?.showDisconnectConfirm && (
-          <motion.div
+          <ConfirmDialog
             key="confirm-disconnect"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 flex items-center justify-center z-20"
-          >
-            <div
-              className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-              onClick={cloudSyncProps?.onCancelDisconnect}
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="relative w-full max-w-xs bg-white/95 dark:bg-gray-800/90 rounded-2xl p-5 space-y-4 border border-gray-200/50 dark:border-white/10 shadow-elevated mx-4"
-            >
-              <div className="flex flex-col items-center text-center space-y-2">
-                <div className="p-2.5 rounded-full bg-amber-100 dark:bg-amber-900/40">
-                  <Unplug className="size-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">断开云同步</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  断开后本地数据仍会保留，但不再自动同步。
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={cloudSyncProps?.onCancelDisconnect}
-                  className="flex-1 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors active:scale-[0.97]"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={cloudSyncProps?.onConfirmDisconnect}
-                  className="flex-1 py-2 rounded-xl text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors active:scale-[0.97]"
-                >
-                  确认断开
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+            open
+            onCancel={cloudSyncProps?.onCancelDisconnect}
+            onConfirm={cloudSyncProps?.onConfirmDisconnect}
+            icon={<Unplug className="size-5 text-amber-600 dark:text-amber-400" />}
+            iconBg="bg-amber-100 dark:bg-amber-900/40"
+            title="断开云同步"
+            description="断开后本地数据仍会保留，但不再自动同步。"
+            confirmLabel="确认断开"
+            confirmColor="bg-amber-500 hover:bg-amber-600"
+          />
         )}
       </AnimatePresence>
     </div>

@@ -6,7 +6,7 @@ import type { ChecklistItem, TabType } from '../types'
 import { MS } from '../utils/constants'
 import { cn } from '../utils/cn'
 import { TagInput } from './TagInput'
-import { getTagColor } from '../utils/tagColors'
+import { TagPill } from './TagPill'
 
 interface Props {
   item: ChecklistItem
@@ -254,12 +254,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1 lg:gap-1 shrink-0">
             {tags.map((tag) => (
-              <span
-                key={tag}
-                className={`inline-block text-2xs px-1.5 py-0.5 rounded-lg font-medium ${getTagColor(tag)}`}
-              >
-                {tag}
-              </span>
+              <TagPill key={tag} tag={tag} />
             ))}
           </div>
         )}

@@ -1,8 +1,8 @@
 import { motion } from 'motion/react'
-import { ArrowLeft } from 'lucide-react'
 import type { ResetConfig, ServerRegion } from '../types'
 import { SERVER_REGIONS } from '../utils/storage'
 import { cn } from '../utils/cn'
+import { SettingsSubPage } from './SettingsSubPage'
 
 interface SettingsServerProps {
   resetConfig: ResetConfig
@@ -18,26 +18,8 @@ const REGION_ICONS: Record<ServerRegion, string> = {
 
 export function SettingsServer({ resetConfig, onResetConfigChange, onBack }: SettingsServerProps) {
   return (
-    <motion.div
-      initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-      transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-      className="absolute inset-0 flex flex-col bg-white/90 dark:bg-gray-900/95 backdrop-blur-xl z-10"
-    >
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200/60 dark:border-white/10 flex-shrink-0">
-        <button
-          onClick={onBack}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/60 dark:hover:bg-white/10 transition-colors active:scale-[0.97]"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-        <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">服务器设置</h2>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-4">
+    <SettingsSubPage title="服务器设置" onBack={onBack}>
+      <div className="p-5 space-y-4">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           选择你的游戏服务器，重置时间将自动适配服务器时区（含夏令时）
         </p>
@@ -101,9 +83,9 @@ export function SettingsServer({ resetConfig, onResetConfigChange, onBack }: Set
             每周一重置 <span className="font-medium text-gray-500 dark:text-gray-400">5:00 AM</span>
             <br />
             <span className="text-[10px]">按服务器时区，含夏令时自动调整</span>
-          </p>
+           </p>
         </div>
       </div>
-    </motion.div>
+    </SettingsSubPage>
   )
 }

@@ -2,7 +2,7 @@ import { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronRight } from 'lucide-react'
 import type { ChecklistItem, TabType } from '../types'
-import { getTagColor } from '../utils/tagColors'
+import { TagPill } from './TagPill'
 
 interface HiddenSectionProps {
   hiddenItems: ChecklistItem[]
@@ -49,12 +49,7 @@ export const HiddenSection = memo(function HiddenSection({
                 {item.tags && item.tags.length > 0 && (
                   <div className="flex gap-1">
                     {item.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={`inline-block text-2xs px-1.5 py-0.5 rounded-lg font-medium ${getTagColor(tag)}`}
-                      >
-                        {tag}
-                      </span>
+                      <TagPill key={tag} tag={tag} />
                     ))}
                   </div>
                 )}
