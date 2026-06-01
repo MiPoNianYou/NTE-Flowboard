@@ -256,6 +256,8 @@ export function exportData(data: ChecklistData): string {
       daily: data.daily,
       weekly: data.weekly,
       resetConfig: data.resetConfig,
+      lastDailyReset: data.lastDailyReset,
+      lastWeeklyReset: data.lastWeeklyReset,
     },
     null,
     2,
@@ -265,17 +267,20 @@ export function exportData(data: ChecklistData): string {
 export function importData(json: string): ChecklistData | null {
   try {
     const parsed: unknown = JSON.parse(json)
-    if (!isChecklistData(parsed)) {
-      return null
-    }
-    const daily = normalizeOrders(parsed.daily)
-    const weekly = normalizeOrders(parsed.weekly ?? defaultData.weekly)
+    if (parsed === null || typeof parsed !== 'object') return null
+    const obj = parsed as Record<string, unknown>
+    // 补齐缺失字段，兼容旧版导出文件
+    if (typeof obj.lastDailyReset !== 'string') obj.lastDailyReset = new Date().toISOString()
+    if (typeof obj.lastWeeklyReset !== 'string') obj.lastWeeklyReset = new Date().toISOString()
+    if (!isChecklistData(obj)) return null
+    const daily = normalizeOrders(obj.daily)
+    const weekly = normalizeOrders(obj.weekly ?? defaultData.weekly)
     return {
       daily,
       weekly,
-      resetConfig: mergeResetConfig(parsed),
-      lastDailyReset: parsed.lastDailyReset,
-      lastWeeklyReset: parsed.lastWeeklyReset,
+      resetConfig: mergeResetConfig(obj),
+      lastDailyReset: obj.lastDailyReset,
+      lastWeeklyReset: obj.lastWeeklyReset,
     }
   } catch {
     return null
