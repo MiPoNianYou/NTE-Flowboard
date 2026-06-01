@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  RotateCcw,
   AlertTriangle,
   Unplug,
   Globe,
@@ -107,29 +106,6 @@ export function SettingsContent({
           {/* Divider */}
           <div className="h-px bg-gray-200/50 dark:bg-white/10 my-3" />
 
-          {/* Manual reset */}
-          <div className="px-1">
-            <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
-              手动重置
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onConfirmTarget('daily')}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors active:scale-[0.97] text-sm font-medium border border-amber-200/50 dark:border-amber-700/30"
-              >
-                <RotateCcw className="size-3.5" />
-                重置每日
-              </button>
-              <button
-                onClick={() => onConfirmTarget('weekly')}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-purple-50/80 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors active:scale-[0.97] text-sm font-medium border border-purple-200/50 dark:border-purple-700/30"
-              >
-                <RotateCcw className="size-3.5" />
-                重置每周
-              </button>
-            </div>
-          </div>
-
           {/* Behavior */}
           <div className="px-1 pt-2">
             <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
@@ -164,6 +140,7 @@ export function SettingsContent({
         {subPage === 'data' && (
           <SettingsData
             key="data"
+            onConfirmTarget={onConfirmTarget}
             onExport={onExport}
             onImportFile={onImportFile}
             fileInputRef={fileInputRef}
