@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { AlertTriangle, X } from 'lucide-react'
+import { MS } from '../utils/constants'
 
 interface Toast {
   id: number
@@ -23,7 +24,7 @@ export function StorageToast() {
     setToasts((prev) => [...prev, toast])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== toast.id))
-    }, 6000)
+    }, MS.TOAST_DISMISS)
   }, [])
 
   useEffect(() => {

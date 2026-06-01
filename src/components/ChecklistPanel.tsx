@@ -17,11 +17,7 @@ import { AddItemForm } from './AddItemForm'
 import { EmptyState } from './EmptyState'
 import { useSortedItems } from '../hooks/useSortedItems'
 import { CARD_STYLES } from '../utils/styles'
-
-/** 超过此数量启用虚拟滚动 */
-const VIRTUAL_THRESHOLD = 50
-/** 列表项估算高度（含间距）：52px */
-const ESTIMATED_ITEM_HEIGHT = 52
+import { UI } from '../utils/constants'
 
 interface ChecklistPanelProps {
   visibleItems: ChecklistItem[]
@@ -56,19 +52,19 @@ export function ChecklistPanel({
   const { sortedItems, sortedItemIds } = useSortedItems(visibleItems, autoMoveCompleted)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  const useVirtual = sortedItems.length > VIRTUAL_THRESHOLD
+  const useVirtual = sortedItems.length > UI.VIRTUAL_THRESHOLD
 
   // 虚拟滚动器
   const virtualizer = useVirtualizer({
     count: sortedItems.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: useCallback(() => ESTIMATED_ITEM_HEIGHT, []),
+    estimateSize: useCallback(() => UI.ESTIMATED_ITEM_HEIGHT, []),
     overscan: 8,
     enabled: useVirtual,
   })
 
   // DnD: require 8px movement to start
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: UI.DRAG_DISTANCE } }))
 
   // 虚拟模式下自定义碰撞检测：基于数学计算而非 DOM 位置
   const collisionDetection: CollisionDetection = useCallback(
@@ -83,7 +79,7 @@ export function ChecklistPanel({
           if (idx === -1) return null
 
           // 用估算位置替代实际 DOM 位置
-          const estimatedY = idx * ESTIMATED_ITEM_HEIGHT + ESTIMATED_ITEM_HEIGHT / 2
+          const estimatedY = idx * UI.ESTIMATED_ITEM_HEIGHT + UI.ESTIMATED_ITEM_HEIGHT / 2
           const dy = Math.abs(collisionRect.top + collisionRect.height / 2 - estimatedY)
 
           return {
@@ -113,7 +109,7 @@ export function ChecklistPanel({
   )
 
   // 虚拟列表的高度（限制最大高度，启用滚动）
-  const virtualHeight = Math.min(sortedItems.length * ESTIMATED_ITEM_HEIGHT + 20, 500)
+  const virtualHeight = Math.min(sortedItems.length * UI.ESTIMATED_ITEM_HEIGHT + UI.VIRTUAL_PADDING, UI.VIRTUAL_MAX_HEIGHT)
 
   if (visibleItems.length === 0) {
     return (

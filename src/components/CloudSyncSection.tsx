@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { SyncStatus } from '../hooks/useSupabaseSync'
 import { CARD_STYLES } from '../utils/styles'
+import { MS } from '../utils/constants'
 
 interface CloudSyncSectionProps {
   syncStatus: SyncStatus
@@ -138,10 +139,10 @@ export const CloudSyncSection = memo(function CloudSyncSection({
     try {
       await navigator.clipboard.writeText(SQL_SNIPPET)
       setHelpCopied(true)
-      setTimeout(() => setHelpCopied(false), 2000)
+      setTimeout(() => setHelpCopied(false), MS.SUCCESS_HINT)
     } catch {
       setHelpCopied(true)
-      setTimeout(() => setHelpCopied(false), 2000)
+      setTimeout(() => setHelpCopied(false), MS.SUCCESS_HINT)
     }
   }
 

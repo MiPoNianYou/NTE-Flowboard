@@ -4,6 +4,7 @@ import { Settings, X } from 'lucide-react'
 import type { ChecklistData, TabType, ResetConfig } from '../types'
 import { exportData, importData } from '../utils/storage'
 import { SettingsContent } from './SettingsContent'
+import { MS } from '../utils/constants'
 import type { CloudSyncProps } from './SettingsContent'
 
 interface Props {
@@ -120,7 +121,7 @@ export function SettingsPanel({
         if (parsed) {
           onImport(parsed)
           setImportSuccess(true)
-          setTimeout(() => setImportSuccess(false), 2000)
+          setTimeout(() => setImportSuccess(false), MS.SUCCESS_HINT)
         } else {
           setImportError('无效的数据文件')
         }

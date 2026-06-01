@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ChecklistData } from '../types'
+import { MS } from '../utils/constants'
 import type { SupabaseConfig } from '../utils/supabase'
 import {
   loadSupabaseConfig,
@@ -138,7 +139,7 @@ export function useSupabaseSync({
         } else {
           setSyncStatus('disconnected')
         }
-      }, 5000)
+      }, MS.ERROR_RECOVERY)
     }
     return () => {
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
@@ -185,7 +186,7 @@ export function useSupabaseSync({
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
         pullSync()
-      }, 500)
+      }, MS.REALTIME_DEBOUNCE)
     })
 
     return () => {
@@ -210,7 +211,7 @@ export function useSupabaseSync({
           pullSync()
         }
       },
-      5 * 60 * 1000,
+      MS.PERIODIC_PULL,
     )
 
     document.addEventListener('visibilitychange', handleVisibility)
@@ -234,7 +235,7 @@ export function useSupabaseSync({
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     pushTimerRef.current = setTimeout(() => {
       pushSync(dataRef.current)
-    }, 3000)
+    }, MS.PUSH_DEBOUNCE)
 
     return () => {
       if (pushTimerRef.current) clearTimeout(pushTimerRef.current)

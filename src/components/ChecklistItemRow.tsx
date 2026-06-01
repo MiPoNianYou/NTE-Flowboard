@@ -3,6 +3,7 @@ import { Check, Pencil, Trash2, X, Save, ChevronRight, GripVertical, EyeOff } fr
 import { motion, AnimatePresence } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
 import type { ChecklistItem, TabType } from '../types'
+import { MS } from '../utils/constants'
 import { cn } from '../utils/cn'
 import { TagInput } from './TagInput'
 import { getTagColor } from '../utils/tagColors'
@@ -136,7 +137,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
         onDelete(tab, item.order)
       } else {
         setConfirmDelete(true)
-        setTimeout(() => setConfirmDelete(false), 3000)
+        setTimeout(() => setConfirmDelete(false), MS.DELETE_CONFIRM)
       }
     },
     [confirmDelete, onDelete, tab, item.order],

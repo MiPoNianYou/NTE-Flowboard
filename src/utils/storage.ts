@@ -1,4 +1,5 @@
 import type { ChecklistData, ChecklistItem, ResetConfig, ServerRegion } from '../types'
+import { MS } from './constants'
 
 // --- Server region presets ---
 
@@ -262,7 +263,7 @@ export function saveData(data: ChecklistData): void {
       notifyStorageError(e, '保存数据失败')
     }
     saveTimeout = null
-  }, 300)
+  }, MS.STORAGE_DEBOUNCE)
 }
 
 /** 立即写入 localStorage，绕过防抖。用于 beforeunload 等必须同步完成的场景。 */

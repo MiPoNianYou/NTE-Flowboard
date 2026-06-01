@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { TabType, ResetConfig } from '../types'
+import { MS } from '../utils/constants'
 import { getServerDate } from '../utils/storage'
 
 interface UseNextResetLabelProps {
@@ -11,7 +12,7 @@ export function useNextResetLabel({ activeTab, resetConfig }: UseNextResetLabelP
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 60_000)
+    const timer = setInterval(() => setNow(Date.now()), MS.LABEL_REFRESH)
     return () => clearInterval(timer)
   }, [])
 

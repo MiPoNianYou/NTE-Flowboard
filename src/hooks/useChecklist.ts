@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ChecklistData, ResetConfig, TabType } from '../types'
+import { MS } from '../utils/constants'
 import {
   loadData,
   saveData,
@@ -50,7 +51,7 @@ export function useChecklist() {
 
     function startInterval() {
       if (interval) clearInterval(interval)
-      interval = setInterval(checkAndReset, 60000)
+      interval = setInterval(checkAndReset, MS.RESET_POLL)
     }
 
     function stopInterval() {

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { ChecklistItem } from '../types'
+import { MS } from '../utils/constants'
 
 export function useItemAnimation(currentItems: ChecklistItem[]) {
   // Track newly added items for enter animation (cleared after animation)
@@ -30,7 +31,7 @@ export function useItemAnimation(currentItems: ChecklistItem[]) {
           newIds.forEach((id) => next.delete(id))
           return next
         })
-      }, 400)
+      }, MS.ANIMATION_WINDOW)
     }
 
     prevItemCount.current = current
