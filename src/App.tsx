@@ -1,21 +1,20 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Sun, Moon, Monitor, Smartphone, LayoutGrid, Rows3 } from 'lucide-react'
+import { useMemo, useEffect } from 'react'
 import { useChecklist } from './hooks/useChecklist'
 import { useSupabaseSync } from './hooks/useSupabaseSync'
 import { useTabManagement } from './hooks/useTabManagement'
 import { useLayoutManagement } from './hooks/useLayoutManagement'
 import { useThemeManagement } from './hooks/useThemeManagement'
+import { useAutoMoveCompleted } from './hooks/useAutoMoveCompleted'
 import { useItemAnimation } from './hooks/useItemAnimation'
 import { useNextResetLabel } from './hooks/useNextResetLabel'
 import { TabSwitch } from './components/TabSwitch'
 import { ProgressCard } from './components/ProgressCard'
 import { HiddenSection } from './components/HiddenSection'
 import { ChecklistPanel } from './components/ChecklistPanel'
-import { SettingsPanel } from './components/SettingsPanel'
+import { Header } from './components/Header'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './utils/cn'
-import { logoDataUri } from './assets/logo'
 import { setStorageErrorHandler } from './utils/storage'
 import { StorageToast, showStorageToast } from './components/StorageToast'
 
@@ -33,14 +32,7 @@ function App() {
     return () => setStorageErrorHandler(null)
   }, [])
 
-  const [autoMoveCompleted, setAutoMoveCompleted] = useState(
-    () => localStorage.getItem('nte-auto-move-completed') !== 'false',
-  )
-
-  const handleAutoMoveCompletedChange = (newVal: boolean) => {
-    setAutoMoveCompleted(newVal)
-    localStorage.setItem('nte-auto-move-completed', String(newVal))
-  }
+  const { autoMoveCompleted, onAutoMoveCompletedChange } = useAutoMoveCompleted()
 
   const {
     data,
@@ -99,75 +91,30 @@ function App() {
 
           <div className="relative max-w-lg md:max-w-[1100px] mx-auto px-4 py-8 sm:py-12 md:py-10 flex-1 w-full">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8 md:mb-7">
-              <div className="flex items-center gap-3 md:gap-3.5">
-                <a
-                  href="https://github.com/MiPoNianYou/NTE-Flowboard"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="GitHub"
-                >
-                  <img src={logoDataUri} alt="Nanally" className="w-10 h-10 md:w-12 md:h-12" />
-                </a>
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
-                    NTE Flowboard
-                  </h1>
-                  <p className="text-2xs md:text-xs text-gray-400 dark:text-gray-500">
-                    每日与每周事项追踪
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={cycleTheme}
-                  className="p-2 lg:p-2 rounded-xl text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors active:scale-[0.97]"
-                  aria-label={`当前主题：${mode === 'system' ? '跟随系统' : mode === 'dark' ? '深色' : '浅色'}，点击切换`}
-                >
-                  {mode === 'light' && <Sun className="size-[20px] lg:size-[22px]" />}
-                  {mode === 'dark' && <Moon className="size-[20px] lg:size-[22px]" />}
-                  {mode === 'system' && (
-                    <>
-                      <Smartphone className="size-[20px] lg:hidden" />
-                      <Monitor className="size-[22px] hidden lg:block" />
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={toggleLayout}
-                  className={cn(
-                    'p-2 lg:p-2 rounded-xl text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors active:scale-[0.97]',
-                    'hidden md:flex',
-                  )}
-                  aria-label={layout === 'two-column' ? '切换为单列布局' : '切换为双列布局'}
-                >
-                  {layout === 'two-column' ? (
-                    <Rows3 className="size-[20px] lg:size-[22px]" />
-                  ) : (
-                    <LayoutGrid className="size-[20px] lg:size-[22px]" />
-                  )}
-                </button>
-                <SettingsPanel
-                  data={data}
-                  autoMoveCompleted={autoMoveCompleted}
-                  onAutoMoveCompletedChange={handleAutoMoveCompletedChange}
-                  onManualReset={manualReset}
-                  onImport={importFullData}
-                  onResetConfigChange={updateResetConfig}
-                  cloudSyncProps={{
-                    syncStatus: supabaseSync.syncStatus,
-                    lastSyncTime: supabaseSync.lastSyncTime,
-                    syncError: supabaseSync.syncError,
-                    isConfigured: supabaseSync.isConfigured,
-                    isLocked: supabaseSync.isLocked,
-                    onSetupSupabase: supabaseSync.setupSupabase,
-                    onUnlock: supabaseSync.unlock,
-                    onTriggerSync: supabaseSync.triggerSync,
-                    onConfirmDisconnect: supabaseSync.disconnect,
-                  }}
-                />
-              </div>
-            </div>
+            <Header
+              dark={dark}
+              mode={mode}
+              cycleTheme={cycleTheme}
+              layout={layout}
+              toggleLayout={toggleLayout}
+              data={data}
+              autoMoveCompleted={autoMoveCompleted}
+              onAutoMoveCompletedChange={onAutoMoveCompletedChange}
+              onManualReset={manualReset}
+              onImport={importFullData}
+              onResetConfigChange={updateResetConfig}
+              cloudSyncProps={{
+                syncStatus: supabaseSync.syncStatus,
+                lastSyncTime: supabaseSync.lastSyncTime,
+                syncError: supabaseSync.syncError,
+                isConfigured: supabaseSync.isConfigured,
+                isLocked: supabaseSync.isLocked,
+                onSetupSupabase: supabaseSync.setupSupabase,
+                onUnlock: supabaseSync.unlock,
+                onTriggerSync: supabaseSync.triggerSync,
+                onConfirmDisconnect: supabaseSync.disconnect,
+              }}
+            />
 
             {/* Unified layout for all screen sizes */}
             <div

@@ -85,7 +85,7 @@ export function useSupabaseSync({
   // --- Pull sync ---
   const pullSync = useCallback(async () => {
     const config = configRef.current
-    if (!config) return
+    if (!config || isPullingRef.current) return
 
     isPullingRef.current = true
     skipNextPushRef.current = true
@@ -168,6 +168,7 @@ export function useSupabaseSync({
   }, [])
 
   // --- Startup pull ---
+  // Initial pull on mount to sync any changes made while offline
   useEffect(() => {
     if (!configRef.current) return
     const timer = setTimeout(() => {
@@ -177,6 +178,8 @@ export function useSupabaseSync({
   }, [pullSync])
 
   // --- Realtime subscription (instant cross-device sync) ---
+  // Subscribes to Supabase postgres_changes for real-time cross-device updates.
+  // Debounced to avoid rapid consecutive pulls from batched DB changes.
   useEffect(() => {
     const config = configRef.current
     if (!config) return
@@ -196,6 +199,8 @@ export function useSupabaseSync({
   }, [isConfigured, pullSync])
 
   // --- Periodic pull (every 5min) + visibility restore pull ---
+  // Backup mechanism: catches changes missed by realtime (e.g. network blips).
+  // Also pulls immediately when tab becomes visible again.
   useEffect(() => {
     if (!configRef.current) return
 

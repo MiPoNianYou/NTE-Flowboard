@@ -79,17 +79,13 @@ body {
   scrollbar-color: var(--scrollbar-thumb-dark) transparent;
 }
 
-/* Theme transition - smooth color changes */
-* {
-  transition-property: background-color, border-color;
+/* Theme transition - smooth color changes on root + main containers */
+html,
+#root,
+.min-h-screen {
+  transition-property: background-color, border-color, color;
   transition-timing-function: ease;
   transition-duration: 0.3s;
-}
-/* Exclude elements that need instant transitions */
-button,
-a,
-[role='button'] {
-  transition-duration: 0.15s;
 }
 
 /* Mobile safe area */
