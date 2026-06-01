@@ -26,5 +26,11 @@ export default tseslint.config(
   },
   {
     ignores: ['dist/**', 'node_modules/**'],
+  },
+  {
+    files: ['src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
+    },
   }
 )

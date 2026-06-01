@@ -81,25 +81,6 @@ export function useSupabaseSync({
     onDataImportRef.current = onDataImport
   }, [onDataImport])
 
-  // Auto-recover from error after 5s
-  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    if (syncStatus === 'error') {
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
-      errorTimerRef.current = setTimeout(() => {
-        if (configRef.current) {
-          setSyncStatus('connected')
-        } else {
-          setSyncStatus('disconnected')
-        }
-        setSyncError(null)
-      }, 5000)
-    }
-    return () => {
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
-    }
-  }, [syncStatus])
-
   // --- Pull sync ---
   const pullSync = useCallback(async () => {
     const config = configRef.current
@@ -142,6 +123,27 @@ export function useSupabaseSync({
       isPullingRef.current = false
     }
   }, [])
+
+  // Auto-recover from error after 5s — verify connectivity before claiming connected
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (syncStatus === 'error') {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = setTimeout(() => {
+        if (configRef.current) {
+          // Attempt a pull to verify actual connectivity
+          pullSync().catch(() => {
+            // pullSync already sets error status on failure, so nothing more needed
+          })
+        } else {
+          setSyncStatus('disconnected')
+        }
+      }, 5000)
+    }
+    return () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
+    }
+  }, [syncStatus, pullSync])
 
   // --- Push sync ---
   const pushSync = useCallback(async (dataToPush: ChecklistData) => {

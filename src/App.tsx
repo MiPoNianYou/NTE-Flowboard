@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Sun, Moon, Monitor, Smartphone, LayoutGrid, Rows3 } from 'lucide-react'
 import { useChecklist } from './hooks/useChecklist'
 import { useSupabaseSync } from './hooks/useSupabaseSync'
@@ -16,12 +16,22 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './utils/cn'
 import { logoDataUri } from './assets/logo'
+import { setStorageErrorHandler } from './utils/storage'
+import { StorageToast, showStorageToast } from './components/StorageToast'
 
 function App() {
   // 使用拆分后的 Hook
   const { activeTab, setActiveTab } = useTabManagement()
   const { layout, toggleLayout } = useLayoutManagement()
   const { dark, mode, cycleTheme } = useThemeManagement()
+
+  // 注册存储错误处理器
+  useEffect(() => {
+    setStorageErrorHandler((error, context) => {
+      showStorageToast(`${context}：${error.message}`)
+    })
+    return () => setStorageErrorHandler(null)
+  }, [])
 
   const [autoMoveCompleted, setAutoMoveCompleted] = useState(
     () => localStorage.getItem('nte-auto-move-completed') !== 'false',
@@ -78,6 +88,7 @@ function App() {
     <ErrorBoundary>
       <div className={dark ? 'dark' : ''}>
         <OfflineIndicator />
+        <StorageToast />
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950/30 transition-colors duration-500">
           {/* 装饰性背景光晕 */}
           <div className="fixed inset-0 overflow-hidden pointer-events-none">

@@ -22,7 +22,7 @@ export const SERVER_REGIONS: Record<ServerRegion, { label: string; description: 
  * DST starts 2nd Sunday of March at 2:00 AM
  * DST ends 1st Sunday of November at 2:00 AM
  */
-function isUSDST(date: Date): boolean {
+export function isUSDST(date: Date): boolean {
   const year = date.getFullYear()
 
   // DST starts: 2nd Sunday of March
@@ -43,17 +43,17 @@ function isUSDST(date: Date): boolean {
  * DST starts last Sunday of March at 1:00 AM UTC
  * DST ends last Sunday of October at 1:00 AM UTC
  */
-function isEUDST(date: Date): boolean {
+export function isEUDST(date: Date): boolean {
   const year = date.getFullYear()
 
   // DST starts: last Sunday of March
   const march31 = new Date(year, 2, 31)
-  const marchLastSunday = 31 - ((march31.getDay() + 6) % 7)
+  const marchLastSunday = 31 - march31.getDay()
   const dstStart = new Date(Date.UTC(year, 2, marchLastSunday, 1, 0, 0))
 
   // DST ends: last Sunday of October
   const oct31 = new Date(year, 9, 31)
-  const octLastSunday = 31 - ((oct31.getDay() + 6) % 7)
+  const octLastSunday = 31 - oct31.getDay()
   const dstEnd = new Date(Date.UTC(year, 9, octLastSunday, 1, 0, 0))
 
   const nowUTC = Date.UTC(
@@ -73,7 +73,7 @@ function isEUDST(date: Date): boolean {
  * @param date - Date to check (defaults to now)
  * @returns UTC offset in hours
  */
-function getServerUTCOffset(region: ServerRegion, date: Date = new Date()): number {
+export function getServerUTCOffset(region: ServerRegion, date: Date = new Date()): number {
   switch (region) {
     case 'asia':
       return 8 // Fixed UTC+8
@@ -207,22 +207,50 @@ function mergeChecklistData(parsed: ChecklistData): ChecklistData {
   }
 }
 
+const CORRUPTED_BACKUP_KEY = 'nte-corrupted-backup'
+
+function backupCorruptedData(raw: string): void {
+  try {
+    localStorage.setItem(CORRUPTED_BACKUP_KEY, raw)
+    notifyStorageError(new Error('数据格式异常，已备份原始数据'), '数据恢复')
+  } catch {
+    // If even backup fails, nothing we can do
+  }
+}
+
 export function loadData(): ChecklistData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return structuredClone(defaultData)
     const parsed: unknown = JSON.parse(raw)
     if (!isChecklistData(parsed)) {
-      console.warn('[Storage] Invalid data format in localStorage, using defaults')
+      backupCorruptedData(raw)
       return structuredClone(defaultData)
     }
     return mergeChecklistData(parsed)
-  } catch {
+  } catch (e) {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) backupCorruptedData(raw)
+    notifyStorageError(e, '读取数据失败，已重置为默认数据')
     return structuredClone(defaultData)
   }
 }
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
+
+// --- Error notification ---
+type StorageErrorHandler = (error: Error, context: string) => void
+let storageErrorHandler: StorageErrorHandler | null = null
+
+export function setStorageErrorHandler(handler: StorageErrorHandler | null): void {
+  storageErrorHandler = handler
+}
+
+function notifyStorageError(error: unknown, context: string): void {
+  const err = error instanceof Error ? error : new Error(String(error))
+  console.error(`[Storage] ${context}:`, err.message)
+  storageErrorHandler?.(err, context)
+}
 
 export function saveData(data: ChecklistData): void {
   // 防抖：300ms 内多次调用只执行最后一次
@@ -230,8 +258,8 @@ export function saveData(data: ChecklistData): void {
   saveTimeout = setTimeout(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    } catch {
-      // localStorage 已满或隐私模式不支持，静默失败
+    } catch (e) {
+      notifyStorageError(e, '保存数据失败')
     }
     saveTimeout = null
   }, 300)
@@ -245,8 +273,8 @@ export function saveDataImmediate(data: ChecklistData): void {
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch {
-    // silent
+  } catch (e) {
+    notifyStorageError(e, '保存数据失败')
   }
 }
 
