@@ -1,0 +1,186 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Halo — Dark Design System tokens */
+  --font-sans:
+    'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Halo color palette */
+  --color-background: #0A0B0F;
+  --color-surface: #14151C;
+  --color-elevated: #1E2029;
+  --color-overlay: rgba(10, 11, 15, 0.72);
+
+  --color-border: #2A2D38;
+  --color-border-strong: #3A3D4A;
+  --color-border-soft: rgba(255, 255, 255, 0.04);
+
+  --color-text-primary: #F2F4F8;
+  --color-text-secondary: #9AA0AE;
+  --color-text-muted: #5C6170;
+
+  --color-primary: #5B6BFF;
+  --color-primary-hover: #7886FF;
+  --color-primary-pressed: #4A59E6;
+  --color-primary-soft: rgba(91, 107, 255, 0.12);
+
+  --color-success: #2BE08C;
+  --color-success-soft: rgba(43, 224, 140, 0.12);
+  --color-warning: #F5D547;
+  --color-warning-soft: rgba(245, 213, 71, 0.14);
+  --color-info: #3DD7E5;
+  --color-info-soft: rgba(61, 215, 229, 0.14);
+  --color-danger: #FF3A5C;
+  --color-danger-soft: rgba(255, 58, 92, 0.14);
+
+  /* Tag color palette — kept for tag pills */
+  --color-tag-blue: #5B6BFF;
+  --color-tag-purple: #9B6BFF;
+  --color-tag-amber: #F5D547;
+  --color-tag-red: #FF3A5C;
+  --color-tag-green: #2BE08C;
+  --color-tag-teal: #3DD7E5;
+  --color-tag-indigo: #5B6BFF;
+  --color-tag-pink: #FF6B9D;
+  --color-tag-orange: #FF9F43;
+  --color-tag-cyan: #3DD7E5;
+  --color-tag-rose: #FF3A5C;
+  --color-tag-lime: #2BE08C;
+  --color-tag-violet: #9B6BFF;
+  --color-tag-sky: #3DD7E5;
+  --color-tag-fuchsia: #FF6B9D;
+  --color-tag-emerald: #2BE08C;
+
+  /* Font size scale — Halo hierarchy */
+  --text-xs: 0.75rem;      /* 12px - label-sm */
+  --text-sm: 0.8125rem;    /* 13px - body-sm */
+  --text-base: 0.9375rem;  /* 15px - body-md */
+  --text-lg: 1.125rem;     /* 18px - title-md */
+  --text-xl: 1.5rem;       /* 24px - headline-md */
+
+  /* Shadow tokens — Halo elevation */
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-elevated: 0 24px 60px rgba(0, 0, 0, 0.55);
+
+  /* Focus & selection */
+  --focus-ring: rgba(91, 107, 255, 0.35);
+  --selection-bg: rgba(91, 107, 255, 0.2);
+}
+
+/* Body — Halo dark substrate */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Halo icon stroke weight: 1.5px (matches hairline border language) */
+.lucide {
+  stroke-width: 1.5;
+}
+
+/* Custom scrollbar - WebKit */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 3px;
+}
+
+/* Custom scrollbar - Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+/* Mobile safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Grid expand/collapse animation helpers */
+.collapse-closed {
+  grid-template-rows: 0fr;
+}
+.collapse-open {
+  grid-template-rows: 1fr;
+}
+
+/* Focus-visible ring — Halo focus (exclude inputs, they have their own focus style) */
+:focus-visible:not(input, textarea, select) {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91, 107, 255, 0.35);
+}
+
+/* Text selection */
+::selection {
+  background: rgba(91, 107, 255, 0.2);
+  color: inherit;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Sync key input group — Halo input style */
+.input-group {
+  width: 100%;
+}
+.input-group .label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  transition: color 0.15s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.input-group:hover .label {
+  color: var(--color-text-primary);
+}
+
+/* Disconnect button — compact square */
+.btn-disconnect {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-disconnect:active {
+  transform: translateY(1px);
+}
+
+/* Active press — Halo elevation.sm */
+.active-press {
+  transition: box-shadow 0.15s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.active-press:active {
+  box-shadow: var(--shadow-sm);
+}

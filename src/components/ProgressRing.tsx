@@ -1,0 +1,72 @@
+import { motion } from 'motion/react'
+import { useState, useEffect, useMemo } from 'react'
+import { Counter } from './Counter'
+
+interface ProgressRingProps {
+  completed: number
+  total: number
+}
+
+export function ProgressRing({ completed, total }: ProgressRingProps) {
+  const percentage = total === 0 ? 0 : Math.round((completed / total) * 100)
+  const circumference = 2 * Math.PI * 32
+
+  const [hasMounted, setHasMounted] = useState(false)
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  const springTransition = useMemo(() => {
+    if (!hasMounted) {
+      return { duration: 0 }
+    }
+    return { type: 'spring' as const, stiffness: 120, damping: 18 }
+  }, [hasMounted])
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width={80} height={80} className="size-14 lg:size-20 -rotate-90" viewBox="0 0 80 80">
+        <circle
+          cx={40}
+          cy={40}
+          r={32}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={5}
+          className="text-border"
+        />
+        <motion.circle
+          cx={40}
+          cy={40}
+          r={32}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={5}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          animate={{ strokeDashoffset: circumference * (1 - percentage / 100) }}
+          transition={percentage === 0 ? { duration: 0.3, ease: 'easeOut' } : springTransition}
+          className={
+            percentage === 100
+              ? 'text-success'
+              : 'text-primary'
+          }
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-xs lg:text-sm font-bold text-text-primary tabular-nums">
+        <Counter
+          value={percentage}
+          fontSize={14}
+          gap={0}
+          padding={0}
+          horizontalPadding={0}
+          textColor="currentColor"
+          fontWeight={700}
+          gradientHeight={0}
+          suffix="%"
+        />
+      </span>
+    </div>
+  )
+}
