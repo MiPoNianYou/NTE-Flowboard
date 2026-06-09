@@ -332,7 +332,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
         {/* 文本 */}
         <span
           className={cn(
-            'flex-1 text-sm min-w-0 transition-all duration-500 ease-in-out',
+            'flex-1 text-sm min-w-0',
             item.completed
               ? 'line-through decoration-dashed decoration-success text-text-muted'
               : 'text-text-primary',

@@ -29,7 +29,9 @@ export function useItemAnimation(currentItems: ChecklistItem[]) {
     }
   }, [currentItems])
 
-  prevItemsRef.current = currentItems
+  useEffect(() => {
+    prevItemsRef.current = currentItems
+  })
 
   return {
     newItemOrders: newOrdersRef.current,

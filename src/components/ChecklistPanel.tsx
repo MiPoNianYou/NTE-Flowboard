@@ -16,6 +16,7 @@ import { ChecklistItemRow } from './ChecklistItemRow'
 import { AddItemForm } from './AddItemForm'
 import { EmptyState } from './EmptyState'
 import { useSortedItems } from '../hooks/useSortedItems'
+import { useItemMotion } from '../hooks/useItemMotion'
 import { CARD_STYLES } from '../utils/styles'
 import { UI } from '../utils/constants'
 
@@ -55,6 +56,10 @@ export function ChecklistPanel({
 }: ChecklistPanelProps) {
   const { sortedItems, sortedItemIds } = useSortedItems(visibleItems, autoMoveCompleted)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const { exitingItems, handleDeleteStart, handleHideStart, getItemAnimation } = useItemMotion({
+    onDelete,
+    onHide,
+  })
 
   const useVirtual = sortedItems.length > UI.VIRTUAL_THRESHOLD
 
@@ -115,15 +120,19 @@ export function ChecklistPanel({
   // 虚拟列表的高度（限制最大高度，启用滚动）
   const virtualHeight = Math.min(sortedItems.length * UI.ESTIMATED_ITEM_HEIGHT + UI.VIRTUAL_PADDING, UI.VIRTUAL_MAX_HEIGHT)
 
-  if (visibleItems.length === 0) {
-    return (
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15 }}
-        className={CARD_STYLES.panel}
-      >
+  const isEmpty = visibleItems.length === 0
+  const virtualItems = useVirtual ? virtualizer.getVirtualItems() : []
+  const totalSize = useVirtual ? virtualizer.getTotalSize() : 0
+
+  return (
+    <motion.div
+      key={activeTab}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.15 }}
+      className={CARD_STYLES.panel}
+    >
+      {isEmpty ? (
         <EmptyState
           title="暂无任务"
           subtitle={
@@ -132,126 +141,99 @@ export function ChecklistPanel({
             : `点击下方添加${customName || '自定义'}任务`
           }
         />
-        <AddItemForm tab={activeTab} onAdd={onAddItem} />
-      </motion.div>
-    )
-  }
-
-  if (useVirtual) {
-    // === 虚拟滚动模式 ===
-    const virtualItems = virtualizer.getVirtualItems()
-    const totalSize = virtualizer.getTotalSize()
-
-    return (
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15 }}
-        className={CARD_STYLES.panel}
-      >
-        <div className="mb-3 text-xs text-text-muted">
-          {sortedItems.length} 项 · 虚拟列表模式
-        </div>
-        <div
-          ref={scrollContainerRef}
-          className="overflow-y-auto rounded-xl"
-          style={{ height: virtualHeight }}
-        >
-          <DndContext
-            sensors={sensors}
-            onDragEnd={handleDragEnd}
-            collisionDetection={collisionDetection}
+      ) : useVirtual ? (
+        <>
+          <div className="mb-3 text-xs text-text-muted">
+            {sortedItems.length} 项 · 虚拟列表模式
+          </div>
+          <div
+            ref={scrollContainerRef}
+            className="overflow-y-auto rounded-xl"
+            style={{ height: virtualHeight }}
           >
+            <DndContext
+              sensors={sensors}
+              onDragEnd={handleDragEnd}
+              collisionDetection={collisionDetection}
+            >
+              <SortableContext items={sortedItemIds} strategy={verticalListSortingStrategy}>
+                <div className="relative" style={{ height: totalSize }}>
+                  <AnimatePresence>
+                    {virtualItems.map((virtualRow) => {
+                      const item = sortedItems[virtualRow.index]
+                      if (!item) return null
+                      const anim = getItemAnimation(item.order, {
+                        isNew: newItemOrders.has(item.order),
+                        activeTab,
+                        mode: 'virtual',
+                      })
+                      return (
+                        <motion.div
+                          key={item.order}
+                          data-index={virtualRow.index}
+                          initial={anim.initial}
+                          animate={anim.animate}
+                          transition={anim.transition}
+                          onAnimationComplete={anim.onAnimationComplete}
+                          className="absolute top-0 left-0 w-full px-0.5"
+                          style={{ transform: `translateY(${virtualRow.start}px)` }}
+                        >
+                          <ChecklistItemRow
+                            item={item}
+                            tab={activeTab}
+                            onToggle={onToggle}
+                            onEdit={onEdit}
+                            onDelete={handleDeleteStart}
+                            onHide={handleHideStart}
+                            confirmDelete={confirmDelete}
+                          />
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </>
+      ) : (
+        <motion.div layout="size" className="space-y-1 md:space-y-1.5 mb-4 md:mb-6">
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext items={sortedItemIds} strategy={verticalListSortingStrategy}>
-              <div className="relative" style={{ height: totalSize }}>
-                <AnimatePresence initial={false}>
-                  {virtualItems.map((virtualRow) => {
-                    const item = sortedItems[virtualRow.index]
-                    if (!item) return null
-                    const isNew = newItemOrders.has(item.order)
-                    return (
-                      <motion.div
-                        key={item.order}
-                        data-index={virtualRow.index}
-                        initial={isNew ? { opacity: 0, y: -8 } : false}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{
-                          opacity: { duration: 0.1 },
-                          scale: { duration: 0.15 },
-                          ...(isNew ? { y: { duration: 0.15 } } : {}),
-                        }}
-                        className="absolute top-0 left-0 w-full px-0.5"
-                        style={{ transform: `translateY(${virtualRow.start}px)` }}
-                      >
-                        <ChecklistItemRow
-                          item={item}
-                          tab={activeTab}
-                          onToggle={onToggle}
-                          onEdit={onEdit}
-                          onDelete={onDelete}
-                          onHide={onHide}
-                          confirmDelete={confirmDelete}
-                        />
-                      </motion.div>
-                    )
-                  })}
-                </AnimatePresence>
-              </div>
+              <AnimatePresence>
+                {sortedItems.map((item) => {
+                  const anim = getItemAnimation(item.order, {
+                    isNew: newItemOrders.has(item.order),
+                    activeTab,
+                    mode: 'normal',
+                  })
+                  const isExiting = exitingItems.has(item.order)
+                  return (
+                    <motion.div
+                      key={item.order}
+                      layout={autoMoveCompleted && !isExiting ? 'position' : false}
+                      initial={anim.initial}
+                      animate={anim.animate}
+                      transition={anim.transition}
+                      onAnimationComplete={anim.onAnimationComplete}
+                    >
+                      <ChecklistItemRow
+                        item={item}
+                        tab={activeTab}
+                        onToggle={onToggle}
+                        onEdit={onEdit}
+                        onDelete={handleDeleteStart}
+                        onHide={handleHideStart}
+                        confirmDelete={confirmDelete}
+                      />
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
             </SortableContext>
           </DndContext>
-        </div>
-        <div className="mt-4 md:mt-6">
-          <AddItemForm tab={activeTab} onAdd={onAddItem} />
-        </div>
-      </motion.div>
-    )
-  }
-
-  // === 常规模式（< 50 项，保留完整动画） ===
-  return (
-    <motion.div
-      key={activeTab}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className={CARD_STYLES.panel}
-    >
-      <div className="space-y-1 md:space-y-1.5 mb-4 md:mb-6">
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <SortableContext items={sortedItemIds} strategy={verticalListSortingStrategy}>
-            <AnimatePresence initial={false}>
-              {sortedItems.map((item) => (
-                <motion.div
-                  key={item.order}
-                  layout={autoMoveCompleted ? 'position' : false}
-                  layoutDependency={item.completed}
-                  initial={newItemOrders.has(item.order) ? { opacity: 0, y: -10 } : false}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{
-                    layout: { type: 'tween', ease: 'easeInOut', duration: 0.15 },
-                    opacity: { duration: 0.1 },
-                    scale: { duration: 0.15 },
-                    ...(newItemOrders.has(item.order) ? { y: { duration: 0.15 } } : {}),
-                  }}
-                >
-                  <ChecklistItemRow
-                    item={item}
-                    tab={activeTab}
-                    onToggle={onToggle}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onHide={onHide}
-                    confirmDelete={confirmDelete}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </SortableContext>
-        </DndContext>
-      </div>
+        </motion.div>
+      )}
       <AddItemForm tab={activeTab} onAdd={onAddItem} />
     </motion.div>
   )
