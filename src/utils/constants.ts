@@ -36,4 +36,6 @@ export const UI = {
   VIRTUAL_MAX_HEIGHT: 500,
   /** 虚拟列表底部额外间距 px */
   VIRTUAL_PADDING: 20,
+  /** 单项目标签上限 */
+  TAG_LIMIT: 5,
 } as const

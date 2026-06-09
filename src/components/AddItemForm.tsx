@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useRef, type FormEvent } from 'react'
 import { Plus } from 'lucide-react'
 import type { TabType } from '../types'
-import { TagInput } from './TagInput'
 import { Button } from './base/Button'
+import { TagPill } from './TagPill'
+import { UI } from '../utils/constants'
 
 interface AddItemFormProps {
   tab: TabType
@@ -13,6 +14,9 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
   const [text, setText] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [open, setOpen] = useState(false)
+  const [editingTag, setEditingTag] = useState(false)
+  const [tagInput, setTagInput] = useState('')
+  const mainInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -22,6 +26,15 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
       setTags([])
       setOpen(false)
     }
+  }
+
+  const addTag = (value: string) => {
+    const trimmed = value.trim()
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags([...tags, trimmed])
+    }
+    setTagInput('')
+    setEditingTag(false)
   }
 
   if (!open) {
@@ -39,19 +52,76 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 lg:space-y-2.5">
-      <div className="flex items-center gap-2 lg:gap-2">
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && !editingTag) {
+          setText('')
+          setTags([])
+          setOpen(false)
+        }
+      }}
+      className="space-y-2"
+    >
+      <div className="rounded-lg border border-border overflow-hidden">
         <input
+          ref={mainInputRef}
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           autoFocus
           placeholder="输入新任务..."
-          className="flex-1 px-3 py-2 lg:px-4 rounded-lg bg-surface border border-border text-sm text-text-primary outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(91,107,255,0.35)] placeholder-text-muted transition-colors duration-150"
+          className="w-full px-3 py-2 bg-transparent text-sm text-text-primary outline-none placeholder-text-muted border-b border-border"
         />
+        <div className="flex items-center flex-wrap gap-1.5 px-3 py-2">
+          {tags.map((tag) => (
+            <TagPill
+              key={tag}
+              tag={tag}
+              onRemove={() => setTags(tags.filter((t) => t !== tag))}
+            />
+          ))}
+          {editingTag ? (
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addTag(tagInput)
+                }
+                if (e.key === 'Escape') {
+                  e.stopPropagation()
+                  setTagInput('')
+                  setEditingTag(false)
+                  mainInputRef.current?.focus()
+                }
+              }}
+              onBlur={() => {
+                if (tagInput.trim()) addTag(tagInput)
+                else setEditingTag(false)
+              }}
+              autoFocus
+              placeholder="标签名"
+              className="w-16 bg-transparent text-xs text-text-primary outline-none placeholder:text-text-muted"
+            />
+          ) : tags.length < UI.TAG_LIMIT ? (
+            <button
+              type="button"
+              onClick={() => setEditingTag(true)}
+              className="text-xs text-text-muted hover:text-text-primary transition-colors"
+            >
+              + 标签
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <div className="flex gap-2">
         <Button
           type="submit"
           disabled={!text.trim()}
+          className="flex-1"
         >
           添加
         </Button>
@@ -66,9 +136,6 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
         >
           取消
         </Button>
-      </div>
-      <div className="pl-1">
-        <TagInput tags={tags} onChange={setTags} />
       </div>
     </form>
   )

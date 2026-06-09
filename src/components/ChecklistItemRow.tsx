@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
 import type { ChecklistItem, TabType } from '../types'
 import { cn } from '../utils/cn'
+import { UI } from '../utils/constants'
 import { usePendingDelete } from '../hooks/usePendingDelete'
 import { TagInput } from './TagInput'
 import { TagPill } from './TagPill'
@@ -70,7 +71,7 @@ function EditForm({ item, onSave, onCancel }: EditFormProps) {
           <X size={17} className="hidden lg:block" />
         </Button>
       </div>
-      <TagInput tags={tags} onChange={setTags} />
+      <TagInput tags={tags} onChange={setTags} limit={UI.TAG_LIMIT} />
     </div>
   )
 }

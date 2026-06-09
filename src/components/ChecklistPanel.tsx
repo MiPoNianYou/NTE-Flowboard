@@ -13,7 +13,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { ChecklistItem, TabType } from '../types'
 import { ChecklistItemRow } from './ChecklistItemRow'
-import { AddItemForm } from './AddItemForm'
+
 import { EmptyState } from './EmptyState'
 import { useSortedItems } from '../hooks/useSortedItems'
 import { useItemMotion } from '../hooks/useItemMotion'
@@ -30,7 +30,6 @@ interface ChecklistPanelProps {
   onDelete: (tab: TabType, order: number) => void
   onHide: (tab: TabType, order: number) => void
   onReorder: (tab: TabType, activeOrder: number, overOrder: number) => void
-  onAddItem: (tab: TabType, text: string, tags: string[]) => void
   confirmDelete: boolean
   customName?: string
 }
@@ -50,13 +49,12 @@ export function ChecklistPanel({
   onDelete,
   onHide,
   onReorder,
-  onAddItem,
   confirmDelete,
   customName,
 }: ChecklistPanelProps) {
   const { sortedItems, sortedItemIds } = useSortedItems(visibleItems, autoMoveCompleted)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const { exitingItems, handleDeleteStart, handleHideStart, getItemAnimation } = useItemMotion({
+  const { handleDeleteStart, handleHideStart, getItemAnimation } = useItemMotion({
     onDelete,
     onHide,
   })
@@ -197,7 +195,7 @@ export function ChecklistPanel({
           </div>
         </>
       ) : (
-        <motion.div layout="size" className="space-y-1 md:space-y-1.5 mb-4 md:mb-6">
+        <motion.div className="space-y-1 md:space-y-1.5">
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext items={sortedItemIds} strategy={verticalListSortingStrategy}>
               <AnimatePresence>
@@ -207,11 +205,9 @@ export function ChecklistPanel({
                     activeTab,
                     mode: 'normal',
                   })
-                  const isExiting = exitingItems.has(item.order)
                   return (
                     <motion.div
                       key={item.order}
-                      layout={autoMoveCompleted && !isExiting ? 'position' : false}
                       initial={anim.initial}
                       animate={anim.animate}
                       transition={anim.transition}
@@ -234,7 +230,6 @@ export function ChecklistPanel({
           </DndContext>
         </motion.div>
       )}
-      <AddItemForm tab={activeTab} onAdd={onAddItem} />
     </motion.div>
   )
 }

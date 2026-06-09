@@ -14,6 +14,7 @@ import { TabSwitch } from './components/TabSwitch'
 import { ProgressCard } from './components/ProgressCard'
 import { HiddenSection } from './components/HiddenSection'
 import { ChecklistPanel } from './components/ChecklistPanel'
+import { AddItemForm } from './components/AddItemForm'
 import { Header } from './components/Header'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OfflineIndicator } from './components/OfflineIndicator'
@@ -147,6 +148,7 @@ function App() {
               )}
             >
               <TabSwitch activeTab={activeTab} onTabChange={setActiveTab} customName={data.customName} />
+              <AddItemForm tab={activeTab} onAdd={addItem} />
               <ProgressCard
                 activeTab={activeTab}
                 completedCount={completedCount}
@@ -155,6 +157,13 @@ function App() {
                 nextResetLabel={nextResetLabel}
                 layout={layout}
                 customName={data.customName}
+              />
+              <HiddenSection
+                hiddenItems={hiddenItems}
+                activeTab={activeTab}
+                onShowItem={showItem}
+                onDelete={deleteItem}
+                confirmDelete={confirmDelete}
               />
               {activeTab === 'custom' && (
                 <div className="p-3 bg-surface rounded-xl border border-border space-y-3">
@@ -170,17 +179,17 @@ function App() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-text-muted">重置模式</span>
-                    <div className="flex h-8 w-40 items-center gap-0.5 p-0.5 bg-surface rounded-full border border-border">
+                    <div className="flex h-8 w-40 items-center gap-0.5 p-0.5 bg-surface rounded-lg border border-border">
                       {(['daily', 'weekly'] as const).map((mode) => (
                         <button
                           key={mode}
                           onClick={() => setCustomResetMode(mode)}
-                          className="flex-1 flex items-center justify-center py-1.5 rounded-full text-sm font-medium relative z-10 transition-colors duration-150"
+                          className="flex-1 flex items-center justify-center py-1.5 rounded-lg text-sm font-medium relative z-10 transition-colors duration-150"
                         >
                           {data.customResetMode === mode && (
                             <motion.div
                               layoutId="reset-mode-indicator"
-                              className="absolute inset-0 bg-elevated rounded-full border border-primary"
+                              className="absolute inset-0 bg-elevated rounded-lg border border-primary"
                               transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                             />
                           )}
@@ -196,13 +205,6 @@ function App() {
                   </div>
                 </div>
               )}
-              <HiddenSection
-                hiddenItems={hiddenItems}
-                activeTab={activeTab}
-                onShowItem={showItem}
-                onDelete={deleteItem}
-                confirmDelete={confirmDelete}
-              />
             </div>
             <div
               className={cn(
@@ -220,7 +222,6 @@ function App() {
                 onDelete={deleteItem}
                 onHide={hideItem}
                 onReorder={reorderItems}
-                onAddItem={addItem}
                 confirmDelete={confirmDelete}
                 customName={data.customName}
               />
