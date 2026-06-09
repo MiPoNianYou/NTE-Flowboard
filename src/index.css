@@ -36,23 +36,17 @@
   --color-danger: #FF3A5C;
   --color-danger-soft: rgba(255, 58, 92, 0.14);
 
-  /* Tag color palette — kept for tag pills */
-  --color-tag-blue: #5B6BFF;
-  --color-tag-purple: #9B6BFF;
-  --color-tag-amber: #F5D547;
-  --color-tag-red: #FF3A5C;
-  --color-tag-green: #2BE08C;
-  --color-tag-teal: #3DD7E5;
-  --color-tag-indigo: #5B6BFF;
-  --color-tag-pink: #FF6B9D;
-  --color-tag-orange: #FF9F43;
-  --color-tag-cyan: #3DD7E5;
-  --color-tag-rose: #FF3A5C;
-  --color-tag-lime: #2BE08C;
-  --color-tag-violet: #9B6BFF;
-  --color-tag-sky: #3DD7E5;
-  --color-tag-fuchsia: #FF6B9D;
-  --color-tag-emerald: #2BE08C;
+  /* Tag color palette — 10 unique colors */
+  --color-tag-1: #EF4444;
+  --color-tag-2: #F97316;
+  --color-tag-3: #EAB308;
+  --color-tag-4: #84CC16;
+  --color-tag-5: #22C55E;
+  --color-tag-6: #14B8A6;
+  --color-tag-7: #6366F1;
+  --color-tag-8: #3B82F6;
+  --color-tag-9: #A855F7;
+  --color-tag-10: #EC4899;
 
   /* Font size scale — Halo hierarchy */
   --text-xs: 0.75rem;      /* 12px - label-sm */

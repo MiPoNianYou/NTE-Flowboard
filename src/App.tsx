@@ -9,6 +9,7 @@ import { useSettings } from './hooks/useSettings'
 import { useItemAnimation } from './hooks/useItemAnimation'
 import { useNextResetLabel } from './hooks/useNextResetLabel'
 import { setStorageErrorHandler } from './utils/storage'
+import { cleanupRegistry } from './utils/tagColors'
 import { TabSwitch } from './components/TabSwitch'
 import { ProgressCard } from './components/ProgressCard'
 import { HiddenSection } from './components/HiddenSection'
@@ -55,6 +56,11 @@ function App() {
     setCustomResetMode,
     setCustomName,
   } = useChecklist()
+
+  useEffect(() => {
+    const allTags = [...data.daily, ...data.weekly, ...data.custom].flatMap(item => item.tags)
+    cleanupRegistry(allTags)
+  }, [data])
 
   const supabaseSync = useSupabaseSync({
     data,

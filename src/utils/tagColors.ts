@@ -1,36 +1,57 @@
+const STORAGE_KEY = 'tag-color-map'
+
 const TAG_COLORS: [text: string, bg: string][] = [
-  ['var(--color-primary)', 'var(--color-primary-soft)'],
-  ['var(--color-tag-purple)', 'rgba(155, 107, 255, 0.14)'],
-  ['var(--color-warning)', 'var(--color-warning-soft)'],
-  ['var(--color-danger)', 'var(--color-danger-soft)'],
-  ['var(--color-success)', 'var(--color-success-soft)'],
-  ['var(--color-info)', 'var(--color-info-soft)'],
-  ['var(--color-tag-indigo)', 'rgba(91, 107, 255, 0.14)'],
-  ['var(--color-tag-pink)', 'rgba(255, 107, 157, 0.14)'],
-  ['var(--color-tag-orange)', 'rgba(255, 159, 67, 0.14)'],
-  ['var(--color-tag-cyan)', 'rgba(61, 215, 229, 0.14)'],
-  ['var(--color-tag-rose)', 'rgba(255, 58, 92, 0.14)'],
-  ['var(--color-tag-lime)', 'rgba(43, 224, 140, 0.14)'],
-  ['var(--color-tag-violet)', 'rgba(155, 107, 255, 0.14)'],
-  ['var(--color-tag-sky)', 'rgba(61, 215, 229, 0.14)'],
-  ['var(--color-tag-fuchsia)', 'rgba(255, 107, 157, 0.14)'],
-  ['var(--color-tag-emerald)', 'rgba(43, 224, 140, 0.14)'],
+  ['var(--color-tag-1)', 'rgba(239, 68, 68, 0.14)'],
+  ['var(--color-tag-2)', 'rgba(249, 115, 22, 0.14)'],
+  ['var(--color-tag-3)', 'rgba(234, 179, 8, 0.14)'],
+  ['var(--color-tag-4)', 'rgba(132, 204, 22, 0.14)'],
+  ['var(--color-tag-5)', 'rgba(34, 197, 94, 0.14)'],
+  ['var(--color-tag-6)', 'rgba(20, 184, 166, 0.14)'],
+  ['var(--color-tag-7)', 'rgba(99, 102, 241, 0.14)'],
+  ['var(--color-tag-8)', 'rgba(59, 130, 246, 0.14)'],
+  ['var(--color-tag-9)', 'rgba(168, 85, 247, 0.14)'],
+  ['var(--color-tag-10)', 'rgba(236, 72, 153, 0.14)'],
 ]
 
-const tagColorMap = new Map<string, number>()
-let nextIndex = 0
-
-export function getTagColor(tag: string): string {
-  if (!tagColorMap.has(tag)) {
-    tagColorMap.set(tag, nextIndex % TAG_COLORS.length)
-    nextIndex++
-  }
-  const [text] = TAG_COLORS[tagColorMap.get(tag)!]
-  return text
+function loadMap(): Map<string, number> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return new Map(JSON.parse(raw))
+  } catch { /* corrupted data, start fresh */ }
+  return new Map()
 }
 
-export function getTagColors(tag: string): { bg: string; text: string } {
-  getTagColor(tag)
-  const [text, bg] = TAG_COLORS[tagColorMap.get(tag)!]
+function saveMap(map: Map<string, number>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...map]))
+  } catch { /* storage full or unavailable, silently ignore */ }
+}
+
+export function getTagColors(tag: string): { text: string; bg: string } {
+  const map = loadMap()
+  if (!map.has(tag)) {
+    const used = new Set(map.values())
+    let idx = -1
+    for (let i = 0; i < TAG_COLORS.length; i++) {
+      if (!used.has(i)) { idx = i; break }
+    }
+    if (idx === -1) idx = map.size % TAG_COLORS.length
+    map.set(tag, idx)
+    saveMap(map)
+  }
+  const [text, bg] = TAG_COLORS[map.get(tag)! % TAG_COLORS.length]
   return { text, bg }
+}
+
+export function cleanupRegistry(activeTags: string[]) {
+  const map = loadMap()
+  const used = new Set(activeTags)
+  let changed = false
+  for (const tag of map.keys()) {
+    if (!used.has(tag)) {
+      map.delete(tag)
+      changed = true
+    }
+  }
+  if (changed) saveMap(map)
 }

@@ -490,7 +490,7 @@ function applyReset(data: ChecklistData): ChecklistData {
 
 | 优先级 | 问题编号 | 简述 |
 |:------:|:--------:|:-----|
-| **高** | 1 | tagColors 颜色不稳定 |
+| **高** | 1 | tagColors 颜色不稳定 | Done
 | **高** | 2 | useItemAnimation 渲染期修改 ref |
 | **高** | 5 | App.tsx 内联 40 行自定义清单设置 JSX |
 | **高** | 18 | UI 组件零测试覆盖 |
