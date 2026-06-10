@@ -43,6 +43,8 @@ interface SettingsContentProps {
   onResetConfigChange: (config: ResetConfig) => void
   cloudSyncBehavior: boolean
   onCloudSyncBehaviorChange: (value: boolean) => void
+  showCustomTab: boolean
+  onShowCustomTabChange: (value: boolean) => void
 }
 
 const NAV_ITEMS: {
@@ -104,6 +106,8 @@ export function SettingsContent({
   onResetConfigChange,
   cloudSyncBehavior,
   onCloudSyncBehaviorChange,
+  showCustomTab,
+  onShowCustomTabChange,
 }: SettingsContentProps) {
   const [activeTab, setActiveTab] = useState<SubPage | null>(null)
   const hasOverlay = !!(confirmTarget || cloudSyncProps?.showDisconnectConfirm)
@@ -129,6 +133,8 @@ export function SettingsContent({
             onAutoMoveCompletedChange={onAutoMoveCompletedChange}
             confirmDelete={confirmDelete}
             onConfirmDeleteChange={onConfirmDeleteChange}
+            showCustomTab={showCustomTab}
+            onShowCustomTabChange={onShowCustomTabChange}
             embedded
           />
         )
@@ -175,6 +181,8 @@ export function SettingsContent({
     cloudSyncProps,
     cloudSyncBehavior,
     onCloudSyncBehaviorChange,
+    showCustomTab,
+    onShowCustomTabChange,
     onConfirmTarget,
     onExport,
     onImportFile,

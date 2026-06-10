@@ -1,17 +1,20 @@
+import { colord, extend } from 'colord'
+import a11yPlugin from 'colord/plugins/a11y'
+import { TAG_HEX } from './colors'
+
+extend([a11yPlugin])
+
 const STORAGE_KEY = 'tag-color-map'
 
-const TAG_COLORS: [text: string, bg: string][] = [
-  ['var(--color-tag-1)', 'rgba(239, 68, 68, 0.14)'],
-  ['var(--color-tag-2)', 'rgba(249, 115, 22, 0.14)'],
-  ['var(--color-tag-3)', 'rgba(234, 179, 8, 0.14)'],
-  ['var(--color-tag-4)', 'rgba(132, 204, 22, 0.14)'],
-  ['var(--color-tag-5)', 'rgba(34, 197, 94, 0.14)'],
-  ['var(--color-tag-6)', 'rgba(20, 184, 166, 0.14)'],
-  ['var(--color-tag-7)', 'rgba(99, 102, 241, 0.14)'],
-  ['var(--color-tag-8)', 'rgba(59, 130, 246, 0.14)'],
-  ['var(--color-tag-9)', 'rgba(168, 85, 247, 0.14)'],
-  ['var(--color-tag-10)', 'rgba(236, 72, 153, 0.14)'],
-]
+function getOptimalAlpha(hex: string): number {
+  const luminance = colord(hex).luminance()
+  return 0.12 + luminance * 0.15
+}
+
+const TAG_COLORS: [text: string, bg: string][] = TAG_HEX.map((hex) => {
+  const bg = colord(hex).alpha(getOptimalAlpha(hex)).toHex()
+  return [hex, bg]
+})
 
 function loadMap(): Map<string, number> {
   try {

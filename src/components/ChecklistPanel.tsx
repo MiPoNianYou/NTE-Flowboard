@@ -24,6 +24,7 @@ interface ChecklistPanelProps {
   visibleItems: ChecklistItem[]
   activeTab: TabType
   autoMoveCompleted: boolean
+  isLayoutTransitioning: boolean
   newItemOrders: Set<number>
   onToggle: (tab: TabType, order: number) => void
   onEdit: (tab: TabType, order: number, text: string, tags: string[]) => void
@@ -43,6 +44,7 @@ export function ChecklistPanel({
   visibleItems,
   activeTab,
   autoMoveCompleted,
+  isLayoutTransitioning,
   newItemOrders,
   onToggle,
   onEdit,
@@ -208,6 +210,7 @@ export function ChecklistPanel({
                   return (
                     <motion.div
                       key={item.order}
+                      layoutId={isLayoutTransitioning ? undefined : `item-${item.order}`}
                       initial={anim.initial}
                       animate={anim.animate}
                       transition={anim.transition}

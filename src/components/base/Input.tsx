@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={cn(
               'w-full rounded-lg bg-surface border border-border outline-none text-text-primary placeholder-text-muted transition-colors duration-150',
-              'focus:border-primary focus:shadow-[0_0_0_3px_rgba(91,107,255,0.35)]',
+              'focus:border-primary focus:shadow-[0_0_0_3px_var(--focus-ring)]',
               sizeStyles[inputSize],
               icon && 'pr-10',
               error && 'border-danger focus:border-danger focus:shadow-[0_0_0_3px_rgba(255,58,92,0.35)]',

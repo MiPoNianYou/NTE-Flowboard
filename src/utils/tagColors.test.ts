@@ -24,8 +24,8 @@ describe('getTagColors', () => {
 
   it('should return valid color strings', () => {
     const { text, bg } = getTagColors('any-tag')
-    expect(text).toMatch(/^var\(--color-tag-\d+\)$/)
-    expect(bg).toMatch(/^rgba\(\d+, \d+, \d+, 0\.14\)$/)
+    expect(text).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    expect(bg).toMatch(/^#[0-9A-Fa-f]{8}$/)
   })
 
   it('should assign unique colors to different tags', () => {

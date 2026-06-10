@@ -160,6 +160,7 @@ const defaultDailyItems: ChecklistItem[] = [
   { text: '赠送角色礼物', completed: false, hidden: false, order: 5, tags: ['羁遇'] },
   { text: '角色都市偕游', completed: false, hidden: false, order: 6, tags: ['羁遇'] },
   { text: '消耗本性像素', completed: false, hidden: false, order: 7, tags: ['材料'] },
+  { text: '领取家具产出', completed: false, hidden: false, order: 8, tags: ['材料'] },
 ]
 
 const defaultWeeklyItems: ChecklistItem[] = [
@@ -342,6 +343,7 @@ export function importData(json: string): ImportResult | null {
         settings = {
           autoMoveCompleted: s.autoMoveCompleted,
           confirmDelete: s.confirmDelete,
+          showCustomTab: typeof s.showCustomTab === 'boolean' ? s.showCustomTab : true,
         }
       }
     }

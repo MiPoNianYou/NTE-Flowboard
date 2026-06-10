@@ -19,6 +19,7 @@ export interface ResetConfig {
 export interface BehaviorSettings {
   autoMoveCompleted: boolean
   confirmDelete: boolean
+  showCustomTab: boolean
 }
 
 export interface ChecklistData {
@@ -59,4 +60,6 @@ export interface SettingsProps {
   onConfirmDeleteChange: (newVal: boolean) => void
   cloudSyncBehavior: boolean
   onCloudSyncBehaviorChange: (value: boolean) => void
+  showCustomTab: boolean
+  onShowCustomTabChange: (value: boolean) => void
 }

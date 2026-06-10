@@ -25,28 +25,16 @@
   --color-primary: #5B6BFF;
   --color-primary-hover: #7886FF;
   --color-primary-pressed: #4A59E6;
-  --color-primary-soft: rgba(91, 107, 255, 0.12);
+  --color-primary-soft: transparent; /* injected by colors.ts */
 
   --color-success: #2BE08C;
-  --color-success-soft: rgba(43, 224, 140, 0.12);
+  --color-success-soft: transparent;
   --color-warning: #F5D547;
-  --color-warning-soft: rgba(245, 213, 71, 0.14);
+  --color-warning-soft: transparent;
   --color-info: #3DD7E5;
-  --color-info-soft: rgba(61, 215, 229, 0.14);
+  --color-info-soft: transparent;
   --color-danger: #FF3A5C;
-  --color-danger-soft: rgba(255, 58, 92, 0.14);
-
-  /* Tag color palette — 10 unique colors */
-  --color-tag-1: #EF4444;
-  --color-tag-2: #F97316;
-  --color-tag-3: #EAB308;
-  --color-tag-4: #84CC16;
-  --color-tag-5: #22C55E;
-  --color-tag-6: #14B8A6;
-  --color-tag-7: #6366F1;
-  --color-tag-8: #3B82F6;
-  --color-tag-9: #A855F7;
-  --color-tag-10: #EC4899;
+  --color-danger-soft: transparent;
 
   /* Font size scale — Halo hierarchy */
   --text-xs: 0.75rem;      /* 12px - label-sm */

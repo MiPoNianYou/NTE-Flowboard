@@ -10,6 +10,7 @@ dist/
 *.swp
 *.swo
 *~
+opencode.json
 
 # OS
 .DS_Store

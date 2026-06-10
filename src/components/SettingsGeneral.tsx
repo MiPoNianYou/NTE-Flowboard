@@ -7,6 +7,8 @@ interface SettingsGeneralProps {
   onAutoMoveCompletedChange: (newVal: boolean) => void
   confirmDelete: boolean
   onConfirmDeleteChange: (newVal: boolean) => void
+  showCustomTab: boolean
+  onShowCustomTabChange: (value: boolean) => void
   onBack?: () => void
   embedded?: boolean
 }
@@ -16,6 +18,8 @@ export function SettingsGeneral({
   onAutoMoveCompletedChange,
   confirmDelete,
   onConfirmDeleteChange,
+  showCustomTab,
+  onShowCustomTabChange,
   onBack,
   embedded,
 }: SettingsGeneralProps) {
@@ -35,6 +39,19 @@ export function SettingsGeneral({
             <SettingRow
               label="删除前二次确认"
               trailing={<ToggleSwitch checked={confirmDelete} onCheckedChange={onConfirmDeleteChange} />}
+            />
+          </div>
+        </div>
+
+        {/* 显示设置 */}
+        <div className="bg-surface rounded-lg border border-border p-4">
+          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3 px-1">
+            显示
+          </p>
+          <div className="space-y-3">
+            <SettingRow
+              label="显示自定义清单"
+              trailing={<ToggleSwitch checked={showCustomTab} onCheckedChange={onShowCustomTabChange} />}
             />
           </div>
         </div>

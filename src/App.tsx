@@ -1,5 +1,4 @@
 import { useMemo, useEffect, useCallback } from 'react'
-import { motion } from 'motion/react'
 import { cn } from './utils/cn'
 import { useChecklist } from './hooks/useChecklist'
 import { useSupabaseSync } from './hooks/useSupabaseSync'
@@ -10,19 +9,20 @@ import { useItemAnimation } from './hooks/useItemAnimation'
 import { useNextResetLabel } from './hooks/useNextResetLabel'
 import { setStorageErrorHandler } from './utils/storage'
 import { cleanupRegistry } from './utils/tagColors'
+import { injectColorTokens, pageGradient } from './utils/colors'
 import { TabSwitch } from './components/TabSwitch'
 import { ProgressCard } from './components/ProgressCard'
 import { HiddenSection } from './components/HiddenSection'
 import { ChecklistPanel } from './components/ChecklistPanel'
 import { AddItemForm } from './components/AddItemForm'
+import { CustomSettings } from './components/CustomSettings'
 import { Header } from './components/Header'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { StorageToast, showStorageToast } from './components/StorageToast'
 
 function App() {
-  const { activeTab, setActiveTab } = useTabManagement()
-  const { layout, toggleLayout } = useLayoutManagement()
+  const { layout, toggleLayout, isLayoutTransitioning } = useLayoutManagement()
 
   useEffect(() => {
     setStorageErrorHandler((error, context) => {
@@ -31,16 +31,33 @@ function App() {
     return () => setStorageErrorHandler(null)
   }, [])
 
+  useEffect(() => {
+    injectColorTokens()
+  }, [])
+
   const {
     autoMoveCompleted, onAutoMoveCompletedChange,
     confirmDelete, onConfirmDeleteChange,
     cloudSyncBehavior, onCloudSyncBehaviorChange,
+    showCustomTab, onShowCustomTabChange,
   } = useSettings()
 
-  const handleSettingsImport = useCallback((settings: { autoMoveCompleted: boolean; confirmDelete: boolean }) => {
+  const { setActiveTab, effectiveActiveTab, setPreviousTab } = useTabManagement(showCustomTab)
+
+  const handleSettingsImport = useCallback((settings: { autoMoveCompleted: boolean; confirmDelete: boolean; showCustomTab?: boolean }) => {
     onAutoMoveCompletedChange(settings.autoMoveCompleted)
     onConfirmDeleteChange(settings.confirmDelete)
-  }, [onAutoMoveCompletedChange, onConfirmDeleteChange])
+    if (settings.showCustomTab !== undefined) {
+      onShowCustomTabChange(settings.showCustomTab)
+    }
+  }, [onAutoMoveCompletedChange, onConfirmDeleteChange, onShowCustomTabChange])
+
+  // 切换到自定义清单时，记住当前 tab
+  useEffect(() => {
+    if (effectiveActiveTab === 'daily' || effectiveActiveTab === 'weekly') {
+      setPreviousTab(effectiveActiveTab)
+    }
+  }, [effectiveActiveTab, setPreviousTab])
 
   const {
     data,
@@ -68,10 +85,10 @@ function App() {
     onDataImport: importFullData,
     onSettingsImport: handleSettingsImport,
     includeSettings: cloudSyncBehavior,
-    settings: { autoMoveCompleted, confirmDelete },
+    settings: { autoMoveCompleted, confirmDelete, showCustomTab },
   })
 
-  const currentItems = useMemo(() => data[activeTab], [data, activeTab])
+  const currentItems = useMemo(() => data[effectiveActiveTab], [data, effectiveActiveTab])
   const visibleItems = useMemo(() => currentItems.filter((i) => !i.hidden), [currentItems])
   const hiddenItems = useMemo(() => currentItems.filter((i) => i.hidden), [currentItems])
   const { completedCount, totalCount, allDone } = useMemo(() => {
@@ -87,7 +104,7 @@ function App() {
   const { newItemOrders } = useItemAnimation(visibleItems)
 
   const nextResetLabel = useNextResetLabel({
-    activeTab,
+    activeTab: effectiveActiveTab,
     resetConfig: data.resetConfig,
     customResetMode: data.customResetMode,
   })
@@ -96,12 +113,7 @@ function App() {
     <ErrorBoundary>
         <div className="relative min-h-screen flex flex-col transition-colors duration-150"
           style={{
-            background: `
-              radial-gradient(900px 600px at 88% 12%, rgba(91, 107, 255, 0.22), transparent 60%),
-              radial-gradient(700px 500px at 6% 92%, rgba(61, 215, 229, 0.10), transparent 60%),
-              radial-gradient(500px 400px at 60% 80%, rgba(255, 58, 92, 0.05), transparent 60%),
-              linear-gradient(180deg, #0A0B0F 0%, #06070A 100%)
-            `,
+            background: pageGradient(),
           }}
         >
         <OfflineIndicator />
@@ -122,6 +134,8 @@ function App() {
               onConfirmDeleteChange,
               cloudSyncBehavior,
               onCloudSyncBehaviorChange,
+              showCustomTab,
+              onShowCustomTabChange,
             }}
             cloudSyncProps={{
               syncStatus: supabaseSync.syncStatus,
@@ -147,10 +161,10 @@ function App() {
                 layout === 'two-column' && 'md:w-[260px] lg:w-[300px]',
               )}
             >
-              <TabSwitch activeTab={activeTab} onTabChange={setActiveTab} customName={data.customName} />
-              <AddItemForm tab={activeTab} onAdd={addItem} />
+              <TabSwitch activeTab={effectiveActiveTab} onTabChange={setActiveTab} customName={data.customName} showCustomTab={showCustomTab} />
+              <AddItemForm tab={effectiveActiveTab} onAdd={addItem} />
               <ProgressCard
-                activeTab={activeTab}
+                activeTab={effectiveActiveTab}
                 completedCount={completedCount}
                 totalCount={totalCount}
                 allDone={allDone}
@@ -160,50 +174,19 @@ function App() {
               />
               <HiddenSection
                 hiddenItems={hiddenItems}
-                activeTab={activeTab}
+                activeTab={effectiveActiveTab}
                 onShowItem={showItem}
                 onDelete={deleteItem}
                 confirmDelete={confirmDelete}
               />
-              {activeTab === 'custom' && (
-                <div className="p-3 bg-surface rounded-xl border border-border space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-text-muted">清单名称</span>
-                    <input
-                      type="text"
-                      value={data.customName ?? ''}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      placeholder="自定义清单"
-                      className="h-8 w-40 text-right text-sm bg-surface border border-border rounded-lg px-3 py-1.5 text-text-primary placeholder:text-text-muted outline-none focus:border-primary transition-colors duration-150"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-text-muted">重置模式</span>
-                    <div className="flex h-8 w-40 items-center gap-0.5 p-0.5 bg-surface rounded-lg border border-border">
-                      {(['daily', 'weekly'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => setCustomResetMode(mode)}
-                          className="flex-1 flex items-center justify-center py-1.5 rounded-lg text-sm font-medium relative z-10 transition-colors duration-150"
-                        >
-                          {data.customResetMode === mode && (
-                            <motion.div
-                              layoutId="reset-mode-indicator"
-                              className="absolute inset-0 bg-elevated rounded-lg border border-primary"
-                              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                            />
-                          )}
-                          <span className={cn(
-                            'relative z-10',
-                            data.customResetMode === mode ? 'text-text-primary' : 'text-text-secondary',
-                          )}>
-                            {mode === 'daily' ? '每日' : '每周'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {effectiveActiveTab === 'custom' && (
+                <CustomSettings
+                  customName={data.customName}
+                  onCustomNameChange={setCustomName}
+                  customResetMode={data.customResetMode}
+                  onCustomResetModeChange={setCustomResetMode}
+                  isLayoutTransitioning={isLayoutTransitioning}
+                />
               )}
             </div>
             <div
@@ -214,8 +197,9 @@ function App() {
             >
               <ChecklistPanel
                 visibleItems={visibleItems}
-                activeTab={activeTab}
+                activeTab={effectiveActiveTab}
                 autoMoveCompleted={autoMoveCompleted}
+                isLayoutTransitioning={isLayoutTransitioning}
                 newItemOrders={newItemOrders}
                 onToggle={toggleItem}
                 onEdit={editItem}

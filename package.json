@@ -1,7 +1,7 @@
 {
   "name": "nte-flowboard",
   "private": true,
-  "version": "1.8.3",
+  "version": "1.8.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,6 +21,7 @@
     "@supabase/supabase-js": "^2.107.0",
     "@tanstack/react-virtual": "^3.13.26",
     "clsx": "2.1.1",
+    "colord": "^2.9.3",
     "lucide-react": "^1.16.0",
     "motion": "^12.40.0",
     "react": "19.2.6",

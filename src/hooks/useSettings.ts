@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react'
 import { useAutoMoveCompleted } from './useAutoMoveCompleted'
 import { useConfirmDelete } from './useConfirmDelete'
+import { useShowCustomTab } from './useShowCustomTab'
 
 export function useSettings() {
   const { autoMoveCompleted, onAutoMoveCompletedChange } = useAutoMoveCompleted()
   const { confirmDelete, onConfirmDeleteChange } = useConfirmDelete()
+  const { showCustomTab, onShowCustomTabChange } = useShowCustomTab()
 
   const [cloudSyncBehavior, setCloudSyncBehavior] = useState(() => {
     return localStorage.getItem('nte-cloud-sync-behavior') !== 'false'
@@ -22,5 +24,7 @@ export function useSettings() {
     onConfirmDeleteChange,
     cloudSyncBehavior,
     onCloudSyncBehaviorChange,
+    showCustomTab,
+    onShowCustomTabChange,
   }
 }

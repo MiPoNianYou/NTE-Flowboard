@@ -93,9 +93,11 @@ export function SettingsData({
             <StatusMessage tone="success" mode="banner">数据导入成功！</StatusMessage>
           )}
 
+          <div className="h-2" />
+
           <StatusMessage tone="info" mode="callout" icon={<Info className="size-4" />}>
-            <p>导出的 JSON 文件包含你的清单数据和服务器设置</p>
-            <p>导入时会覆盖当前数据</p>
+            <p>导出的 JSON 文件包含你的所有数据</p>
+            <p>导入时会完全覆盖当前数据</p>
           </StatusMessage>
         </div>
       </div>

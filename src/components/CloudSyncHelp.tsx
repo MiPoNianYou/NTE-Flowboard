@@ -70,6 +70,7 @@ export function CloudSyncHelp() {
       icon={<HelpCircle className="size-4 text-text-muted" />}
       label="如何获取配置信息"
       variant="elevated"
+      className="bg-surface"
     >
       <div className="px-4 pb-4 text-[13px] text-text-secondary leading-relaxed space-y-3">
           <div>

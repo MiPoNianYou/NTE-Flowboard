@@ -10,6 +10,7 @@ interface CollapsibleSectionProps {
   count?: number
   defaultOpen?: boolean
   variant?: 'surface' | 'elevated'
+  className?: string
   children: ReactNode
 }
 
@@ -19,12 +20,13 @@ export function CollapsibleSection({
   count,
   defaultOpen = false,
   variant = 'surface',
+  className,
   children,
 }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <Card variant={variant} className="overflow-hidden">
+    <Card variant={variant} className={cn('overflow-hidden', className)}>
       <Button
         variant="tertiary"
         onClick={() => setOpen((v) => !v)}
@@ -46,7 +48,9 @@ export function CollapsibleSection({
         open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
       )}>
         <div className="overflow-hidden">
-          {children}
+          <div className="pt-1">
+            {children}
+          </div>
         </div>
       </div>
     </Card>

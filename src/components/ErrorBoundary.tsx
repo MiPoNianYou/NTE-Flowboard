@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { CARD_STYLES } from '../utils/styles'
+import { pageGradient } from '../utils/colors'
 import { Button } from './base/Button'
 import NanallyError from '../assets/Nanally Error.png'
 
@@ -30,12 +31,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center" style={{
-            background: `
-              radial-gradient(900px 600px at 88% 12%, rgba(91, 107, 255, 0.22), transparent 60%),
-              radial-gradient(700px 500px at 6% 92%, rgba(61, 215, 229, 0.10), transparent 60%),
-              radial-gradient(500px 400px at 60% 80%, rgba(255, 58, 92, 0.05), transparent 60%),
-              linear-gradient(180deg, #0A0B0F 0%, #06070A 100%)
-            `,
+            background: pageGradient(),
           }}>
           <div className={`text-center max-w-md ${CARD_STYLES.panel} p-6`}>
             <div className="flex justify-center mb-2">

@@ -28,6 +28,7 @@ export function SettingsPanel({
     autoMoveCompleted, onAutoMoveCompletedChange,
     confirmDelete, onConfirmDeleteChange,
     cloudSyncBehavior, onCloudSyncBehaviorChange,
+    showCustomTab, onShowCustomTabChange,
   } = settings
   const [open, setOpen] = useState(false)
   const [importError, setImportError] = useState('')
@@ -86,7 +87,7 @@ export function SettingsPanel({
   }, [confirmTarget, onManualReset])
 
   const handleExport = useCallback(() => {
-    const settings = { autoMoveCompleted, confirmDelete }
+    const settings = { autoMoveCompleted, confirmDelete, showCustomTab }
     const json = exportData(data, true, settings)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -97,7 +98,7 @@ export function SettingsPanel({
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }, [data, autoMoveCompleted, confirmDelete])
+  }, [data, autoMoveCompleted, confirmDelete, showCustomTab])
 
   const handleImportFile = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -177,7 +178,9 @@ export function SettingsPanel({
     onResetConfigChange,
     cloudSyncBehavior,
     onCloudSyncBehaviorChange,
-  }), [autoMoveCompleted, onAutoMoveCompletedChange, confirmDelete, onConfirmDeleteChange, data.resetConfig, onResetConfigChange, cloudSyncBehavior, onCloudSyncBehaviorChange])
+    showCustomTab,
+    onShowCustomTabChange,
+  }), [autoMoveCompleted, onAutoMoveCompletedChange, confirmDelete, onConfirmDeleteChange, data.resetConfig, onResetConfigChange, cloudSyncBehavior, onCloudSyncBehaviorChange, showCustomTab, onShowCustomTabChange])
 
   const cloudSyncContentProps = useMemo(() => ({
     cloudSyncProps,
