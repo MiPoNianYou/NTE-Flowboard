@@ -110,7 +110,7 @@ export const CloudSyncSection = memo(function CloudSyncSection({
     }
   })()
 
-  // --- Not configured ---
+  // --- 未配置 ---
   if (!isConfigured) {
     return (
       <div className="space-y-3">
@@ -169,7 +169,7 @@ export const CloudSyncSection = memo(function CloudSyncSection({
     )
   }
 
-  // --- Connected ---
+  // --- 已连接 ---
   return (
     <div>
       <div className={CARD_STYLES.sectionSpaced}>

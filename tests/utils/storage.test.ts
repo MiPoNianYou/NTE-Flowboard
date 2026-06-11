@@ -6,6 +6,7 @@ import {
   getServerDate,
   shouldResetDaily,
   shouldResetWeekly,
+  shouldResetCustom,
   resetItems,
   isChecklistData,
   loadData,
@@ -14,8 +15,10 @@ import {
   exportData,
   importData,
   SERVER_REGIONS,
-} from './storage'
-import type { ChecklistData, ChecklistItem } from '../types'
+  mergeChecklistData,
+  toOrderedData,
+} from '../../src/utils/storage'
+import type { ChecklistData, ChecklistItem } from '../../src/types'
 
 // --- DST Tests ---
 
@@ -77,7 +80,7 @@ describe('isEUDST', () => {
   })
 
   // 2025 EU DST: Mar 30 - Oct 26
-  it('should handle 2025 DST boundaries', () => {
+  it('should handle 2025 EU DST boundaries', () => {
     expect(isEUDST(new Date(Date.UTC(2025, 2, 29, 12)))).toBe(false)
     expect(isEUDST(new Date(Date.UTC(2025, 2, 30, 12)))).toBe(true)
     expect(isEUDST(new Date(Date.UTC(2025, 9, 25, 12)))).toBe(true)
@@ -187,6 +190,42 @@ describe('shouldResetWeekly', () => {
       lastWeeklyReset: twoWeeksAgo.toISOString(),
     })
     expect(shouldResetWeekly(data)).toBe(true)
+  })
+})
+
+describe('shouldResetCustom', () => {
+  it('should return false when last custom reset is recent', () => {
+    const data = makeChecklistData({
+      lastCustomReset: new Date().toISOString(),
+    })
+    expect(shouldResetCustom(data)).toBe(false)
+  })
+
+  it('should return true when last custom reset was before today', () => {
+    const twoDaysAgo = new Date()
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+    const data = makeChecklistData({
+      lastCustomReset: twoDaysAgo.toISOString(),
+      customResetMode: 'daily',
+    })
+    expect(shouldResetCustom(data)).toBe(true)
+  })
+
+  it('should return false when last custom reset is missing (default no-reset)', () => {
+    const data = makeChecklistData({
+      lastCustomReset: undefined,
+    })
+    expect(shouldResetCustom(data)).toBe(false)
+  })
+
+  it('should respect weekly customResetMode', () => {
+    const twoWeeksAgo = new Date()
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+    const data = makeChecklistData({
+      lastCustomReset: twoWeeksAgo.toISOString(),
+      customResetMode: 'weekly',
+    })
+    expect(shouldResetCustom(data)).toBe(true)
   })
 })
 
@@ -405,5 +444,154 @@ describe('SERVER_REGIONS', () => {
       expect(typeof region.label).toBe('string')
       expect(typeof region.description).toBe('string')
     }
+  })
+})
+
+// --- mergeChecklistData Tests ---
+
+describe('mergeChecklistData', () => {
+  it('should normalize orders in daily/weekly/custom', () => {
+    const data = makeChecklistData({
+      daily: [
+        { text: 'A', completed: false, hidden: false, order: 5, tags: [] },
+        { text: 'B', completed: false, hidden: false, order: 10, tags: [] },
+      ],
+    })
+    const merged = mergeChecklistData(data)
+    expect(merged.daily[0].order).toBe(1)
+    expect(merged.daily[1].order).toBe(2)
+  })
+
+  it('should default missing weekly/custom to empty arrays', () => {
+    const data = {
+      daily: [],
+      weekly: [],
+      custom: [],
+      resetConfig: { serverRegion: 'asia' },
+      lastDailyReset: new Date().toISOString(),
+      lastWeeklyReset: new Date().toISOString(),
+    } as ChecklistData
+    const merged = mergeChecklistData(data)
+    expect(merged.weekly).toEqual([])
+    expect(merged.custom).toEqual([])
+  })
+
+  it('should default customResetMode to daily for invalid values', () => {
+    const data = makeChecklistData({ customResetMode: 'none' as never })
+    const merged = mergeChecklistData(data)
+    expect(merged.customResetMode).toBe('daily')
+  })
+})
+
+// --- toOrderedData Tests ---
+
+describe('toOrderedData', () => {
+  it('should produce object with correct field order', () => {
+    const data = makeChecklistData()
+    const ordered = toOrderedData(data)
+    const keys = Object.keys(ordered)
+    expect(keys[0]).toBe('daily')
+    expect(keys[1]).toBe('weekly')
+    expect(keys[2]).toBe('custom')
+  })
+
+  it('should include settings when provided', () => {
+    const data = makeChecklistData()
+    const settings = { autoMoveCompleted: true, confirmDelete: false, showCustomTab: true }
+    const ordered = toOrderedData(data, settings)
+    expect(ordered.settings).toEqual(settings)
+  })
+
+  it('should not include settings when not provided', () => {
+    const data = makeChecklistData()
+    const ordered = toOrderedData(data)
+    expect(ordered.settings).toBeUndefined()
+  })
+})
+
+// --- exportData with settings ---
+
+describe('exportData with settings', () => {
+  it('should include settings when includeSettings is true', () => {
+    const data = makeChecklistData()
+    const settings = { autoMoveCompleted: true, confirmDelete: false, showCustomTab: true }
+    const json = exportData(data, true, settings)
+    const parsed = JSON.parse(json)
+    expect(parsed.settings).toEqual(settings)
+  })
+
+  it('should not include settings when includeSettings is false', () => {
+    const data = makeChecklistData()
+    const settings = { autoMoveCompleted: true, confirmDelete: false, showCustomTab: true }
+    const json = exportData(data, false, settings)
+    const parsed = JSON.parse(json)
+    expect(parsed.settings).toBeUndefined()
+  })
+})
+
+// --- importData backward compatibility ---
+
+describe('importData backward compatibility', () => {
+  it('should fill missing lastDailyReset with current date', () => {
+    const data = {
+      daily: [{ text: 'A', completed: false, hidden: false, order: 1, tags: [] }],
+      weekly: [],
+      resetConfig: { serverRegion: 'asia' },
+      lastWeeklyReset: new Date().toISOString(),
+    }
+    const result = importData(JSON.stringify(data))
+    expect(result).not.toBeNull()
+    expect(result!.data.lastDailyReset).toBeTruthy()
+  })
+
+  it('should fill missing lastWeeklyReset with current date', () => {
+    const data = {
+      daily: [{ text: 'A', completed: false, hidden: false, order: 1, tags: [] }],
+      weekly: [],
+      resetConfig: { serverRegion: 'asia' },
+      lastDailyReset: new Date().toISOString(),
+    }
+    const result = importData(JSON.stringify(data))
+    expect(result).not.toBeNull()
+    expect(result!.data.lastWeeklyReset).toBeTruthy()
+  })
+
+  it('should fill missing custom with empty array', () => {
+    const data = {
+      daily: [{ text: 'A', completed: false, hidden: false, order: 1, tags: [] }],
+      weekly: [],
+      resetConfig: { serverRegion: 'asia' },
+      lastDailyReset: new Date().toISOString(),
+      lastWeeklyReset: new Date().toISOString(),
+    }
+    const result = importData(JSON.stringify(data))
+    expect(result).not.toBeNull()
+    expect(result!.data.custom).toEqual([])
+  })
+
+  it('should extract settings from imported data', () => {
+    const data = {
+      daily: [],
+      weekly: [],
+      resetConfig: { serverRegion: 'asia' },
+      lastDailyReset: new Date().toISOString(),
+      lastWeeklyReset: new Date().toISOString(),
+      settings: { autoMoveCompleted: false, confirmDelete: true, showCustomTab: true },
+    }
+    const result = importData(JSON.stringify(data))
+    expect(result).not.toBeNull()
+    expect(result!.settings).toEqual({ autoMoveCompleted: false, confirmDelete: true, showCustomTab: true })
+  })
+})
+
+// --- shouldResetCustom edge cases ---
+
+describe('shouldResetCustom edge cases', () => {
+  it('should return false for non-daily/non-weekly customResetMode', () => {
+    const data = makeChecklistData({
+      lastCustomReset: new Date(Date.now() - 86400000).toISOString(),
+      customResetMode: 'none' as never,
+    })
+    expect(shouldResetCustom(data)).toBe(false)
   })
 })

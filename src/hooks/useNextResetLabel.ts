@@ -41,7 +41,7 @@ export function useNextResetLabel({ activeTab, resetConfig, customResetMode }: U
       target.setHours(resetHour, 0, 0, 0)
       if (nowDate >= target) target.setDate(target.getDate() + 1)
     } else if (activeTab === 'weekly') {
-      const resetDay = 1 // Monday
+      const resetDay = 1 // 周一
       const currentDay = nowDate.getDay()
       const daysUntilReset = (resetDay - currentDay + 7) % 7
       target = new Date(nowDate)
@@ -51,9 +51,9 @@ export function useNextResetLabel({ activeTab, resetConfig, customResetMode }: U
         target.setDate(target.getDate() + 7)
       }
     } else {
-      // custom tab — follows customResetMode (daily or weekly)
+      // 自定义标签页 — 跟随 customResetMode（每日或每周）
       if (customResetMode === 'weekly') {
-        const resetDay = 1 // Monday
+        const resetDay = 1 // 周一
         const currentDay = nowDate.getDay()
         const daysUntilReset = (resetDay - currentDay + 7) % 7
         target = new Date(nowDate)
@@ -61,7 +61,7 @@ export function useNextResetLabel({ activeTab, resetConfig, customResetMode }: U
         target.setHours(resetHour, 0, 0, 0)
         if (nowDate >= target) target.setDate(target.getDate() + 7)
       } else {
-        // daily (default)
+        // 每日（默认）
         target = new Date(nowDate)
         target.setHours(resetHour, 0, 0, 0)
         if (nowDate >= target) target.setDate(target.getDate() + 1)

@@ -1,14 +1,14 @@
-import { useState, useRef, useEffect, useCallback, useMemo, memo, type CSSProperties, type MouseEvent, type KeyboardEvent } from 'react'
-import { Check, Pencil, Trash2, X, Save, ChevronRight, GripVertical, EyeOff } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo, type CSSProperties, type MouseEvent } from 'react'
+import { Check, ChevronRight, GripVertical } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
-import type { ChecklistItem, TabType } from '../types'
-import { cn } from '../utils/cn'
-import { UI } from '../utils/constants'
-import { usePendingDelete } from '../hooks/usePendingDelete'
-import { TagInput } from './TagInput'
-import { TagPill } from './TagPill'
-import { Button } from './base/Button'
+import type { ChecklistItem, TabType } from '../../types'
+import { cn } from '../../utils/cn'
+import { usePendingDelete } from '../../hooks/usePendingDelete'
+import { TagPill } from '../TagPill'
+import { EditForm } from './EditForm'
+import { DesktopActions } from './DesktopActions'
+import { MobileActionBar } from './MobileActionBar'
 
 interface ChecklistItemRowProps {
   item: ChecklistItem
@@ -18,151 +18,6 @@ interface ChecklistItemRowProps {
   onDelete: (tab: TabType, order: number) => void
   onHide: (tab: TabType, order: number) => void
   confirmDelete: boolean
-}
-
-interface EditFormProps {
-  item: ChecklistItem
-  onSave: (text: string, tags: string[]) => void
-  onCancel: () => void
-}
-
-function EditForm({ item, onSave, onCancel }: EditFormProps) {
-  const [text, setText] = useState(item.text)
-  const [tags, setTags] = useState<string[]>(item.tags ?? [])
-
-  const handleSave = useCallback(() => {
-    if (text.trim()) onSave(text.trim(), tags)
-  }, [text, tags, onSave])
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Enter') handleSave()
-      if (e.key === 'Escape') onCancel()
-    },
-    [handleSave, onCancel],
-  )
-
-  return (
-    <div className="px-3 py-3 lg:px-4 lg:py-3 rounded-lg bg-surface border border-primary space-y-2 lg:space-y-2">
-      <div className="flex items-center gap-2 lg:gap-2">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoFocus
-          className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder-text-muted"
-          placeholder="输入任务内容..."
-        />
-        <Button
-          variant="tertiary"
-          onClick={handleSave}
-          className="p-1.5 hover:bg-success-soft hover:text-success"
-        >
-          <Save size={15} className="lg:hidden" />
-          <Save size={17} className="hidden lg:block" />
-        </Button>
-        <Button
-          variant="tertiary"
-          onClick={onCancel}
-          className="p-1.5 hover:bg-info-soft hover:text-info"
-        >
-          <X size={15} className="lg:hidden" />
-          <X size={17} className="hidden lg:block" />
-        </Button>
-      </div>
-      <TagInput tags={tags} onChange={setTags} limit={UI.TAG_LIMIT} />
-    </div>
-  )
-}
-
-interface DesktopActionsProps {
-  onEdit: () => void
-  onHide: () => void
-  onDelete: (e: MouseEvent) => void
-  isPending: boolean
-}
-
-function DesktopActions({ onEdit, onHide, onDelete, isPending }: DesktopActionsProps) {
-  return (
-    <div className="hidden lg:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-[opacity]">
-      <Button
-        variant="tertiary"
-        onClick={(e) => { e.stopPropagation(); onEdit() }}
-        className="p-1.5 hover:bg-primary-soft hover:text-primary"
-      >
-        <Pencil size={15} />
-      </Button>
-      <Button
-        variant="tertiary"
-        onClick={(e) => { e.stopPropagation(); onHide() }}
-        className="p-1.5 hover:bg-warning-soft hover:text-warning"
-      >
-        <EyeOff size={15} />
-      </Button>
-      <Button
-        variant="tertiary"
-        onClick={onDelete}
-        className={cn(
-          'p-1.5 hover:bg-danger-soft hover:text-danger',
-          isPending && 'text-white bg-danger hover:bg-danger hover:text-white',
-        )}
-      >
-        <Trash2 size={15} />
-      </Button>
-    </div>
-  )
-}
-
-interface MobileActionBarProps {
-  onEdit: () => void
-  onHide: () => void
-  onDelete: (e: MouseEvent) => void
-  isPending: boolean
-  expanded: boolean
-}
-
-function MobileActionBar({ onEdit, onHide, onDelete, isPending, expanded }: MobileActionBarProps) {
-  return (
-    <div
-      className={cn(
-        'grid transition-[grid-template-rows] duration-150 lg:hidden',
-        expanded ? 'collapse-open' : 'collapse-closed',
-      )}
-    >
-      <div className="overflow-hidden">
-        <div className="flex items-center justify-end gap-1 pb-1 pt-1 px-1">
-          <Button
-            variant="primary-soft"
-            onClick={onEdit}
-            className="px-2 py-1.5 text-xs justify-center"
-          >
-            <Pencil size={13} />
-            <span>编辑</span>
-          </Button>
-          <Button
-            variant="warning-soft"
-            onClick={(e) => { e.stopPropagation(); onHide() }}
-            className="px-2 py-1.5 text-xs justify-center"
-          >
-            <EyeOff size={13} />
-            <span>隐藏</span>
-          </Button>
-          <Button
-            variant="danger"
-            onClick={onDelete}
-            className={cn(
-              'px-2 py-1.5 text-xs justify-center',
-              !isPending && 'text-text-muted hover:text-danger',
-            )}
-          >
-            <Trash2 size={13} />
-            <span>{isPending ? '确认' : '删除'}</span>
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export const ChecklistItemRow = memo(function ChecklistItemRow({
@@ -284,7 +139,6 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
               : 'border border-transparent hover:bg-elevated hover:border-border',
         )}
       >
-        {/* 拖拽手柄 */}
         <button
           {...attributes}
           {...listeners}
@@ -298,7 +152,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
           <GripVertical size={14} className="lg:hidden" />
           <GripVertical size={16} className="hidden lg:block" />
         </button>
-        {/* 复选框 */}
+
         <motion.button
           onClick={handleToggle}
           type="button"
@@ -330,7 +184,6 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
           </AnimatePresence>
         </motion.button>
 
-        {/* 文本 */}
         <span
           className={cn(
             'flex-1 text-sm min-w-0',
@@ -342,7 +195,6 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
           {item.text}
         </span>
 
-        {/* 标签 */}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1 lg:gap-1 shrink-0">
             {tags.map((tag) => (
@@ -358,7 +210,6 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
           isPending={isPending(item.order)}
         />
 
-        {/* 移动端：箭头 */}
         <ChevronRight
           size={15}
           className={cn(

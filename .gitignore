@@ -26,3 +26,7 @@ Halo/
 # Analysis
 Memory.md
 AGENTS.md
+
+# Dev logs
+*.log
+.mimocode/

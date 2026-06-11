@@ -16,7 +16,7 @@ import { ChecklistItemRow } from './ChecklistItemRow'
 
 import { EmptyState } from './EmptyState'
 import { useSortedItems } from '../hooks/useSortedItems'
-import { useItemMotion } from '../hooks/useItemMotion'
+import { useItemAnimations } from '../hooks/useItemAnimations'
 import { CARD_STYLES } from '../utils/styles'
 import { UI } from '../utils/constants'
 
@@ -25,7 +25,6 @@ interface ChecklistPanelProps {
   activeTab: TabType
   autoMoveCompleted: boolean
   isLayoutTransitioning: boolean
-  newItemOrders: Set<number>
   onToggle: (tab: TabType, order: number) => void
   onEdit: (tab: TabType, order: number, text: string, tags: string[]) => void
   onDelete: (tab: TabType, order: number) => void
@@ -45,7 +44,6 @@ export function ChecklistPanel({
   activeTab,
   autoMoveCompleted,
   isLayoutTransitioning,
-  newItemOrders,
   onToggle,
   onEdit,
   onDelete,
@@ -56,7 +54,8 @@ export function ChecklistPanel({
 }: ChecklistPanelProps) {
   const { sortedItems, sortedItemIds } = useSortedItems(visibleItems, autoMoveCompleted)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const { handleDeleteStart, handleHideStart, getItemAnimation } = useItemMotion({
+  const { handleDeleteStart, handleHideStart, getItemAnimation } = useItemAnimations({
+    visibleItems,
     onDelete,
     onHide,
   })
@@ -163,7 +162,6 @@ export function ChecklistPanel({
                       const item = sortedItems[virtualRow.index]
                       if (!item) return null
                       const anim = getItemAnimation(item.order, {
-                        isNew: newItemOrders.has(item.order),
                         activeTab,
                         mode: 'virtual',
                       })
@@ -203,7 +201,6 @@ export function ChecklistPanel({
               <AnimatePresence>
                 {sortedItems.map((item) => {
                   const anim = getItemAnimation(item.order, {
-                    isNew: newItemOrders.has(item.order),
                     activeTab,
                     mode: 'normal',
                   })

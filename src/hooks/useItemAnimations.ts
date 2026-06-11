@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react'
-import type { TabType } from '../types'
+import { useRef, useEffect, useCallback, useState } from 'react'
+import type { ChecklistItem, TabType } from '../types'
+import { MS } from '../utils/constants'
 
 export type ExitDirection = 'delete' | 'hide'
 
-interface UseItemMotionOptions {
+interface UseItemAnimationsOptions {
+  visibleItems: ChecklistItem[]
   onDelete: (tab: TabType, order: number) => void
   onHide: (tab: TabType, order: number) => void
 }
@@ -15,17 +17,12 @@ interface ItemAnimationValues {
   onAnimationComplete: () => void
 }
 
-interface UseItemMotionResult {
-  exitingItems: Map<number, ExitDirection>
+interface UseItemAnimationsResult {
   handleDeleteStart: (tab: TabType, order: number) => void
   handleHideStart: (tab: TabType, order: number) => void
   getItemAnimation: (
     order: number,
-    options: {
-      isNew: boolean
-      activeTab: TabType
-      mode: 'normal' | 'virtual'
-    },
+    options: { activeTab: TabType; mode: 'normal' | 'virtual' },
   ) => ItemAnimationValues
 }
 
@@ -44,15 +41,51 @@ const TRANSITIONS = {
 
 const EXIT_X = 40
 
-export function useItemMotion({ onDelete, onHide }: UseItemMotionOptions): UseItemMotionResult {
+export function useItemAnimations({
+  visibleItems,
+  onDelete,
+  onHide,
+}: UseItemAnimationsOptions): UseItemAnimationsResult {
+  // --- 新增项追踪 ---
+  const prevItemsRef = useRef<ChecklistItem[]>(visibleItems)
+  const newOrdersRef = useRef<Set<number>>(new Set())
+  const newIdsRef = useRef<number[]>([])
+  const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const prevIds = new Set(prevItemsRef.current.map((i) => i.order))
+  const currentIds = new Set(visibleItems.map((i) => i.order))
+  const newIds = [...currentIds].filter((id) => !prevIds.has(id))
+
+  if (newIds.length > 0) {
+    newIds.forEach((id) => newOrdersRef.current.add(id))
+    newIdsRef.current = newIds
+  }
+
+  useEffect(() => {
+    const ids = newIdsRef.current
+    if (ids.length === 0) return
+    if (animTimeoutRef.current) clearTimeout(animTimeoutRef.current)
+    animTimeoutRef.current = setTimeout(() => {
+      ids.forEach((id) => newOrdersRef.current.delete(id))
+    }, MS.ANIMATION_WINDOW)
+    return () => {
+      if (animTimeoutRef.current) clearTimeout(animTimeoutRef.current)
+    }
+  }, [visibleItems])
+
+  useEffect(() => {
+    prevItemsRef.current = visibleItems
+  })
+
+  // --- 退出动画追踪 ---
   const [exitingItems, setExitingItems] = useState<Map<number, ExitDirection>>(new Map())
 
   const handleDeleteStart = useCallback((_tab: TabType, order: number) => {
-    setExitingItems(prev => new Map(prev).set(order, 'delete'))
+    setExitingItems((prev) => new Map(prev).set(order, 'delete'))
   }, [])
 
   const handleHideStart = useCallback((_tab: TabType, order: number) => {
-    setExitingItems(prev => new Map(prev).set(order, 'hide'))
+    setExitingItems((prev) => new Map(prev).set(order, 'hide'))
   }, [])
 
   const handleExitComplete = useCallback(
@@ -63,7 +96,7 @@ export function useItemMotion({ onDelete, onHide }: UseItemMotionOptions): UseIt
         } else {
           onHide(tab, order)
         }
-        setExitingItems(prev => {
+        setExitingItems((prev) => {
           const next = new Map(prev)
           next.delete(order)
           return next
@@ -73,19 +106,13 @@ export function useItemMotion({ onDelete, onHide }: UseItemMotionOptions): UseIt
     [onDelete, onHide],
   )
 
+  // --- 动画计算（合并入口 + 退出） ---
   const getItemAnimation = useCallback(
     (
       order: number,
-      {
-        isNew,
-        activeTab,
-        mode,
-      }: {
-        isNew: boolean
-        activeTab: TabType
-        mode: 'normal' | 'virtual'
-      },
+      { activeTab, mode }: { activeTab: TabType; mode: 'normal' | 'virtual' },
     ): ItemAnimationValues => {
+      const isNew = newOrdersRef.current.has(order)
       const exitDirection = exitingItems.get(order)
       const isExiting = !!exitDirection
 
@@ -124,7 +151,6 @@ export function useItemMotion({ onDelete, onHide }: UseItemMotionOptions): UseIt
   )
 
   return {
-    exitingItems,
     handleDeleteStart,
     handleHideStart,
     getItemAnimation,

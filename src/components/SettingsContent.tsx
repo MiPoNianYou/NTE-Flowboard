@@ -273,8 +273,8 @@ export function SettingsContent({
               {NAV_ITEMS.map((item) => {
                 const isActive = (activeTab ?? 'general') === item.id
                 return (
-                <Button
-                  key={item.id}
+                  <Button
+                    key={item.id}
                   variant="tertiary"
                   onClick={() => setActiveTab(item.id)}
                   className={cn(
@@ -315,8 +315,8 @@ export function SettingsContent({
                         : 'text-text-muted',
                     )}
                   />
-                </Button>
-              )})}
+                  </Button>
+                )})}
             </nav>
           </div>
 

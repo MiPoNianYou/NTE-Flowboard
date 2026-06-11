@@ -1,8 +1,5 @@
-import { colord, extend } from 'colord'
-import a11yPlugin from 'colord/plugins/a11y'
+import { colord } from './colors'
 import { TAG_HEX } from './colors'
-
-extend([a11yPlugin])
 
 const STORAGE_KEY = 'tag-color-map'
 
@@ -20,14 +17,14 @@ function loadMap(): Map<string, number> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return new Map(JSON.parse(raw))
-  } catch { /* corrupted data, start fresh */ }
+  } catch { /* 数据损坏，重新开始 */ }
   return new Map()
 }
 
 function saveMap(map: Map<string, number>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...map]))
-  } catch { /* storage full or unavailable, silently ignore */ }
+  } catch { /* 存储已满或不可用，静默忽略 */ }
 }
 
 export function getTagColors(tag: string): { text: string; bg: string } {

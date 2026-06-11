@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { getTagColors, cleanupRegistry } from './tagColors'
+import { getTagColors, cleanupRegistry } from '../../src/utils/tagColors'
 
 function clearMap() {
   localStorage.removeItem('tag-color-map')

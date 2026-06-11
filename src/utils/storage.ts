@@ -80,16 +80,16 @@ export function isEUDST(date: Date): boolean {
 export function getServerUTCOffset(region: ServerRegion, date: Date = new Date()): number {
   switch (region) {
     case 'asia':
-      return 8 // Fixed UTC+8
+      return 8 // 固定 UTC+8
     case 'america':
-      return isUSDST(date) ? -4 : -5 // EDT : EST
+      return isUSDST(date) ? -4 : -5 // 夏令时 : 标准时间
     case 'europe':
-      return isEUDST(date) ? 2 : 1 // CEST : CET
+      return isEUDST(date) ? 2 : 1 // 夏令时 : 标准时间
   }
 }
 
 /**
- * Get the current date/time adjusted for a server region's timezone.
+ * 获取根据服务器区域时区调整后的当前日期/时间。
  */
 export function getServerDate(region: ServerRegion): Date {
   const offset = getServerUTCOffset(region)

@@ -4,7 +4,7 @@ import { isChecklistData, mergeChecklistData } from './storage'
 
 const SYNC_TABLE = 'sync_data'
 
-// --- Config ---
+// --- 配置 ---
 
 export interface SupabaseConfig {
   projectId: string
@@ -77,7 +77,7 @@ export function saveLastSeenTime(isoString: string): void {
   localStorage.setItem(LAST_SEEN_KEY, isoString)
 }
 
-// --- Client ---
+// --- 客户端 ---
 
 let client: SupabaseClient | null = null
 let cachedConfig: SupabaseConfig | null = null
@@ -99,7 +99,7 @@ export function resetClient(): void {
   cachedConfig = null
 }
 
-// --- Realtime subscription ---
+// --- 实时订阅 ---
 
 export function subscribeToChanges(
   config: SupabaseConfig,
@@ -119,7 +119,7 @@ export function subscribeToChanges(
   }
 }
 
-// --- API ---
+// --- 接口 ---
 
 export class SyncError extends Error {
   code: string

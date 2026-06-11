@@ -1,4 +1,4 @@
-// --- Time durations (ms) ---
+// --- 时间间隔（毫秒） ---
 export const MS = {
   /** 重置检查轮询间隔（useChecklist） */
   RESET_POLL: 60_000,
@@ -14,7 +14,7 @@ export const MS = {
   PERIODIC_PULL: 5 * 60_000,
   /** Realtime 变更防抖（useSupabaseSync） */
   REALTIME_DEBOUNCE: 500,
-  /** 新增项动画窗口（useItemAnimation） */
+  /** 新增项动画窗口（useItemAnimations） */
   ANIMATION_WINDOW: 400,
   /** 删除确认超时（ChecklistItemRow） */
   DELETE_CONFIRM: 2_000,
@@ -24,7 +24,7 @@ export const MS = {
   SUCCESS_HINT: 3_000,
 } as const
 
-// --- UI / Layout ---
+// --- 界面 / 布局 ---
 export const UI = {
   /** 虚拟滚动启用阈值 */
   VIRTUAL_THRESHOLD: 50,

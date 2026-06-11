@@ -27,9 +27,9 @@ export interface ChecklistData {
   weekly: ChecklistItem[]
   custom: ChecklistItem[]
   resetConfig: ResetConfig
-  lastDailyReset: string // ISO date string
-  lastWeeklyReset: string // ISO date string
-  lastCustomReset?: string // ISO date string
+  lastDailyReset: string // ISO 日期字符串
+  lastWeeklyReset: string // ISO 日期字符串
+  lastCustomReset?: string // ISO 日期字符串
   customResetMode?: CustomResetMode
   customName?: string
   settings?: BehaviorSettings

@@ -5,7 +5,7 @@ import { useSupabaseSync } from './hooks/useSupabaseSync'
 import { useTabManagement } from './hooks/useTabManagement'
 import { useLayoutManagement } from './hooks/useLayoutManagement'
 import { useSettings } from './hooks/useSettings'
-import { useItemAnimation } from './hooks/useItemAnimation'
+
 import { useNextResetLabel } from './hooks/useNextResetLabel'
 import { setStorageErrorHandler } from './utils/storage'
 import { cleanupRegistry } from './utils/tagColors'
@@ -100,8 +100,6 @@ function App() {
       allDone: total > 0 && completed === total,
     }
   }, [visibleItems])
-
-  const { newItemOrders } = useItemAnimation(visibleItems)
 
   const nextResetLabel = useNextResetLabel({
     activeTab: effectiveActiveTab,
@@ -200,7 +198,6 @@ function App() {
                 activeTab={effectiveActiveTab}
                 autoMoveCompleted={autoMoveCompleted}
                 isLayoutTransitioning={isLayoutTransitioning}
-                newItemOrders={newItemOrders}
                 onToggle={toggleItem}
                 onEdit={editItem}
                 onDelete={deleteItem}

@@ -1,16 +1,8 @@
-import { useState, useCallback } from 'react'
-
-const STORAGE_KEY = 'nte-auto-move-completed'
+import { useLocalStorageBoolean } from './useLocalStorageBoolean'
 
 export function useAutoMoveCompleted() {
-  const [autoMoveCompleted, setAutoMoveCompleted] = useState(
-    () => localStorage.getItem(STORAGE_KEY) !== 'false',
-  )
+  const { value: autoMoveCompleted, onChange: onAutoMoveCompletedChange } =
+    useLocalStorageBoolean('nte-auto-move-completed')
 
-  const handleAutoMoveCompletedChange = useCallback((newVal: boolean) => {
-    setAutoMoveCompleted(newVal)
-    localStorage.setItem(STORAGE_KEY, String(newVal))
-  }, [])
-
-  return { autoMoveCompleted, onAutoMoveCompletedChange: handleAutoMoveCompletedChange }
+  return { autoMoveCompleted, onAutoMoveCompletedChange }
 }

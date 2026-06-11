@@ -75,7 +75,7 @@ export function useSupabaseSync({
     onSettingsImportRef.current = onSettingsImport
   }, [onSettingsImport])
 
-  // --- Pull sync ---
+  // --- 拉取同步 ---
   const pullSync = useCallback(async (force = false): Promise<boolean> => {
     const config = configRef.current
     if (!config || isPullingRef.current) return false
@@ -145,7 +145,7 @@ export function useSupabaseSync({
     }
   }, [syncStatus, pullSync])
 
-  // --- Push sync ---
+  // --- 推送同步 ---
   const pushSync = useCallback(async (dataToPush: ChecklistData) => {
     const config = configRef.current
     if (!config || isPullingRef.current) return
@@ -173,7 +173,7 @@ export function useSupabaseSync({
     }
   }, [includeSettings, settings])
 
-  // --- Startup: load config and connect ---
+  // --- 启动：加载配置并连接 ---
   useEffect(() => {
     const config = loadSupabaseConfig()
     if (!config) return
@@ -196,7 +196,7 @@ export function useSupabaseSync({
     return () => clearTimeout(timer)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- Realtime subscription ---
+  // --- 实时订阅 ---
   useEffect(() => {
     const config = configRef.current
     if (!config) return
@@ -215,7 +215,7 @@ export function useSupabaseSync({
     }
   }, [isConfigured, pullSync])
 
-  // --- Periodic pull + visibility restore ---
+  // --- 定时拉取 + 可见性恢复 ---
   useEffect(() => {
     if (!configRef.current) return
 
@@ -241,7 +241,7 @@ export function useSupabaseSync({
     }
   }, [isConfigured, pullSync])
 
-  // --- Track local changes ---
+  // --- 跟踪本地变更 ---
   useEffect(() => {
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false
@@ -250,7 +250,7 @@ export function useSupabaseSync({
     hasLocalChangesRef.current = true
   }, [data])
 
-  // --- Auto-push on data change (3s debounce) ---
+  // --- 数据变更时自动推送（3 秒防抖） ---
   useEffect(() => {
     if (syncStatus !== 'connected') return
     if (!configRef.current) return
@@ -265,7 +265,7 @@ export function useSupabaseSync({
     }
   }, [data, syncStatus, pushSync])
 
-  // --- Setup: validate and save ---
+  // --- 配置：验证并保存 ---
   const setupSupabase = useCallback(
     async (projectId: string, anonKey: string) => {
       setSyncStatus('connecting')
@@ -301,7 +301,7 @@ export function useSupabaseSync({
     [pullSync, pushSync],
   )
 
-  // --- Manual sync trigger ---
+  // --- 手动触发同步 ---
   const triggerSync = useCallback(async () => {
     setSyncStatus('syncing')
     setSyncError(null)
@@ -310,7 +310,7 @@ export function useSupabaseSync({
     await pushSync(dataRef.current)
   }, [pullSync, pushSync])
 
-  // --- Disconnect ---
+  // --- 断开连接 ---
   const disconnect = useCallback(() => {
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     clearSyncConfig()

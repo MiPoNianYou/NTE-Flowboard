@@ -1,8 +1,8 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useChecklist } from './useChecklist'
-import * as storage from '../utils/storage'
-import { MS } from '../utils/constants'
+import { useChecklist } from '../../src/hooks/useChecklist'
+import * as storage from '../../src/utils/storage'
+import { MS } from '../../src/utils/constants'
 
 const defaultData = storage.loadData()
 

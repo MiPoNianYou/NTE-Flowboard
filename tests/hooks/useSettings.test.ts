@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useSettings } from './useSettings'
+import { useSettings } from '../../src/hooks/useSettings'
 
 describe('useSettings', () => {
   beforeEach(() => {
@@ -60,5 +60,32 @@ describe('useSettings', () => {
     expect(result.current.autoMoveCompleted).toBe(false)
     act(() => result.current.onAutoMoveCompletedChange(true))
     expect(result.current.autoMoveCompleted).toBe(true)
+  })
+
+  it('should return default showCustomTab as true', () => {
+    const { result } = renderHook(() => useSettings())
+    expect(result.current.showCustomTab).toBe(true)
+  })
+
+  it('should read showCustomTab from localStorage', () => {
+    localStorage.setItem('nte-show-custom-tab', 'false')
+    const { result } = renderHook(() => useSettings())
+    expect(result.current.showCustomTab).toBe(false)
+  })
+
+  it('should update showCustomTab and persist', () => {
+    const { result } = renderHook(() => useSettings())
+    act(() => result.current.onShowCustomTabChange(false))
+    expect(result.current.showCustomTab).toBe(false)
+    expect(localStorage.getItem('nte-show-custom-tab')).toBe('false')
+  })
+
+  it('should toggle showCustomTab back and forth', () => {
+    const { result } = renderHook(() => useSettings())
+    expect(result.current.showCustomTab).toBe(true)
+    act(() => result.current.onShowCustomTabChange(false))
+    expect(result.current.showCustomTab).toBe(false)
+    act(() => result.current.onShowCustomTabChange(true))
+    expect(result.current.showCustomTab).toBe(true)
   })
 })

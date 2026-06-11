@@ -32,13 +32,13 @@ function NumberDigit({ mv, number, height }: NumberProps) {
   return <motion.span style={{ ...baseStyle, y }}>{number}</motion.span>
 }
 
-function normalizeNearInteger(num: number): number {
+export function normalizeNearInteger(num: number): number {
   const nearest = Math.round(num)
   const tolerance = 1e-9 * Math.max(1, Math.abs(num))
   return Math.abs(num - nearest) < tolerance ? nearest : num
 }
 
-function getValueRoundedToPlace(value: number, place: number): number {
+export function getValueRoundedToPlace(value: number, place: number): number {
   const scaled = value / place
   return Math.floor(normalizeNearInteger(scaled))
 }
