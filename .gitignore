@@ -30,3 +30,9 @@ AGENTS.md
 # Dev logs
 *.log
 .mimocode/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
