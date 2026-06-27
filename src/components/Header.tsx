@@ -33,7 +33,7 @@ export const Header = memo(function Header({
           <h1 className="text-lg md:text-xl font-bold text-text-primary tracking-tight chromatic-aberration">
             NTE Flowboard
           </h1>
-          <p className="text-xs md:text-xs text-text-muted">每日 · 每周 · 每月任务追踪</p>
+          <p className="text-xs md:text-xs text-text-muted">每日 · 每周 · 每月任务追踪看板</p>
         </div>
       </div>
       <OfflineIndicator />

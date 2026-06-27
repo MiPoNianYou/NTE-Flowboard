@@ -320,24 +320,24 @@ body {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  backdrop-filter: blur(var(--blur-amount, 15px)) saturate(var(--saturate-amount, 1.2));
   -webkit-backdrop-filter: blur(var(--blur-amount, 15px)) saturate(var(--saturate-amount, 1.2));
+  backdrop-filter: blur(var(--blur-amount, 15px)) saturate(var(--saturate-amount, 1.2));
   z-index: -1;
   pointer-events: none;
 }
 
 .glass-strong {
   background: var(--color-glass-strong);
-  backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
   -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
+  backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
   border: 1px solid var(--color-border-strong);
 }
 
 /* ─── 玻璃遮罩（Liquid Glass 毛玻璃背景）────────────────── */
 .glass-overlay {
   background: var(--color-overlay);
-  backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
   -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
+  backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
 }
 
 /* ─── 页面背景渐变（Liquid Glass 噪点纹理风格）────────────────── */

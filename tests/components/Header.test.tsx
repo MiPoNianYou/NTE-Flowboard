@@ -44,7 +44,7 @@ describe('Header', () => {
         onImport={vi.fn()}
       />,
     )
-    expect(screen.getByText('每日 · 每周 · 每月任务追踪')).toBeInTheDocument()
+    expect(screen.getByText('每日 · 每周 · 每月任务追踪看板')).toBeInTheDocument()
   })
 
   it('should render logo image', () => {
