@@ -1,0 +1,48 @@
+﻿# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Design docs
+DESIGN.md
+
+# Agent config
+AGENTS.md
+docs/
+
+# Cache
+.vite/
+.eslintcache
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local config overrides
+*.local
+
+# Temporary files
+*.tmp
+*.temp
