@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Cloud, Loader2, LogOut, AlertCircle } from 'lucide-react'
+import { Cloud, LogOut, AlertCircle } from 'lucide-react'
 import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { ITEM_ENTRY, ITEM_EXIT } from '../../utils/motion'
@@ -130,13 +130,13 @@ export function CloudSyncStatus({
             )}
           >
             {isLoading ? (
-              <Loader2 className="size-5 text-info animate-spin" />
+              <span className="size-3.5 rounded-full bg-info animate-ripple" />
             ) : (
               <span
                 className={cn(
                   'size-3.5 rounded-full',
-                  syncStatus === 'connected' && 'bg-success animate-pulse-glow',
-                  syncStatus === 'error' && 'bg-danger',
+                  syncStatus === 'connected' && 'bg-success animate-breathe',
+                  syncStatus === 'error' && 'bg-danger animate-blink',
                   syncStatus === 'disconnected' && 'bg-text-muted',
                 )}
               />

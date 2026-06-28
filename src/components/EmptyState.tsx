@@ -1,10 +1,16 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { motion } from 'motion/react'
 import { STAGGER, APPLE_EASE } from '../utils/motion'
 
+const fallbackSubtitles = [
+  '没什么事做的话，要不要听听我的家族兴建大计？',
+  '早上好！有新的委托吗？柯林斯家族随时可以出发！',
+  '还早还早，再出去转一趟吧',
+]
+
 interface EmptyStateProps {
   title: string
-  subtitle: string
+  subtitle?: string
   action?: ReactNode
 }
 
@@ -24,6 +30,10 @@ const rowVariants = {
 }
 
 export function EmptyState({ title, subtitle, action }: EmptyStateProps) {
+  const displaySubtitle = useMemo(
+    () => subtitle ?? fallbackSubtitles[Math.floor(Math.random() * fallbackSubtitles.length)],
+    [subtitle],
+  )
   return (
     <div className="flex flex-col items-center justify-center py-10 md:py-14 gap-4 text-text-muted">
       <div className="relative">
@@ -141,7 +151,7 @@ export function EmptyState({ title, subtitle, action }: EmptyStateProps) {
           {title}
         </motion.p>
         <motion.p className="text-xs text-text-muted" custom={1} variants={rowVariants}>
-          {subtitle}
+          {displaySubtitle}
         </motion.p>
         {action && (
           <motion.div custom={2} variants={rowVariants} className="mt-2">

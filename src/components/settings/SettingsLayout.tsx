@@ -1,4 +1,4 @@
-import { useState, useMemo, type ChangeEvent, type RefObject } from 'react'
+import { useState, useMemo, useRef, type ChangeEvent, type RefObject } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ArrowLeft } from 'lucide-react'
 import type { TabType } from '../../types'
@@ -10,7 +10,7 @@ import { SettingsData } from './SettingsData'
 import { CloudSyncSection } from './CloudSyncSection'
 import { Button } from '../base/Button'
 import { SERVER_REGIONS } from '../../utils/storage'
-import { SPRING } from '../../utils/motion'
+import { SPRING, PAGE } from '../../utils/motion'
 import { useSettings } from '../../context/SettingsContext'
 
 interface SettingsLayoutProps {
@@ -40,6 +40,22 @@ export function SettingsLayout({
 }: SettingsLayoutProps) {
   const { settings } = useSettings()
   const [activeTab, setActiveTab] = useState<SubPage | null>(null)
+  const [direction, setDirection] = useState(1)
+  const prevIndexRef = useRef(0)
+
+  const TAB_ORDER: SubPage[] = ['general', 'server', 'cloud', 'data']
+
+  const handleTabChange = (tab: SubPage | null) => {
+    if (tab !== null && activeTab !== null) {
+      const oldIndex = TAB_ORDER.indexOf(activeTab)
+      const newIndex = TAB_ORDER.indexOf(tab)
+      if (newIndex !== oldIndex) {
+        setDirection(newIndex > oldIndex ? 1 : -1)
+        prevIndexRef.current = newIndex
+      }
+    }
+    setActiveTab(tab)
+  }
 
   const sidebarLabels = useMemo<Record<SubPage, string | undefined>>(
     () => ({
@@ -105,7 +121,7 @@ export function SettingsLayout({
               transition={SPRING}
               className="flex-1 overflow-y-auto overscroll-contain p-4"
             >
-              <SettingsNav activeTab={tab} onTabChange={setActiveTab} labels={sidebarLabels} />
+              <SettingsNav activeTab={tab} onTabChange={handleTabChange} labels={sidebarLabels} />
             </motion.div>
           ) : (
             <motion.div
@@ -135,7 +151,7 @@ export function SettingsLayout({
         <div className="w-[240px] lg:w-[260px] border-r border-border flex-shrink-0 flex flex-col p-3">
           <SettingsNav
             activeTab={tab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             labels={sidebarLabels}
             orientation="vertical"
           />
@@ -144,10 +160,10 @@ export function SettingsLayout({
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: direction * 16 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={SPRING}
+              exit={{ opacity: 0, y: direction * -8 }}
+              transition={PAGE}
               className="p-5"
             >
               {renderContent}

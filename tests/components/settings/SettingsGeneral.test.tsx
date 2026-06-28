@@ -14,8 +14,8 @@ const mockUpdateSettings = vi.fn()
 describe('SettingsGeneral', () => {
   it('should render setting labels', () => {
     render(<SettingsGeneral isEmbedded />)
-    expect(screen.getByText('已完成任务自动移至底部')).toBeInTheDocument()
-    expect(screen.getByText('删除前需二次确认')).toBeInTheDocument()
+    expect(screen.getByText('完成任务自动置底')).toBeInTheDocument()
+    expect(screen.getByText('删除二次确认')).toBeInTheDocument()
   })
 
   it('should call updateSettings when auto-move toggle clicked', () => {

@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { Card } from './Card'
+import { GRID_COLLAPSE } from '../../utils/stylePresets'
 
 interface CollapsibleSectionProps {
   icon?: ReactNode
@@ -60,7 +61,7 @@ export function CollapsibleSection({
           <ChevronDown className="size-4 text-text-muted" />
         )}
       </motion.button>
-      <div className={cn('grid', isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+      <div className={cn(GRID_COLLAPSE, isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
         <div className="overflow-hidden">
           <div>{children}</div>
         </div>

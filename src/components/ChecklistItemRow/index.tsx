@@ -30,6 +30,7 @@ interface ChecklistItemRowProps {
   shouldConfirmDelete: boolean
   onHeightChange?: (id: string, height: number) => void
   suppressMountAnimation?: boolean
+  isDragOverlay?: boolean
 }
 
 export const ChecklistItemRow = memo(function ChecklistItemRow({
@@ -42,6 +43,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
   shouldConfirmDelete,
   onHeightChange,
   suppressMountAnimation,
+  isDragOverlay,
 }: ChecklistItemRowProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
@@ -55,7 +57,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
       observerRef.current = null
       rowRef.current = element
 
-      if (!element || !onHeightChange) return
+      if (!element || !onHeightChange || isDragOverlay) return
 
       const observer = new ResizeObserver((entries) => {
         for (const entry of entries) {
@@ -65,7 +67,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
       observer.observe(element)
       observerRef.current = observer
     },
-    [onHeightChange, item.id],
+    [onHeightChange, item.id, isDragOverlay],
   )
 
   useEffect(() => {
@@ -80,25 +82,31 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
     setNodeRef: setSortableRef,
     transform,
     isDragging,
-  } = useSortable({ id: item.id })
+  } = useSortable({ id: item.id, disabled: isDragOverlay })
 
   const mergedRef = useCallback(
     (element: HTMLDivElement | null) => {
-      setSortableRef(element)
+      if (!isDragOverlay) {
+        setSortableRef(element)
+      }
       measuredRef(element)
     },
-    [setSortableRef, measuredRef],
+    [setSortableRef, measuredRef, isDragOverlay],
   )
 
-  const sortableStyle: CSSProperties = transform
+  const sortableStyle: CSSProperties = isDragOverlay
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        boxShadow: isDragging ? 'var(--shadow-elevated)' : undefined,
-        opacity: isDragging ? 0.9 : 1,
-        scale: isDragging ? 1.05 : 1,
-        zIndex: isDragging ? 100 : undefined,
+        boxShadow: 'var(--shadow-elevated)',
+        cursor: 'grabbing',
       }
-    : {}
+    : isDragging
+      ? { visibility: 'hidden' }
+      : transform
+        ? {
+            transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+            zIndex: 100,
+          }
+        : {}
 
   const isTouch = useMemo(() => {
     try {

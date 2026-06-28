@@ -6,6 +6,7 @@ vi.mock('../../src/utils/supabase')
 
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DragOverlay: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   PointerSensor: class {},
   useSensor: vi.fn(),
   useSensors: vi.fn(() => []),
@@ -21,13 +22,6 @@ vi.mock('@dnd-kit/sortable', () => ({
     setNodeRef: vi.fn(),
     transform: null,
     isDragging: false,
-  })),
-}))
-
-vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: vi.fn(() => ({
-    getVirtualItems: vi.fn(() => []),
-    getTotalSize: vi.fn(() => 0),
   })),
 }))
 

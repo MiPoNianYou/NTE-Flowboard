@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Eye, Trash2 } from 'lucide-react'
 import type { ChecklistItem, TabType } from '../types'
@@ -38,6 +38,10 @@ export function HiddenSection({
   onToggle,
 }: HiddenSectionProps) {
   const isVisible = hiddenItems.length > 0
+  const isMountedRef = useRef(false)
+  useEffect(() => {
+    isMountedRef.current = true
+  }, [])
   const {
     frameOpacity,
     headerOpacity,
@@ -79,7 +83,7 @@ export function HiddenSection({
                 {hiddenItems.map((item) => (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, height: 0 }}
+                    initial={isMountedRef.current ? { opacity: 0, height: 0 } : false}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0, transition: ITEM_EXIT }}
                     transition={ITEM_ENTRY}

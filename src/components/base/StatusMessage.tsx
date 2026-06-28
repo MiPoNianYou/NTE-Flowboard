@@ -53,7 +53,7 @@ export function StatusMessage({
     return (
       <div className={cn(toneStyles[tone][mode], className)}>
         {icon && <div className={cn('flex-shrink-0 self-center', toneTextClass[tone])}>{icon}</div>}
-        <div className="text-[12px] text-text-secondary leading-relaxed whitespace-pre-line">
+        <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-line">
           {children}
         </div>
       </div>

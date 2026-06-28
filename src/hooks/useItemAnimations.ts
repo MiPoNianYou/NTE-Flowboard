@@ -20,10 +20,7 @@ interface ItemAnimationValues {
 interface UseItemAnimationsResult {
   handleDeleteStart: (tab: TabType, id: string) => void
   handleHideStart: (tab: TabType, id: string) => void
-  getItemAnimation: (
-    id: string,
-    options: { targetTab: TabType; mode: 'normal' | 'virtual' },
-  ) => ItemAnimationValues
+  getItemAnimation: (id: string, options: { targetTab: TabType }) => ItemAnimationValues
 }
 
 export function useItemAnimations({
@@ -88,15 +85,12 @@ export function useItemAnimations({
 
   // --- 动画计算（新增项入场动画，退出动画由 AnimatePresence 接管） ---
   const getItemAnimation = useCallback(
-    (
-      id: string,
-      { mode }: { targetTab: TabType; mode: 'normal' | 'virtual' },
-    ): ItemAnimationValues => {
+    (id: string, { targetTab: _targetTab }: { targetTab: TabType }): ItemAnimationValues => {
       const isNew = newOrdersRef.current.has(id)
 
       const initial = isNew ? { opacity: 0, height: 0 } : false
       const animate = { opacity: 1, height: 'auto' }
-      const transition = mode === 'normal' ? { ...ITEM_ENTRY } : ITEM_ENTRY
+      const transition = { ...ITEM_ENTRY }
       const onAnimationComplete = () => {}
 
       return { initial, animate, transition, onAnimationComplete }

@@ -7,6 +7,7 @@ import type { ChecklistItem } from '../../src/types'
 
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DragOverlay: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   PointerSensor: class {},
   useSensor: vi.fn(),
   useSensors: vi.fn(() => []),
@@ -22,13 +23,6 @@ vi.mock('@dnd-kit/sortable', () => ({
     setNodeRef: vi.fn(),
     transform: null,
     isDragging: false,
-  })),
-}))
-
-vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: vi.fn(() => ({
-    getVirtualItems: vi.fn(() => []),
-    getTotalSize: vi.fn(() => 0),
   })),
 }))
 
@@ -203,31 +197,4 @@ describe('ChecklistPanel', () => {
     expect(renderedItems[1].textContent).toBe('已完成')
   })
 
-  it('should render many items in virtual mode without errors', () => {
-    const manyItems: ChecklistItem[] = Array.from({ length: 60 }, (_, i) => ({
-      id: `vm${i}`,
-      text: `任务${i}`,
-      isCompleted: false,
-      isHidden: false,
-      order: i + 1,
-      tags: [],
-    }))
-    render(
-      <ChecklistPanel
-        visibleItems={manyItems}
-        activeTab="daily"
-        direction="down"
-        isAutoMoveEnabled={false}
-        onToggle={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onHide={vi.fn()}
-        onReorder={vi.fn()}
-        shouldConfirmDelete={false}
-      />,
-    )
-    // Should show virtual list mode indicator
-    expect(screen.getByText(/虚拟列表模式/)).toBeInTheDocument()
-    expect(screen.getByText(/60/)).toBeInTheDocument()
-  })
 })

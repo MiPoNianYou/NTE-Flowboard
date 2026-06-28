@@ -309,6 +309,61 @@ body {
   animation: pulse-glow 600ms ease-out;
 }
 
+/* ─── 同步状态动画 ──────────────────────────────────────────── */
+@keyframes status-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
+}
+
+@keyframes status-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes status-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-breathe {
+  animation: status-breathe 3s ease-in-out infinite;
+}
+
+.animate-ripple {
+  position: relative;
+}
+
+.animate-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: status-ripple 1.5s ease-out infinite;
+}
+
+.animate-blink {
+  animation: status-blink 1s ease-in-out infinite;
+}
+
 /* ─── 玻璃效果（::before 分离 backdrop-filter，避免 scale 模糊文字）── */
 .glass {
   position: relative;

@@ -33,7 +33,7 @@ describe('useItemAnimations', () => {
       const { result } = renderHook(() =>
         useItemAnimations({ visibleItems: [makeItem(1), makeItem(2)], activeTab: 'daily', ...defaults }),
       )
-      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily', mode: 'normal' })
+      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily' })
       expect(animation.initial).toBe(false)
     })
 
@@ -45,19 +45,7 @@ describe('useItemAnimations', () => {
 
       rerender({ items: [makeItem(1), makeItem(2)] })
 
-      const animation = result.current.getItemAnimation('ia2', { targetTab: 'daily', mode: 'normal' })
-      expect(animation.initial).toEqual({ opacity: 0, height: 0 })
-    })
-
-    it('should detect new items in virtual mode with different initial', () => {
-      const { result, rerender } = renderHook(
-        ({ items }) => useItemAnimations({ visibleItems: items, activeTab: 'daily', ...defaults }),
-        { initialProps: { items: [makeItem(1)] } },
-      )
-
-      rerender({ items: [makeItem(1), makeItem(2)] })
-
-      const animation = result.current.getItemAnimation('ia2', { targetTab: 'daily', mode: 'virtual' })
+      const animation = result.current.getItemAnimation('ia2', { targetTab: 'daily' })
       expect(animation.initial).toEqual({ opacity: 0, height: 0 })
     })
 
@@ -68,12 +56,12 @@ describe('useItemAnimations', () => {
       )
 
       rerender({ items: [makeItem(1), makeItem(2)] })
-      let animation = result.current.getItemAnimation('ia2', { targetTab: 'daily', mode: 'normal' })
+      let animation = result.current.getItemAnimation('ia2', { targetTab: 'daily' })
       expect(animation.initial).toEqual({ opacity: 0, height: 0 })
 
       vi.advanceTimersByTime(MS.ANIMATION_WINDOW)
 
-      animation = result.current.getItemAnimation('ia2', { targetTab: 'daily', mode: 'normal' })
+      animation = result.current.getItemAnimation('ia2', { targetTab: 'daily' })
       expect(animation.initial).toBe(false)
     })
 
@@ -85,8 +73,8 @@ describe('useItemAnimations', () => {
 
       rerender({ items: [makeItem(1), makeItem(2), makeItem(3)] })
 
-      const animation2 = result.current.getItemAnimation('ia2', { targetTab: 'daily', mode: 'normal' })
-      const animation3 = result.current.getItemAnimation('ia3', { targetTab: 'daily', mode: 'normal' })
+      const animation2 = result.current.getItemAnimation('ia2', { targetTab: 'daily' })
+      const animation3 = result.current.getItemAnimation('ia3', { targetTab: 'daily' })
       expect(animation2.initial).toEqual({ opacity: 0, height: 0 })
       expect(animation3.initial).toEqual({ opacity: 0, height: 0 })
     })
@@ -124,7 +112,7 @@ describe('useItemAnimations', () => {
         useItemAnimations({ visibleItems: [makeItem(1)], activeTab: 'daily', ...defaults }),
       )
 
-      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily', mode: 'normal' })
+      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily' })
       expect(animation.animate).toEqual({ opacity: 1, height: 'auto' })
     })
 
@@ -135,7 +123,7 @@ describe('useItemAnimations', () => {
         useItemAnimations({ visibleItems: [makeItem(1)], activeTab: 'daily', onDelete, onHide }),
       )
 
-      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily', mode: 'normal' })
+      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily' })
 
       act(() => {
         animation.onAnimationComplete()
@@ -147,21 +135,12 @@ describe('useItemAnimations', () => {
   })
 
   describe('transition config', () => {
-    it('normal mode should use item entry transition', () => {
+    it('should use item entry transition', () => {
       const { result } = renderHook(() =>
         useItemAnimations({ visibleItems: [makeItem(1)], activeTab: 'daily', ...defaults }),
       )
 
-      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily', mode: 'normal' })
-      expect(animation.transition).toEqual(ITEM_ENTRY)
-    })
-
-    it('virtual mode should use item entry transition', () => {
-      const { result } = renderHook(() =>
-        useItemAnimations({ visibleItems: [makeItem(1)], activeTab: 'daily', ...defaults }),
-      )
-
-      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily', mode: 'virtual' })
+      const animation = result.current.getItemAnimation('ia1', { targetTab: 'daily' })
       expect(animation.transition).toEqual(ITEM_ENTRY)
     })
   })

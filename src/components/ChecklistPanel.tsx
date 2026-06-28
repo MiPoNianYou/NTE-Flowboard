@@ -2,13 +2,12 @@ import { useRef, useCallback, useMemo, useState, useLayoutEffect, useEffect } fr
 import { motion, AnimatePresence } from 'motion/react'
 import {
   type DragEndEvent,
+  type DragStartEvent,
+  type DragCancelEvent,
   PointerSensor,
   useSensor,
   useSensors,
-  type CollisionDetection,
-  closestCenter,
 } from '@dnd-kit/core'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import type { ChecklistItem, TabType } from '../types'
 import type { TabDirection } from '../hooks/useTabManagement'
 import { ChecklistItemRow } from './ChecklistItemRow'
@@ -22,12 +21,6 @@ import { CARD_STYLES } from '../utils/stylePresets'
 import { cn } from '../utils/cn'
 import { UI } from '../utils/constants'
 import { SPRING, ENTRY, PAGE } from '../utils/motion'
-
-const emptySubtitles = [
-  '没什么事做的话，要不要听听我的家族兴建大计？',
-  '早上好！有新的委托吗？柯林斯家族随时可以出发！',
-  '还早还早，再出去转一趟吧',
-]
 
 interface ChecklistPanelProps {
   visibleItems: ChecklistItem[]
@@ -57,7 +50,6 @@ export function ChecklistPanel({
   emptyAction,
 }: ChecklistPanelProps) {
   const { sortedItems, sortedItemIds } = useSortedItems(visibleItems, isAutoMoveEnabled)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const outerRef = useRef<HTMLDivElement>(null)
   const [verticalPadding, setVerticalPadding] = useState(0)
   const { handleDeleteStart, handleHideStart, getItemAnimation } = useItemAnimations({
@@ -128,46 +120,19 @@ export function ChecklistPanel({
     }
   }, [totalHeight])
 
-  const isVirtualMode = sortedItems.length > UI.VIRTUAL_THRESHOLD
-
-  const virtualizer = useVirtualizer({
-    count: sortedItems.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: useCallback(() => UI.ESTIMATED_ITEM_HEIGHT, []),
-    overscan: 8,
-    enabled: isVirtualMode,
-  })
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: UI.DRAG_DISTANCE } }),
   )
 
-  const collisionDetection: CollisionDetection = useCallback(
-    (args) => {
-      if (!isVirtualMode) return closestCenter(args)
-      const { collisionRect, droppableContainers } = args
-      const collisions = droppableContainers
-        .map((container) => {
-          const foundIndex = sortedItems.findIndex((item) => item.id === String(container.id))
-          if (foundIndex === -1) return null
-          const estimatedY = foundIndex * UI.ESTIMATED_ITEM_HEIGHT + UI.ESTIMATED_ITEM_HEIGHT / 2
-          const deltaY = Math.abs(collisionRect.top + collisionRect.height / 2 - estimatedY)
-          return {
-            id: container.id,
-            data: { value: 1 / (deltaY + 1), droppableContainer: container },
-          }
-        })
-        .filter((collision): collision is NonNullable<typeof collision> => collision !== null)
-        .sort(
-          (leftCollision, rightCollision) => rightCollision.data.value - leftCollision.data.value,
-        )
-      return collisions
-    },
-    [isVirtualMode, sortedItems],
-  )
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id))
+  }, [])
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      setActiveId(null)
       const { active, over } = event
       if (over && active.id !== over.id) {
         onReorder(activeTab, String(active.id), String(over.id))
@@ -176,17 +141,13 @@ export function ChecklistPanel({
     [onReorder, activeTab],
   )
 
-  const virtualHeight = Math.min(
-    sortedItems.length * UI.ESTIMATED_ITEM_HEIGHT + UI.VIRTUAL_PADDING,
-    UI.VIRTUAL_MAX_HEIGHT,
-  )
+  const handleDragCancel = useCallback((_event: DragCancelEvent) => {
+    setActiveId(null)
+  }, [])
+
+  const activeItem = activeId ? sortedItems.find((i) => i.id === activeId) : null
+
   const isEmpty = visibleItems.length === 0
-  const virtualItems = isVirtualMode ? virtualizer.getVirtualItems() : []
-  const totalSize = isVirtualMode ? virtualizer.getTotalSize() : 0
-  const emptySubtitle = useMemo(
-    () => emptySubtitles[Math.floor(Math.random() * emptySubtitles.length)],
-    [],
-  )
 
   return (
     <motion.div
@@ -205,74 +166,36 @@ export function ChecklistPanel({
           <div className="relative">
             <div ref={sortedItems.length === 0 ? emptyContentRef : undefined}>
               {isEmpty ? (
-                <EmptyState title="暂无任务" subtitle={emptySubtitle} action={emptyAction} />
-              ) : isVirtualMode ? (
-                <>
-                  <div className="mb-3 text-xs text-text-muted">
-                    {sortedItems.length} 项 · 虚拟列表模式
-                  </div>
-                  <div
-                    ref={scrollContainerRef}
-                    className="overflow-y-auto rounded-xl"
-                    style={{ height: virtualHeight }}
-                  >
-                    <SortList
-                      sortedItemIds={sortedItemIds}
-                      sensors={sensors}
-                      onDragEnd={handleDragEnd}
-                      collisionDetection={collisionDetection}
-                    >
-                      <div className="relative" style={{ height: totalSize }}>
-                        <AnimatePresence mode="popLayout">
-                          {virtualItems.map((virtualRow) => {
-                            const item = sortedItems[virtualRow.index]
-                            if (!item) return null
-                            const animation = getItemAnimation(item.id, {
-                              targetTab: activeTab,
-                              mode: 'virtual',
-                            })
-                            return (
-                              <motion.div
-                                key={item.id}
-                                data-index={virtualRow.index}
-                                initial={animation.initial}
-                                animate={animation.animate}
-                                transition={animation.transition}
-                                onAnimationComplete={animation.onAnimationComplete}
-                                className="absolute top-0 left-0 w-full px-0.5"
-                                style={{ transform: `translateY(${virtualRow.start}px)` }}
-                              >
-                                <ChecklistItemRow
-                                  item={item}
-                                  tab={activeTab}
-                                  onToggle={onToggle}
-                                  onEdit={onEdit}
-                                  onDelete={handleDeleteStart}
-                                  onHide={handleHideStart}
-                                  shouldConfirmDelete={shouldConfirmDelete}
-                                  onHeightChange={reportHeight}
-                                  suppressMountAnimation={isFirstSetRef.current}
-                                />
-                              </motion.div>
-                            )
-                          })}
-                        </AnimatePresence>
-                      </div>
-                    </SortList>
-                  </div>
-                </>
+                <EmptyState title="暂无任务" action={emptyAction} />
               ) : (
                 <div className="space-y-1.5">
                   <SortList
                     sortedItemIds={sortedItemIds}
                     sensors={sensors}
+                    onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
+                    overlay={
+                      activeItem ? (
+                        <ChecklistItemRow
+                          item={activeItem}
+                          tab={activeTab}
+                          onToggle={onToggle}
+                          onEdit={onEdit}
+                          onDelete={handleDeleteStart}
+                          onHide={handleHideStart}
+                          shouldConfirmDelete={shouldConfirmDelete}
+                          onHeightChange={reportHeight}
+                          suppressMountAnimation
+                          isDragOverlay
+                        />
+                      ) : undefined
+                    }
                   >
                     <AnimatePresence mode="popLayout">
                       {sortedItems.map((item) => {
                         const animation = getItemAnimation(item.id, {
                           targetTab: activeTab,
-                          mode: 'normal',
                         })
                         return (
                           <motion.div

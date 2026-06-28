@@ -26,16 +26,8 @@ export const MS = {
 
 // ─── 界面 / 布局 ──────────────────────────────────────────
 export const UI = {
-  /** 虚拟滚动启用阈值 */
-  VIRTUAL_THRESHOLD: 50,
-  /** 列表项估算高度（含间距）px */
-  ESTIMATED_ITEM_HEIGHT: 52,
   /** 拖拽激活距离 px */
   DRAG_DISTANCE: 8,
-  /** 虚拟列表最大高度 px */
-  VIRTUAL_MAX_HEIGHT: 500,
-  /** 虚拟列表底部额外间距 px */
-  VIRTUAL_PADDING: 20,
   /** 单项目标签上限 */
   TAG_LIMIT: 5,
 } as const

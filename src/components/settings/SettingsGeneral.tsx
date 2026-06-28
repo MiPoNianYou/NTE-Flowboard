@@ -15,7 +15,7 @@ export function SettingsGeneral({ onBack, isEmbedded }: SettingsPageBaseProps) {
         <Card variant="surface" className="p-0 overflow-hidden">
           <SettingRow
             icon={ListEnd}
-            label="已完成任务自动移至底部"
+            label="完成任务自动置底"
             trailing={
               <ToggleSwitch
                 checked={settings.isAutoMoveEnabled}
@@ -28,7 +28,7 @@ export function SettingsGeneral({ onBack, isEmbedded }: SettingsPageBaseProps) {
         <Card variant="surface" className="p-0 overflow-hidden">
           <SettingRow
             icon={CheckCheck}
-            label="删除前需二次确认"
+            label="删除二次确认"
             trailing={
               <ToggleSwitch
                 checked={settings.shouldConfirmDelete}

@@ -11,7 +11,7 @@
 [**在线使用 →**](https://miponianyou.github.io/NTE-Flowboard/)
 
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Tests](https://img.shields.io/badge/Tests-493_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-376_passing-brightgreen)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
@@ -29,12 +29,11 @@
 | 每日/每周/每月清单 | 自动按服务器时区重置（含夏令时） |
 | 拖拽排序 | dnd-kit 流畅拖拽体验 |
 | 标签分类 | 10 种颜色标签，按序自动分配 |
-| Liquid Glass 暗色主题 | 深色设计系统，玻璃态表面层 |
 | 云端同步 | Supabase Realtime 跨设备实时同步 |
-| 虚拟滚动 | 超过 50 项自动启用 |
+| Liquid Glass 暗色主题 | 深色设计系统，玻璃态表面层 |
 | 离线提示 | 断网时显示状态 |
 | 无障碍支持 | WAI-ARIA 标签、焦点陷阱、键盘导航 |
-| 单元测试 | 494 个测试用例覆盖核心逻辑 |
+| 单元测试 | 376 个测试用例覆盖核心逻辑 |
 
 </div>
 
@@ -74,12 +73,12 @@ npm run dev
 ```
 src/
 ├── components/                # UI 组件
-│   ├── base/                  # 基础组件（8 个）
+│   ├── base/                  # 基础组件（9 个）
 │   ├── ChecklistItemRow/      # 清单项行（拖拽 + 编辑）
 │   ├── settings/              # 设置页面（11 个）
 │   └── ...                    # 业务组件
 ├── hooks/                     # 自定义 Hooks（15 个）
-├── utils/                     # 工具函数（11 个）
+├── utils/                     # 工具函数（12 个）
 ├── types.ts                   # 共享类型定义
 ├── system.css                 # Liquid Glass 设计令牌
 └── App.tsx                    # 根组件

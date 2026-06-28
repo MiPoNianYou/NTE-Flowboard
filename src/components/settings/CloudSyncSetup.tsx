@@ -171,7 +171,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
               href="https://supabase.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[12px] font-medium hover:bg-primary/20 transition-colors duration-200"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors duration-200"
             >
               supabase.com
               <ExternalLink className="size-3" />
@@ -182,7 +182,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         <div>
           <p className="font-medium text-text-primary mb-1">2.创建数据表</p>
           <p className="mb-2">复制下方 SQL 至 Supabase SQL Editor 运行</p>
-          <div className="relative bg-elevated rounded-xl overflow-hidden shadow-card">
+          <div className="relative bg-surface rounded-xl overflow-hidden">
             <div
               role="button"
               tabIndex={0}
@@ -193,7 +193,10 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
                   setIsSqlExpanded((prev) => !prev)
                 }
               }}
-              className="flex items-center justify-between px-3 py-1.5 bg-surface w-full cursor-pointer"
+              className={cn(
+                'flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
+                isSqlExpanded ? '' : 'rounded-xl',
+              )}
             >
               <span className="flex items-center gap-1.5 text-[11px] text-text-muted font-medium font-mono">
                 <Database className="size-3" />
@@ -250,7 +253,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
               className={cn(GRID_COLLAPSE, isSqlExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}
             >
               <div className="overflow-hidden">
-                <pre className="p-3 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 bg-surface whitespace-pre-wrap break-words overflow-y-auto">
+                <pre className="px-3 pb-3 pt-1 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
                   {SQL_SNIPPET}
                 </pre>
               </div>
@@ -259,7 +262,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         </div>
         <div>
           <p className="font-medium text-text-primary mb-1">3.获取项目 ID</p>
-          <div className="flex items-center gap-1 text-[12px] text-text-secondary flex-wrap">
+          <div className="flex items-center gap-1 text-xs text-text-secondary flex-wrap">
             <Path>Project Settings</Path>
             <ChevronRight className="size-3 text-text-muted" />
             <Path>General</Path>
@@ -269,7 +272,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         </div>
         <div>
           <p className="font-medium text-text-primary mb-1">4.获取 Anon Key</p>
-          <div className="flex items-center gap-1 text-[12px] text-text-secondary flex-wrap">
+          <div className="flex items-center gap-1 text-xs text-text-secondary flex-wrap">
             <Path>Project Settings</Path>
             <ChevronRight className="size-3 text-text-muted" />
             <Path>API Keys</Path>
