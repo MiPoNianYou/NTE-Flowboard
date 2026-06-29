@@ -22,12 +22,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary hover:brightness-[0.92] text-[var(--color-text-on-accent)] shadow-md hover:shadow-card-hover',
+    'bg-primary hover:brightness-[0.92] text-[var(--color-text-on-accent)] shadow-md hover:shadow-card-hover [border-width:1.5px] border-transparent',
   secondary: '[border-width:1.5px] border-border text-primary hover:bg-surface-hover',
   tertiary:
     '[border-width:1.5px] border-border text-text-primary hover:text-text-primary hover:bg-surface-hover',
-  danger: 'bg-danger text-[var(--color-text-on-accent)] shadow-md hover:shadow-card-hover',
-  warning: 'bg-warning text-[var(--color-text-on-accent)] shadow-md hover:shadow-card-hover',
+  danger:
+    'bg-danger text-[var(--color-text-on-accent)] shadow-md hover:shadow-card-hover [border-width:1.5px] border-transparent',
+  warning:
+    'bg-warning text-[var(--color-text-on-accent)] shadow-md hover:shadow-card-hover [border-width:1.5px] border-transparent',
   'primary-soft':
     'bg-primary/10 text-primary [border-width:1.5px] border-primary/30 hover:bg-primary/20',
   'success-soft':

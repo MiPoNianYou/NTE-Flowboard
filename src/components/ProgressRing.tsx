@@ -51,10 +51,10 @@ export function ProgressRing({ completed, total }: ProgressRingProps) {
           className={percentage === 100 ? 'text-success' : 'text-primary'}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-xs lg:text-sm font-bold text-text-primary tabular-nums">
+      <span className="absolute inset-0 flex items-center justify-center text-[10px] lg:text-sm font-bold text-text-primary tabular-nums">
         <Counter
           value={percentage}
-          fontSize={14}
+          fontSize={12}
           gap={0}
           padding={0}
           horizontalPadding={0}

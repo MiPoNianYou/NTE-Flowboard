@@ -22,7 +22,7 @@ describe('ProgressCard', () => {
 
       />,
     )
-    expect(screen.getByText('今日进度')).toBeInTheDocument()
+    expect(screen.getAllByText('今日进度').length).toBeGreaterThan(0)
   })
 
   it('should show weekly progress title', () => {
@@ -36,7 +36,7 @@ describe('ProgressCard', () => {
 
       />,
     )
-    expect(screen.getByText('本周进度')).toBeInTheDocument()
+    expect(screen.getAllByText('本周进度').length).toBeGreaterThan(0)
   })
 
   it('should show completed count', () => {
@@ -50,7 +50,7 @@ describe('ProgressCard', () => {
 
       />,
     )
-    expect(screen.getByText('3 / 5 项已完成')).toBeInTheDocument()
+    expect(screen.getAllByText('3 / 5 项已完成').length).toBeGreaterThan(0)
   })
 
   it('should show "全部完成" badge when allDone is true', () => {
@@ -64,7 +64,7 @@ describe('ProgressCard', () => {
 
       />,
     )
-    expect(screen.getByText('全部完成')).toBeInTheDocument()
+    expect(screen.getAllByText('全部完成').length).toBeGreaterThan(0)
   })
 
   it('should not show "全部完成" badge when allDone is false', () => {

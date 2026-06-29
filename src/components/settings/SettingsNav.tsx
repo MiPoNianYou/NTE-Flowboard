@@ -48,23 +48,28 @@ export function SettingsNav({
             className={cn(
               'group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors duration-200',
               isActive
-                ? 'bg-primary/5 text-primary'
+                ? 'md:bg-primary/5 md:text-primary text-text-secondary hover:text-text-primary hover:bg-surface-hover md:hover:bg-primary/5 md:hover:text-primary'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
             )}
           >
             <div
               className={cn(
                 'size-8 rounded-lg flex items-center justify-center transition-colors duration-200',
-                isActive ? 'bg-primary/15' : 'bg-surface group-hover:bg-elevated',
+                isActive ? 'md:bg-primary/15 bg-surface' : 'bg-surface group-hover:bg-elevated',
               )}
             >
-              <item.icon className={cn('size-4', isActive && 'text-primary')} />
+              <item.icon className={cn('size-4', isActive && 'md:text-primary')} />
             </div>
             <span className={cn('flex-1 text-sm', isActive ? 'font-medium' : 'font-medium')}>
               {item.label}
             </span>
             {labels?.[item.id] && (
-              <span className={cn('text-xs', isActive ? 'text-primary/70' : 'text-text-muted')}>
+              <span
+                className={cn(
+                  'text-xs',
+                  isActive ? 'md:text-primary/70 text-text-muted' : 'text-text-muted',
+                )}
+              >
                 {labels[item.id]}
               </span>
             )}

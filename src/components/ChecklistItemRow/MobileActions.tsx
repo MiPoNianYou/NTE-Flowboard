@@ -4,17 +4,17 @@ import { GRID_COLLAPSE } from '../../utils/stylePresets'
 import { Button } from '../base/Button'
 import type { ItemActionProps } from './DesktopActions'
 
-interface MobileActionBarProps extends ItemActionProps {
+interface MobileActionsProps extends ItemActionProps {
   isExpanded: boolean
 }
 
-export function MobileActionBar({
+export function MobileActions({
   onEdit,
   onHide,
   onDelete,
   isPending,
   isExpanded,
-}: MobileActionBarProps) {
+}: MobileActionsProps) {
   return (
     <div className={cn(GRID_COLLAPSE, isExpanded ? 'collapse-open' : 'collapse-closed')}>
       <div className="overflow-hidden">
@@ -39,12 +39,9 @@ export function MobileActionBar({
             <span>隐藏</span>
           </Button>
           <Button
-            variant="danger"
+            variant={isPending ? 'danger' : 'danger-soft'}
             onClick={onDelete}
-            className={cn(
-              'px-2 py-1.5 text-xs justify-center',
-              !isPending && 'text-text-muted hover:text-danger',
-            )}
+            className="px-2 py-1.5 text-xs justify-center"
           >
             <Trash2 size={13} />
             <span>{isPending ? '确认' : '删除'}</span>

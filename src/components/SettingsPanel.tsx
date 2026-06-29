@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback, useMemo, type ChangeEvent } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Settings, X } from 'lucide-react'
+import { Settings, X, ArrowLeft } from 'lucide-react'
 import type { ChecklistData, TabType } from '../types'
 import type { CloudSyncProps } from './settings/CloudSyncSection'
 import { exportData, importData } from '../utils/storage'
 import { SettingsLayout } from './settings/SettingsLayout'
+import { NAV_ITEMS, type SubPage } from './settings/SettingsNav'
 import { SPRING, PAGE } from '../utils/motion'
 import { Button } from './base/Button'
 import { useTimedToggle } from '../hooks/useTimedToggle'
@@ -120,6 +121,33 @@ export function SettingsPanel({
     ],
   )
 
+  const renderSettingsHeader = useCallback(
+    (activeTab: SubPage | null, setActiveTab: (tab: SubPage | null) => void) =>
+      activeTab ? (
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
+          <h2 className="text-base font-bold text-text-primary">
+            {NAV_ITEMS.find((item) => item.id === activeTab)?.label ?? ''}
+          </h2>
+          <Button
+            variant="tertiary"
+            onClick={() => setActiveTab(null)}
+            className="p-1.5"
+            aria-label="返回设置列表"
+          >
+            <ArrowLeft className="size-[18px]" />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
+          <h2 className="text-base font-bold text-text-primary">设置</h2>
+          <Button variant="tertiary" onClick={handleClose} className="p-1.5">
+            <X className="size-[18px]" />
+          </Button>
+        </div>
+      ),
+    [handleClose],
+  )
+
   return (
     <>
       <Button variant="tertiary" onClick={handleOpen} className="p-2 lg:p-2" aria-label="打开设置">
@@ -148,7 +176,7 @@ export function SettingsPanel({
               exit={{ y: '100%' }}
               transition={SPRING}
               className="md:hidden fixed bottom-0 left-0 right-0 z-[300] glass-strong border-t border-border rounded-t-2xl flex flex-col"
-              style={{ maxHeight: 'min(88dvh, 600px)' }}
+              style={{ height: 'clamp(380px, 50dvh, 560px)' }}
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -157,13 +185,7 @@ export function SettingsPanel({
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                 <div className="w-12 h-1.5 rounded-full bg-border-strong/50" />
               </div>
-              <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
-                <h2 className="text-base font-bold text-text-primary">设置</h2>
-                <Button variant="tertiary" onClick={handleClose} className="p-1.5">
-                  <X className="size-[18px]" />
-                </Button>
-              </div>
-              <SettingsLayout {...layoutProps} />
+              <SettingsLayout {...layoutProps} renderHeader={renderSettingsHeader} />
             </motion.div>
 
             {/* Desktop: Centered dialog */}
@@ -181,7 +203,7 @@ export function SettingsPanel({
                 aria-modal="true"
                 aria-label="设置"
               >
-                <SettingsLayout {...layoutProps} />
+                <SettingsLayout {...layoutProps} renderHeader={renderSettingsHeader} />
               </motion.div>
             </div>
           </>

@@ -1,9 +1,9 @@
 import { useMemo, useEffect } from 'react'
-import { cn } from './utils/cn'
 import { useChecklist } from './hooks/useChecklist'
 import { useSupabaseSync } from './hooks/useSupabaseSync'
 import { useTabManagement } from './hooks/useTabManagement'
 import { useLocalStorageBoolean } from './hooks/useLocalStorageBoolean'
+import { useIsMobile } from './hooks/useIsMobile'
 import { SettingsProvider, useSettings } from './context/SettingsContext'
 
 import { useNextResetLabel } from './hooks/useNextResetLabel'
@@ -39,6 +39,7 @@ function AppContent() {
   const { settings, updateSettings } = useSettings()
 
   const { setActiveTab, activeTab, direction } = useTabManagement()
+  const isMobile = useIsMobile()
 
   const {
     data,
@@ -125,18 +126,28 @@ function AppContent() {
             cloudSyncProps={cloudSyncProps}
           />
 
-          <div
-            className={cn('flex flex-col gap-6 items-start', 'md:flex-row md:flex-wrap lg:gap-8')}
-          >
-            <div className={cn('space-y-4 w-full', 'md:space-y-5', 'md:w-[280px] lg:w-[320px]')}>
+          {isMobile ? (
+            <div className="flex flex-col gap-4">
               <TabSwitch activeTab={activeTab} onTabChange={setActiveTab} />
-              <AddItemForm tab={activeTab} onAdd={addItem} />
               <ProgressCard
                 activeTab={activeTab}
                 completedCount={completedCount}
                 totalCount={totalCount}
                 isAllDone={isAllDone}
                 nextResetLabel={nextResetLabel}
+              />
+              <AddItemForm tab={activeTab} onAdd={addItem} />
+              <ChecklistPanel
+                visibleItems={visibleItems}
+                activeTab={activeTab}
+                direction={direction}
+                isAutoMoveEnabled={settings.isAutoMoveEnabled}
+                onToggle={toggleItem}
+                onEdit={editItem}
+                onDelete={removeItem}
+                onHide={hideItem}
+                onReorder={reorderItem}
+                shouldConfirmDelete={settings.shouldConfirmDelete}
               />
               <HiddenSection
                 hiddenItems={hiddenItems}
@@ -149,22 +160,46 @@ function AppContent() {
                 onToggle={() => setIsHiddenSectionOpen(!isHiddenSectionOpen)}
               />
             </div>
-            <div className={cn('min-w-0 w-full', 'md:flex-1 md:sticky md:top-8 lg:top-10')}>
-              <ChecklistPanel
-                visibleItems={visibleItems}
-                activeTab={activeTab}
-                direction={direction}
-                isAutoMoveEnabled={settings.isAutoMoveEnabled}
-                onToggle={toggleItem}
-                onEdit={editItem}
-                onDelete={removeItem}
-                onHide={hideItem}
-                onReorder={reorderItem}
-                shouldConfirmDelete={settings.shouldConfirmDelete}
-                emptyAction={<Badge variant="primary">在左侧添加第一个任务</Badge>}
-              />
+          ) : (
+            <div className="flex flex-row gap-6 items-start lg:gap-8">
+              <div className="space-y-5 w-[280px] lg:w-[320px]">
+                <TabSwitch activeTab={activeTab} onTabChange={setActiveTab} />
+                <AddItemForm tab={activeTab} onAdd={addItem} />
+                <ProgressCard
+                  activeTab={activeTab}
+                  completedCount={completedCount}
+                  totalCount={totalCount}
+                  isAllDone={isAllDone}
+                  nextResetLabel={nextResetLabel}
+                />
+                <HiddenSection
+                  hiddenItems={hiddenItems}
+                  activeTab={activeTab}
+                  direction={direction}
+                  onShowItem={showItem}
+                  onDelete={removeItem}
+                  shouldConfirmDelete={settings.shouldConfirmDelete}
+                  isOpen={isHiddenSectionOpen}
+                  onToggle={() => setIsHiddenSectionOpen(!isHiddenSectionOpen)}
+                />
+              </div>
+              <div className="flex-1 sticky top-8 lg:top-10 min-w-0">
+                <ChecklistPanel
+                  visibleItems={visibleItems}
+                  activeTab={activeTab}
+                  direction={direction}
+                  isAutoMoveEnabled={settings.isAutoMoveEnabled}
+                  onToggle={toggleItem}
+                  onEdit={editItem}
+                  onDelete={removeItem}
+                  onHide={hideItem}
+                  onReorder={reorderItem}
+                  shouldConfirmDelete={settings.shouldConfirmDelete}
+                  emptyAction={<Badge variant="primary">在左侧添加第一个任务</Badge>}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>

@@ -1,16 +1,22 @@
-import { useState, useMemo, useRef, type ChangeEvent, type RefObject } from 'react'
+import {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  type ChangeEvent,
+  type RefObject,
+  type ReactNode,
+} from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeft } from 'lucide-react'
 import type { TabType } from '../../types'
 import type { CloudSyncProps } from './CloudSyncSection'
-import { SettingsNav, NAV_ITEMS, type SubPage } from './SettingsNav'
+import { SettingsNav, type SubPage } from './SettingsNav'
 import { SettingsGeneral } from './SettingsGeneral'
 import { SettingsServer } from './SettingsServer'
 import { SettingsData } from './SettingsData'
 import { CloudSyncSection } from './CloudSyncSection'
-import { Button } from '../base/Button'
 import { SERVER_REGIONS } from '../../utils/storage'
-import { SPRING, PAGE } from '../../utils/motion'
+import { PAGE } from '../../utils/motion'
 import { useSettings } from '../../context/SettingsContext'
 
 interface SettingsLayoutProps {
@@ -22,6 +28,10 @@ interface SettingsLayoutProps {
   isImportSuccess: boolean
   isExportSuccess: boolean
   cloudSyncProps?: CloudSyncProps
+  renderHeader?: (
+    activeTab: SubPage | null,
+    setActiveTab: (tab: SubPage | null) => void,
+  ) => ReactNode
 }
 
 const REGION_LABELS: Record<string, string> = Object.fromEntries(
@@ -37,11 +47,19 @@ export function SettingsLayout({
   isImportSuccess,
   isExportSuccess,
   cloudSyncProps,
+  renderHeader,
 }: SettingsLayoutProps) {
   const { settings } = useSettings()
   const [activeTab, setActiveTab] = useState<SubPage | null>(null)
   const [direction, setDirection] = useState(1)
   const prevIndexRef = useRef(0)
+  const suppressMobileNavInitialRef = useRef(true)
+  const suppressDesktopContentInitialRef = useRef(true)
+
+  useEffect(() => {
+    suppressMobileNavInitialRef.current = false
+    suppressDesktopContentInitialRef.current = false
+  }, [])
 
   const TAB_ORDER: SubPage[] = ['general', 'server', 'cloud', 'data']
 
@@ -111,14 +129,15 @@ export function SettingsLayout({
     <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
       {/* Mobile layout */}
       <div className="md:hidden flex-1 flex flex-col min-h-0 overflow-hidden">
+        {renderHeader?.(activeTab, handleTabChange)}
         <AnimatePresence mode="wait">
           {!activeTab ? (
             <motion.div
               key="mobile-nav"
-              initial={{ opacity: 0, x: -16 }}
+              initial={suppressMobileNavInitialRef.current ? false : { opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
-              transition={SPRING}
+              transition={PAGE}
               className="flex-1 overflow-y-auto overscroll-contain p-4"
             >
               <SettingsNav activeTab={tab} onTabChange={handleTabChange} labels={sidebarLabels} />
@@ -129,17 +148,9 @@ export function SettingsLayout({
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
-              transition={SPRING}
+              transition={PAGE}
               className="flex-1 flex flex-col min-h-0"
             >
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 glass">
-                <Button variant="tertiary" onClick={() => setActiveTab(null)} className="p-1.5">
-                  <ArrowLeft className="size-5" />
-                </Button>
-                <h2 className="flex-1 text-base font-bold text-text-primary">
-                  {NAV_ITEMS.find((navItem) => navItem.id === activeTab)?.label ?? ''}
-                </h2>
-              </div>
               <div className="flex-1 overflow-y-auto overscroll-contain p-4">{renderContent}</div>
             </motion.div>
           )}
@@ -160,7 +171,9 @@ export function SettingsLayout({
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
-              initial={{ opacity: 0, y: direction * 16 }}
+              initial={
+                suppressDesktopContentInitialRef.current ? false : { opacity: 0, y: direction * 16 }
+              }
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: direction * -8 }}
               transition={PAGE}

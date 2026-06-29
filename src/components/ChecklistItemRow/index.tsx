@@ -18,7 +18,7 @@ import { FADE_IN, FADE_OUT, SPRING } from '../../utils/motion'
 import { TagPill } from '../TagPill'
 import { EditForm } from './EditForm'
 import { DesktopActions } from './DesktopActions'
-import { MobileActionBar } from './MobileActionBar'
+import { MobileActions } from './MobileActions'
 
 interface ChecklistItemRowProps {
   item: ChecklistItem
@@ -288,7 +288,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
             />
           </div>
 
-          <MobileActionBar
+          <MobileActions
             onEdit={startEdit}
             onHide={() => onHide(tab, item.id)}
             onDelete={handleDeleteClick}

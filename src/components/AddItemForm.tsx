@@ -56,7 +56,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
               }
             }}
           >
-            <div className="flex items-center justify-center gap-2 py-2 lg:py-3">
+            <div className="flex items-center justify-center gap-2 py-3 lg:py-3">
               <Plus size={16} className="lg:hidden text-text-muted" />
               <Plus size={20} className="hidden lg:block text-text-muted" />
               <span className="text-sm font-medium text-text-secondary">添加新任务</span>
