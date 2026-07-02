@@ -157,7 +157,14 @@ export type ValidateResult = { ok: true } | { ok: false; reason: ValidateReason;
 export async function validateConfig(projectId: string, anonKey: string): Promise<ValidateResult> {
   try {
     const url = buildSupabaseUrl(projectId)
-    const supabaseClient = createClient(url, anonKey)
+    const supabaseClient = createClient(url, anonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        storageKey: `flowboard-cloud-validate-${projectId}`,
+      },
+    })
     const { error } = await supabaseClient.rpc('pull_sync').maybeSingle()
     if (!error || error.code === '42883' || error.code === 'PGRST301') {
       return { ok: true }

@@ -6,13 +6,13 @@ import { ACTION_HOVER_SUCCESS, ACTION_HOVER_INFO } from '../../utils/stylePreset
 import { TagInput } from '../TagInput'
 import { Button } from '../base/Button'
 
-interface EditFormProps {
+interface ItemEditorProps {
   item: ChecklistItem
   onSave: (text: string, tags: string[]) => void
   onCancel: () => void
 }
 
-export function EditForm({ item, onSave, onCancel }: EditFormProps) {
+export function ItemEditor({ item, onSave, onCancel }: ItemEditorProps) {
   const [text, setText] = useState(item.text)
   const [tags, setTags] = useState<string[]>(item.tags ?? [])
 

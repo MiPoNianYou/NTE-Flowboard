@@ -191,7 +191,6 @@ export function useSupabaseSync({
     if (!config) return
 
     configRef.current = config
-    resetClient()
 
     const timer = setTimeout(() => {
       validateConfig(config.projectId, config.anonKey).then((valid) => {

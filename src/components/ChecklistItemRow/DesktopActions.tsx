@@ -24,7 +24,7 @@ export function DesktopActions({ onEdit, onHide, onDelete, isPending }: ItemActi
           event.stopPropagation()
           onEdit()
         }}
-        className={ACTION_HOVER_PRIMARY}
+        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
       >
         <Pencil size={15} />
       </Button>
@@ -34,14 +34,14 @@ export function DesktopActions({ onEdit, onHide, onDelete, isPending }: ItemActi
           event.stopPropagation()
           onHide()
         }}
-        className={ACTION_HOVER_WARNING}
+        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_WARNING)}
       >
         <EyeOff size={15} />
       </Button>
       <Button
         variant="tertiary"
         onClick={onDelete}
-        className={cn(ACTION_HOVER_DANGER, isPending && PENDING_DELETE_STYLE)}
+        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_DANGER, isPending && PENDING_DELETE_STYLE)}
       >
         <Trash2 size={15} />
       </Button>

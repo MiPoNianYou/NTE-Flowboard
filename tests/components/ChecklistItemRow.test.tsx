@@ -16,6 +16,7 @@ vi.mock('@dnd-kit/sortable', () => ({
 
 vi.mock('../../src/utils/tagColors', () => ({
   getTagColors: vi.fn(() => ({ text: '#EF4444', backgroundColor: '#ef444424' })),
+  previewTagColors: vi.fn(() => ({ text: '#EF4444', backgroundColor: '#ef444424' })),
 }))
 
 vi.mock('../../src/hooks/usePendingDelete', () => {
@@ -205,14 +206,52 @@ describe('ChecklistItemRow', () => {
         onDelete={vi.fn()}
         onHide={vi.fn()}
         shouldConfirmDelete={false}
-      />,
+      />, 
     )
     const editButton = screen.getByRole('button', { name: /编辑/ })
     fireEvent.click(editButton)
-    expect(screen.getByPlaceholderText('输入任务名称...')).toBeInTheDocument()
+    expect(screen.getByLabelText('编辑任务名称')).toBeInTheDocument()
   })
 
-  it('should call onEdit when save is clicked in edit form', () => {
+  it('should call onEdit when save is clicked in inline edit mode', () => {
+    const onEdit = vi.fn()
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={onEdit}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />, 
+    )
+    fireEvent.click(screen.getByRole('button', { name: /编辑/ }))
+    const input = screen.getByLabelText('编辑任务名称')
+    fireEvent.change(input, { target: { value: '改名' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(onEdit).toHaveBeenCalledWith('daily', 'test1', '改名', ['地图'])
+  })
+
+  it('should cancel edit when Escape is pressed', () => {
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />, 
+    )
+    fireEvent.click(screen.getByRole('button', { name: /编辑/ }))
+    expect(screen.getByLabelText('编辑任务名称')).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByLabelText('编辑任务名称'), { key: 'Escape' })
+    expect(screen.queryByLabelText('编辑任务名称')).not.toBeInTheDocument()
+  })
+
+  it('should keep editing when saving empty text', () => {
     const onEdit = vi.fn()
     render(
       <ChecklistItemRow
@@ -226,17 +265,15 @@ describe('ChecklistItemRow', () => {
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: /编辑/ }))
-    const input = screen.getByPlaceholderText('输入任务名称...')
-    fireEvent.change(input, { target: { value: '改名' } })
-    // Click save button (the one with Save icon)
-    const saveButtons = screen.getAllByRole('button')
-    const saveButton = saveButtons.find(b => b.querySelector('svg'))
-    if (saveButton) fireEvent.click(saveButton)
-    // onEdit should be called with the new text
-    expect(onEdit).toHaveBeenCalled()
+    const input = screen.getByLabelText('编辑任务名称')
+    fireEvent.change(input, { target: { value: '   ' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(onEdit).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('编辑任务名称')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByPlaceholderText('任务名称不能为空')).toBeInTheDocument()
   })
 
-  it('should cancel edit when Escape is pressed', () => {
+  it('should show add-tag trigger in edit mode', () => {
     render(
       <ChecklistItemRow
         item={mockItem}
@@ -249,8 +286,41 @@ describe('ChecklistItemRow', () => {
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: /编辑/ }))
-    expect(screen.getByPlaceholderText('输入任务名称...')).toBeInTheDocument()
-    fireEvent.keyDown(screen.getByPlaceholderText('输入任务名称...'), { key: 'Escape' })
-    expect(screen.queryByPlaceholderText('输入任务名称...')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新增标签' })).toBeInTheDocument()
+  })
+
+  it('should keep existing tags non-editable in edit mode', () => {
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /编辑/ }))
+    fireEvent.click(screen.getByText('地图'))
+    expect(screen.queryByLabelText('编辑标签 地图')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新增标签' })).toBeEnabled()
+  })
+
+  it('should enter new-tag mode when add-tag trigger is clicked', () => {
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /编辑/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: '新增标签' })[0])
+    expect(screen.getByRole('textbox', { name: '新增标签' })).toBeInTheDocument()
   })
 })

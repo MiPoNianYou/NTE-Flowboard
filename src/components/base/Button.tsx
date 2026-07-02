@@ -17,6 +17,7 @@ type ButtonVariant =
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   isLoading?: boolean
+  contentClassName?: string
   children: ReactNode
 }
 
@@ -42,7 +43,15 @@ const variantStyles: Record<ButtonVariant, string> = {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', isLoading = false, className, disabled, children, ...props },
+  {
+    variant = 'primary',
+    isLoading = false,
+    className,
+    contentClassName,
+    disabled,
+    children,
+    ...props
+  },
   ref,
 ) {
   return (
@@ -58,7 +67,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...props}
     >
       <span
-        className={cn('inline-flex items-center gap-1.5', isLoading && 'invisible')}
+        className={cn(
+          'inline-flex items-center gap-1.5',
+          isLoading && 'invisible',
+          contentClassName,
+        )}
         aria-hidden={isLoading}
       >
         {children}

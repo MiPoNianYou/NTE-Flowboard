@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { SCALE_ENTRY, SCALE_EXIT } from '../../utils/motion'
 import {
@@ -11,14 +11,13 @@ import {
   ClipboardCheck,
   Database,
   ExternalLink,
-  AlertCircle,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { GRID_COLLAPSE } from '../../utils/stylePresets'
 import { Button } from '../base/Button'
 import { Input } from '../base/Input'
 import { Card } from '../base/Card'
-import { StatusMessage } from '../base/StatusMessage'
 
 const SQL_SNIPPET = `-- NTE Flowboard 云同步配置
 -- 在 Supabase SQL Editor 中执行以下语句
@@ -67,6 +66,8 @@ interface CloudSyncSetupProps {
   onSetupSupabase: (projectId: string, anonKey: string) => Promise<void>
 }
 
+type ButtonPhase = 'idle' | 'loading' | 'error'
+
 export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupProps) {
   const [projectIdInput, setProjectIdInput] = useState('')
   const [anonKeyInput, setAnonKeyInput] = useState('')
@@ -75,14 +76,145 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
   const [localError, setLocalError] = useState<string | null>(null)
   const [isSqlExpanded, setIsSqlExpanded] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+  const [buttonPhase, setButtonPhase] = useState<ButtonPhase>('idle')
+  const [buttonErrorMessage, setButtonErrorMessage] = useState<string | null>(null)
+  const [isMarqueeNeeded, setIsMarqueeNeeded] = useState(false)
+  const [marqueeDistance, setMarqueeDistance] = useState(0)
+  const [shouldStartMarquee, setShouldStartMarquee] = useState(false)
+  const awaitingRequestResultRef = useRef(false)
+  const hasClearedErrorSinceRequestRef = useRef(false)
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const marqueeStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const marqueeViewportRef = useRef<HTMLSpanElement | null>(null)
+  const marqueeTrackRef = useRef<HTMLSpanElement | null>(null)
+
+  useEffect(() => {
+    const errorMessage = syncError || localError
+
+    if (awaitingRequestResultRef.current) {
+      if (!errorMessage) {
+        hasClearedErrorSinceRequestRef.current = true
+        if (!isConnecting) {
+          awaitingRequestResultRef.current = false
+          setButtonPhase('idle')
+        }
+        return
+      }
+
+      if (!hasClearedErrorSinceRequestRef.current) {
+        return
+      }
+    }
+
+    if (!errorMessage) return
+
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current)
+      feedbackTimerRef.current = null
+    }
+
+    setButtonErrorMessage(errorMessage)
+    setButtonPhase('error')
+    awaitingRequestResultRef.current = false
+
+    if (isConnecting) return
+
+    feedbackTimerRef.current = setTimeout(() => {
+      setButtonErrorMessage(null)
+      setButtonPhase('idle')
+      feedbackTimerRef.current = null
+    }, 2000)
+
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current)
+        feedbackTimerRef.current = null
+      }
+    }
+  }, [isConnecting, localError, syncError])
+
+  const clearButtonFeedback = () => {
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current)
+      feedbackTimerRef.current = null
+    }
+    if (marqueeStartTimerRef.current) {
+      clearTimeout(marqueeStartTimerRef.current)
+      marqueeStartTimerRef.current = null
+    }
+    setButtonErrorMessage(null)
+    setButtonPhase('idle')
+    setIsMarqueeNeeded(false)
+    setMarqueeDistance(0)
+    setShouldStartMarquee(false)
+    awaitingRequestResultRef.current = false
+    hasClearedErrorSinceRequestRef.current = false
+  }
+
+  useEffect(() => {
+    if (!buttonErrorMessage) {
+      if (marqueeStartTimerRef.current) {
+        clearTimeout(marqueeStartTimerRef.current)
+        marqueeStartTimerRef.current = null
+      }
+      setIsMarqueeNeeded(false)
+      setMarqueeDistance(0)
+      setShouldStartMarquee(false)
+      return
+    }
+
+    const measureOverflow = () => {
+      const viewport = marqueeViewportRef.current
+      const track = marqueeTrackRef.current
+      if (!viewport || !track) return
+
+      const overflow = track.scrollWidth - viewport.clientWidth
+      if (overflow > 8) {
+        setIsMarqueeNeeded(true)
+        setMarqueeDistance(overflow)
+        setShouldStartMarquee(false)
+        if (marqueeStartTimerRef.current) clearTimeout(marqueeStartTimerRef.current)
+        marqueeStartTimerRef.current = setTimeout(() => {
+          setShouldStartMarquee(true)
+          marqueeStartTimerRef.current = null
+        }, 260)
+      } else {
+        setIsMarqueeNeeded(false)
+        setMarqueeDistance(0)
+        setShouldStartMarquee(false)
+      }
+    }
+
+    measureOverflow()
+
+    const resizeObserver = new ResizeObserver(() => {
+      measureOverflow()
+    })
+
+    if (marqueeViewportRef.current) resizeObserver.observe(marqueeViewportRef.current)
+    if (marqueeTrackRef.current) resizeObserver.observe(marqueeTrackRef.current)
+
+    return () => {
+      resizeObserver.disconnect()
+      if (marqueeStartTimerRef.current) {
+        clearTimeout(marqueeStartTimerRef.current)
+        marqueeStartTimerRef.current = null
+      }
+    }
+  }, [buttonErrorMessage])
 
   const handleSetup = async () => {
-    if (!projectIdInput.trim() || !anonKeyInput.trim()) return
+    if (buttonPhase !== 'idle' || !projectIdInput.trim() || !anonKeyInput.trim()) return
+    clearButtonFeedback()
+    awaitingRequestResultRef.current = true
+    hasClearedErrorSinceRequestRef.current = false
     setIsConnecting(true)
+    setButtonPhase('loading')
     setLocalError(null)
     const start = Date.now()
     try {
       await onSetupSupabase(projectIdInput.trim(), anonKeyInput.trim())
+      setButtonPhase('idle')
     } catch {
       setLocalError('连接失败，请检查配置')
     } finally {
@@ -106,13 +238,16 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         </p>
       </Card>
 
-      <Card variant="surface" className="px-4 py-3 space-y-3">
+      <Card variant="surface" className="px-4 py-3">
         <div className="space-y-3">
           <Input
             label="项目 ID"
             type="text"
             value={projectIdInput}
-            onChange={(event) => setProjectIdInput(event.target.value)}
+            onChange={(event) => {
+              clearButtonFeedback()
+              setProjectIdInput(event.target.value)
+            }}
             placeholder="abcdefgh123456789xyz"
             autoComplete="off"
           />
@@ -120,7 +255,10 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
             label="Anon Key"
             type={isAnonKeyVisible ? 'text' : 'password'}
             value={anonKeyInput}
-            onChange={(event) => setAnonKeyInput(event.target.value)}
+            onChange={(event) => {
+              clearButtonFeedback()
+              setAnonKeyInput(event.target.value)
+            }}
             placeholder="eyJhbGciOi..."
             autoComplete="off"
             suffix={
@@ -137,26 +275,90 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         </div>
         <Button
           onClick={handleSetup}
-          disabled={!projectIdInput.trim() || !anonKeyInput.trim()}
-          isLoading={isConnecting}
-          className="w-full justify-center"
-        >
-          <Cloud className="size-3.5" /> 连接 Supabase
-        </Button>
-        <div
+          disabled={isConnecting || !projectIdInput.trim() || !anonKeyInput.trim()}
+          aria-disabled={buttonPhase !== 'idle' || !projectIdInput.trim() || !anonKeyInput.trim()}
+          tabIndex={buttonPhase === 'error' ? -1 : undefined}
+          variant={buttonPhase === 'error' ? 'danger-soft' : 'primary'}
           className={cn(
-            'grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)]',
-            (syncError || localError) && !isConnecting
-              ? 'grid-rows-[1fr] opacity-100'
-              : 'grid-rows-[0fr] opacity-0',
+            'mt-3 w-full justify-center hover:brightness-100 hover:shadow-md',
+            buttonPhase === 'error' &&
+              'cursor-not-allowed hover:bg-danger/10 hover:text-danger hover:brightness-100',
           )}
+          contentClassName={
+            buttonPhase === 'error' ? 'w-full justify-center overflow-hidden' : undefined
+          }
         >
-          <div className="overflow-hidden min-h-0">
-            <StatusMessage tone="danger" mode="callout" icon={<AlertCircle className="size-4" />}>
-              {syncError || localError}
-            </StatusMessage>
-          </div>
-        </div>
+          <AnimatePresence mode="wait" initial={false}>
+            {buttonPhase === 'loading' ? (
+              <motion.span
+                key="loading-label"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4, transition: SCALE_EXIT }}
+                transition={SCALE_ENTRY}
+                className="inline-flex items-center gap-1.5"
+              >
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>连接中</span>
+              </motion.span>
+            ) : buttonPhase === 'error' && buttonErrorMessage ? (
+              <motion.span
+                key={buttonErrorMessage}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4, transition: SCALE_EXIT }}
+                transition={SCALE_ENTRY}
+                className="block w-full"
+              >
+                <span
+                  ref={marqueeViewportRef}
+                  className="relative block w-full overflow-hidden whitespace-nowrap"
+                >
+                  <motion.span
+                    ref={marqueeTrackRef}
+                    animate={
+                      isMarqueeNeeded && shouldStartMarquee
+                        ? { x: [0, -marqueeDistance] }
+                        : { x: 0 }
+                    }
+                    transition={
+                      isMarqueeNeeded && shouldStartMarquee
+                        ? {
+                            x: {
+                              duration: Math.max(1.8, marqueeDistance / 36),
+                              ease: 'linear',
+                              repeat: Infinity,
+                              repeatType: 'reverse',
+                              repeatDelay: 0.35,
+                              delay: 0.25,
+                            },
+                          }
+                        : undefined
+                    }
+                    className={cn(
+                      'inline-block text-sm leading-snug',
+                      isMarqueeNeeded && shouldStartMarquee ? 'text-left' : 'w-full text-center',
+                    )}
+                  >
+                    {buttonErrorMessage}
+                  </motion.span>
+                </span>
+              </motion.span>
+            ) : (
+              <motion.span
+                key="connect-label"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4, transition: SCALE_EXIT }}
+                transition={SCALE_ENTRY}
+                className="inline-flex items-center gap-1.5"
+              >
+                <Cloud className="size-3.5" />
+                <span>连接 Supabase</span>
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </Button>
       </Card>
 
       <Card

@@ -4,7 +4,7 @@ import { createElement, Fragment } from 'react'
 const motionProps = [
   'initial', 'animate', 'exit', 'transition',
   'variants', 'custom', 'whileTap', 'whileHover', 'whileFocus',
-  'layoutId', 'onAnimationComplete',
+  'layout', 'layoutId', 'onAnimationComplete',
 ]
 
 function createMotionElement(tag: string) {

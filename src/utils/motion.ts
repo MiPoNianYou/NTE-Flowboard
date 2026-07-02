@@ -46,6 +46,20 @@ export const ITEM_EXIT = {
   scale: { duration: 0.3, ease: APPLE_EASE },
 }
 
+/** Inline message entry: height expand + fade + slight slide, 300ms Apple ease */
+export const INLINE_MESSAGE_ENTRY = {
+  opacity: { duration: 0.3, ease: APPLE_EASE },
+  height: { duration: 0.3, ease: APPLE_EASE },
+  y: { duration: 0.3, ease: APPLE_EASE },
+}
+
+/** Inline message exit: height collapse + fade + slight slide, 220ms Apple ease */
+export const INLINE_MESSAGE_EXIT = {
+  opacity: { duration: 0.22, ease: APPLE_EASE },
+  height: { duration: 0.22, ease: APPLE_EASE },
+  y: { duration: 0.22, ease: APPLE_EASE },
+}
+
 /** Page/panel transition: 300ms Apple ease */
 export const PAGE = { duration: 0.3, ease: APPLE_EASE }
 

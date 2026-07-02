@@ -5,10 +5,11 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  type KeyboardEvent,
   type CSSProperties,
   type MouseEvent,
 } from 'react'
-import { Check, ChevronRight, GripVertical } from 'lucide-react'
+import { Check, ChevronRight, GripVertical, Save, TagPlus, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useSortable } from '@dnd-kit/sortable'
 import type { ChecklistItem, TabType } from '../../types'
@@ -16,9 +17,15 @@ import { cn } from '../../utils/cn'
 import { usePendingDelete } from '../../hooks/usePendingDelete'
 import { FADE_IN, FADE_OUT, SPRING } from '../../utils/motion'
 import { TagPill } from '../TagPill'
-import { EditForm } from './EditForm'
 import { DesktopActions } from './DesktopActions'
 import { MobileActions } from './MobileActions'
+import { Button } from '../base/Button'
+import {
+  ACTION_HOVER_PRIMARY,
+  ACTION_HOVER_SUCCESS,
+  ACTION_HOVER_INFO,
+} from '../../utils/stylePresets'
+import { TagEditor } from './TagEditor'
 
 interface ChecklistItemRowProps {
   item: ChecklistItem
@@ -47,8 +54,14 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
 }: ChecklistItemRowProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [draftText, setDraftText] = useState(item.text)
+  const [draftTags, setDraftTags] = useState<string[]>(item.tags ?? [])
+  const [editError, setEditError] = useState<string | null>(null)
+  const [tagAddRequest, setTagAddRequest] = useState(0)
+  const [isTagEditorBusy, setIsTagEditorBusy] = useState(false)
   const rowRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<ResizeObserver | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // 测量行高度并报告给父组件
   const measuredRef = useCallback(
@@ -75,6 +88,16 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
       observerRef.current?.disconnect()
     }
   }, [])
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraftText(item.text)
+      setDraftTags(item.tags ?? [])
+      setEditError(null)
+      setTagAddRequest(0)
+      setIsTagEditorBusy(false)
+    }
+  }, [item.text, item.tags, isEditing])
 
   const {
     attributes,
@@ -144,20 +167,57 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
 
   const tags = useMemo(() => item.tags ?? [], [item.tags])
 
-  const startEdit = useCallback(() => setIsEditing(true), [])
+  const beginEdit = useCallback(() => {
+    setDraftText(item.text)
+    setDraftTags(item.tags ?? [])
+    setEditError(null)
+    setTagAddRequest(0)
+    setIsTagEditorBusy(false)
+    setIsEditing(true)
+  }, [item.text, item.tags])
 
   const cancelEdit = useCallback(() => {
     setIsEditing(false)
+    setDraftText(item.text)
+    setDraftTags(item.tags ?? [])
+    setEditError(null)
+    setTagAddRequest(0)
+    setIsTagEditorBusy(false)
     setIsExpanded(false)
-  }, [])
+  }, [item.text, item.tags])
 
   const handleSave = useCallback(
-    (text: string, editTags: string[]) => {
-      onEdit(tab, item.id, text, editTags)
+    (nextText: string) => {
+      const trimmed = nextText.trim()
+      if (!trimmed) {
+        setEditError('任务名称不能为空')
+        inputRef.current?.focus()
+        return
+      }
+
+      onEdit(tab, item.id, trimmed, draftTags)
       setIsEditing(false)
+      setDraftText(trimmed)
+      setEditError(null)
+      setTagAddRequest(0)
+      setIsTagEditorBusy(false)
       setIsExpanded(false)
     },
-    [onEdit, tab, item.id],
+    [onEdit, tab, item.id, draftTags],
+  )
+
+  const handleEditKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        handleSave(draftText)
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        cancelEdit()
+      }
+    },
+    [cancelEdit, draftText, handleSave],
   )
 
   const handleDeleteClick = useCallback(
@@ -169,134 +229,234 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
   )
 
   return (
-    <AnimatePresence mode="wait">
-      {isEditing ? (
-        <motion.div
-          key="edit"
-          ref={mergedRef}
-          style={sortableStyle}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: FADE_OUT }}
-          transition={FADE_IN}
-        >
-          <EditForm item={item} onSave={handleSave} onCancel={cancelEdit} />
-        </motion.div>
-      ) : (
-        <motion.div
-          key="display"
-          ref={mergedRef}
-          style={sortableStyle}
-          initial={suppressMountAnimation ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: FADE_OUT }}
-          transition={FADE_IN}
-        >
-          <div
-            onClick={isTouch ? () => setIsExpanded((prev) => !prev) : undefined}
-            className={cn(
-              'group flex items-center gap-3 lg:gap-3 px-3 py-2 lg:px-4 lg:py-3 rounded-xl transition-colors duration-200',
-              isTouch && isExpanded
-                ? 'glass border border-primary/30'
-                : item.isCompleted
-                  ? 'border border-solid border-success/30 bg-success/5'
-                  : 'border border-transparent hover:glass hover:border-border',
-            )}
-          >
-            <button
-              {...attributes}
-              {...listeners}
-              onClick={(event) => event.stopPropagation()}
-              className={cn(
-                'flex-shrink-0 p-0.5 rounded cursor-grab active:cursor-grabbing text-text-muted hover:text-text-secondary transition-colors duration-150 touch-none select-none',
-                isDragging && 'text-primary',
-              )}
-              aria-label="拖拽排序"
+    <motion.div
+      ref={mergedRef}
+      style={sortableStyle}
+      layout
+      initial={suppressMountAnimation ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: FADE_OUT }}
+      transition={FADE_IN}
+    >
+      <div
+        className={cn(
+          'rounded-xl transition-colors duration-200',
+          editError
+            ? 'border border-solid border-danger/30 bg-danger/5'
+            : isEditing
+              ? 'border border-solid border-border bg-surface/40'
+              : item.isCompleted
+                ? 'border border-solid border-success/30 bg-success/5'
+                : 'border border-transparent hover:glass hover:border-border',
+        )}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {isEditing ? (
+            <motion.div
+              key="edit"
+              layout
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: FADE_OUT }}
+              transition={FADE_IN}
             >
-              <GripVertical size={14} className="lg:hidden" />
-              <GripVertical size={16} className="hidden lg:block" />
-            </button>
-
-            <motion.button
-              onClick={handleToggle}
-              type="button"
-              aria-label={
-                item.isCompleted ? `标记「${item.text}」为未完成` : `标记「${item.text}」为已完成`
-              }
-              aria-pressed={item.isCompleted}
-              className={cn(
-                'flex-shrink-0 w-5 h-5 lg:w-[22px] lg:h-[22px] rounded-xl border flex items-center justify-center transition-colors duration-200',
-                item.isCompleted
-                  ? 'bg-success border-success shadow-md'
-                  : 'border-border-strong hover:border-primary',
-              )}
-              animate={{ scale: item.isCompleted ? 1.05 : 1 }}
-              whileTap={{ scale: 0.85 }}
-              transition={SPRING}
-            >
-              <AnimatePresence initial={false}>
-                {item.isCompleted && (
-                  <motion.div
-                    key="check"
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={SPRING}
+              <div className="px-3 py-2 lg:px-4 lg:py-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    {...attributes}
+                    {...listeners}
+                    onClick={(event) => event.stopPropagation()}
+                    className={cn(
+                      'flex-shrink-0 rounded p-0.5 text-text-muted transition-colors duration-150 touch-none select-none',
+                      'cursor-grab active:cursor-grabbing hover:text-text-secondary',
+                      isDragging && 'text-primary',
+                    )}
+                    aria-label="拖拽排序"
                   >
-                    <Check size={12} className="text-[var(--color-text-on-accent)] lg:hidden" />
-                    <Check
-                      size={13}
-                      className="text-[var(--color-text-on-accent)] hidden lg:block"
+                    <GripVertical size={14} className="lg:hidden" />
+                    <GripVertical size={16} className="hidden lg:block" />
+                  </button>
+
+                  <div className="flex flex-1 min-w-0 items-center rounded-lg px-2 transition-colors duration-200">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={draftText}
+                      onChange={(event) => {
+                        setDraftText(event.target.value)
+                        if (editError) setEditError(null)
+                      }}
+                      onKeyDown={handleEditKeyDown}
+                      autoFocus
+                      spellCheck={false}
+                      className={cn(
+                        'w-full min-w-0 bg-transparent border-0 p-0 text-sm text-text-primary outline-none',
+                        'placeholder:text-text-muted whitespace-nowrap overflow-x-auto',
+                        editError && 'placeholder:text-[#e8525266]',
+                      )}
+                      placeholder={editError ?? '输入任务名称...'}
+                      aria-label="编辑任务名称"
+                      aria-invalid={!!editError}
                     />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
+                  </div>
 
-            <span
-              className={cn(
-                'flex-1 text-sm min-w-0 completion-text',
-                item.isCompleted
-                  ? 'line-through decoration-dashed decoration-success text-text-muted'
-                  : 'text-text-primary',
-              )}
-            >
-              {item.text}
-            </span>
+                  <TagEditor
+                    tags={draftTags}
+                    onChange={setDraftTags}
+                    isEditing={isEditing}
+                    suppressMountAnimation={suppressMountAnimation}
+                    addRequest={tagAddRequest}
+                    onAddRequestHandled={() => setTagAddRequest(0)}
+                    onEditStateChange={setIsTagEditorBusy}
+                  />
 
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 lg:gap-1 shrink-0">
-                {tags.map((tag) => (
-                  <TagPill key={tag} tag={tag} suppressMountAnimation={suppressMountAnimation} />
-                ))}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="tertiary"
+                      onClick={() => setTagAddRequest((count) => count + 1)}
+                      className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
+                      aria-label="新增标签"
+                      disabled={isTagEditorBusy}
+                    >
+                      <TagPlus size={15} />
+                    </Button>
+                    <Button
+                      variant="tertiary"
+                      onClick={cancelEdit}
+                      className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_INFO)}
+                      aria-label="取消"
+                    >
+                      <X size={15} />
+                    </Button>
+                    <Button
+                      variant="tertiary"
+                      onClick={() => handleSave(draftText)}
+                      className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_SUCCESS)}
+                      aria-label="保存"
+                    >
+                      <Save size={15} />
+                    </Button>
+                  </div>
+                </div>
               </div>
-            )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="display"
+              layout
+              initial={false}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: FADE_OUT }}
+              transition={FADE_IN}
+            >
+              <div
+                onClick={isTouch ? () => setIsExpanded((prev) => !prev) : undefined}
+                className="group flex items-center gap-3 px-3 py-2 lg:px-4 lg:py-3"
+              >
+                <button
+                  {...attributes}
+                  {...listeners}
+                  onClick={(event) => event.stopPropagation()}
+                  className={cn(
+                    'flex-shrink-0 rounded p-0.5 text-text-muted transition-colors duration-150 touch-none select-none',
+                    'cursor-grab active:cursor-grabbing hover:text-text-secondary',
+                    isDragging && 'text-primary',
+                  )}
+                  aria-label="拖拽排序"
+                >
+                  <GripVertical size={14} className="lg:hidden" />
+                  <GripVertical size={16} className="hidden lg:block" />
+                </button>
 
-            <DesktopActions
-              onEdit={startEdit}
-              onHide={() => onHide(tab, item.id)}
-              onDelete={handleDeleteClick}
-              isPending={isPending(item.id)}
-            />
+                <motion.button
+                  onClick={handleToggle}
+                  type="button"
+                  initial={suppressMountAnimation && item.isCompleted ? false : undefined}
+                  aria-label={
+                    item.isCompleted
+                      ? `标记「${item.text}」为未完成`
+                      : `标记「${item.text}」为已完成`
+                  }
+                  aria-pressed={item.isCompleted}
+                  className={cn(
+                    'flex-shrink-0 w-5 h-5 lg:w-[22px] lg:h-[22px] rounded-xl border flex items-center justify-center transition-colors duration-200',
+                    item.isCompleted
+                      ? 'bg-success border-success shadow-md'
+                      : 'border-border-strong hover:border-primary',
+                  )}
+                  animate={{ scale: item.isCompleted ? 1.05 : 1 }}
+                  whileTap={{ scale: 0.85 }}
+                  transition={suppressMountAnimation && item.isCompleted ? { duration: 0 } : SPRING}
+                >
+                  <AnimatePresence initial={false}>
+                    {item.isCompleted && (
+                      <motion.div
+                        key="check"
+                        initial={suppressMountAnimation ? false : { scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={suppressMountAnimation ? { duration: 0 } : SPRING}
+                      >
+                        <Check size={12} className="text-[var(--color-text-on-accent)] lg:hidden" />
+                        <Check
+                          size={13}
+                          className="text-[var(--color-text-on-accent)] hidden lg:block"
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
 
-            <ChevronRight
-              size={15}
-              className={cn(
-                'shrink-0 text-text-muted transition-transform duration-200 lg:hidden',
-                isExpanded && 'rotate-90',
-              )}
-            />
-          </div>
+                <span
+                  className={cn(
+                    'flex-1 text-sm min-w-0 completion-text',
+                    item.isCompleted
+                      ? 'line-through decoration-dashed decoration-success text-text-muted'
+                      : 'text-text-primary',
+                  )}
+                >
+                  {item.text}
+                </span>
 
-          <MobileActions
-            onEdit={startEdit}
-            onHide={() => onHide(tab, item.id)}
-            onDelete={handleDeleteClick}
-            isPending={isPending(item.id)}
-            isExpanded={isExpanded}
-          />
-        </motion.div>
-      )}
-    </AnimatePresence>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 lg:gap-1 shrink-0">
+                    {tags.map((tag) => (
+                      <TagPill
+                        key={tag}
+                        tag={tag}
+                        suppressMountAnimation={suppressMountAnimation}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <DesktopActions
+                  onEdit={beginEdit}
+                  onHide={() => onHide(tab, item.id)}
+                  onDelete={handleDeleteClick}
+                  isPending={isPending(item.id)}
+                />
+
+                <ChevronRight
+                  size={15}
+                  className={cn(
+                    'shrink-0 text-text-muted transition-transform duration-200 lg:hidden',
+                    isExpanded && 'rotate-90',
+                  )}
+                />
+              </div>
+
+              <MobileActions
+                onEdit={beginEdit}
+                onHide={() => onHide(tab, item.id)}
+                onDelete={handleDeleteClick}
+                isPending={isPending(item.id)}
+                isExpanded={isExpanded}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
   )
 })
