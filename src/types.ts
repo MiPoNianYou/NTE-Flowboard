@@ -17,6 +17,10 @@ export interface BehaviorSettings {
   shouldConfirmDelete: boolean
 }
 
+export interface UiPreferences {
+  cloudPatchHidden: boolean
+}
+
 export interface ChecklistData {
   daily: ChecklistItem[]
   weekly: ChecklistItem[]

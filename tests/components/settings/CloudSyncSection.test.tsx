@@ -69,6 +69,22 @@ describe('CloudSyncSection', () => {
   })
 
   describe('configured', () => {
+    it('should hide patch card when cloudPatchHidden is true in ui preferences', () => {
+      localStorage.setItem('flowboard-ui-preferences', JSON.stringify({ cloudPatchHidden: true }))
+
+      render(<CloudSyncSection {...mockConfiguredProps} />)
+
+      expect(screen.queryByText('数据库补丁')).not.toBeInTheDocument()
+    })
+
+    it('should ignore legacy patch hidden key', () => {
+      localStorage.setItem('flowboard-cloud-patch-hidden', 'true')
+
+      render(<CloudSyncSection {...mockConfiguredProps} />)
+
+      expect(screen.getByText('数据库补丁')).toBeInTheDocument()
+    })
+
     it('should show connected status', () => {
       render(<CloudSyncSection {...mockConfiguredProps} />)
       expect(screen.getByText('已连接')).toBeInTheDocument()
@@ -93,7 +109,8 @@ describe('CloudSyncSection', () => {
 
     it('should show disconnect button', () => {
       render(<CloudSyncSection {...mockConfiguredProps} />)
-      expect(screen.getByText('手动同步').closest('.flex')!.querySelector('.button-disconnect')).toBeTruthy()
+      expect(screen.getByLabelText('断开连接').className).toContain('danger-confirm-button')
+      expect(screen.getByLabelText('断开连接').className).toContain('danger-confirm-button--default')
     })
 
     it('should expand disconnect button on first click', () => {
@@ -101,6 +118,7 @@ describe('CloudSyncSection', () => {
       const button = screen.getByLabelText('断开连接')
       fireEvent.click(button)
       expect(button.className).toContain('expanded')
+      expect(screen.getByText('确认断开？').className).toContain('danger-confirm-text')
     })
 
     it('should call onTeardownSupabase on second click', () => {
@@ -135,6 +153,54 @@ describe('CloudSyncSection', () => {
     it('should show error status', () => {
       render(<CloudSyncSection {...mockConfiguredProps} syncStatus="error" />)
       expect(screen.getByText('出错了')).toBeInTheDocument()
+    })
+
+    it('should show updated_at patch card for configured sync', () => {
+      render(<CloudSyncSection {...mockConfiguredProps} />)
+      expect(screen.getByText('数据库补丁')).toBeInTheDocument()
+      expect(screen.getByText(/可单独执行 `updated_at` 触发器增量脚本/)).toBeInTheDocument()
+      expect(screen.getByText('执行补丁 SQL')).toBeInTheDocument()
+      expect(screen.getByLabelText('隐藏补丁卡片').className).toContain('danger-confirm-button')
+      expect(screen.getByLabelText('隐藏补丁卡片').className).toContain('danger-confirm-button--compact')
+      expect(screen.getByText('数据库补丁').parentElement?.className).toContain('min-w-0')
+      expect(screen.getByText('数据库补丁').parentElement?.className).toContain('pr-12')
+    })
+
+    it('should require a second click before hiding the patch card', () => {
+      render(<CloudSyncSection {...mockConfiguredProps} />)
+
+      const hideButton = screen.getByLabelText('隐藏补丁卡片')
+      fireEvent.click(hideButton)
+
+      expect(screen.getByText('数据库补丁')).toBeInTheDocument()
+      expect(hideButton.className).toContain('expanded')
+      expect(screen.getByText('确认隐藏？').className).toContain('danger-confirm-text')
+    })
+
+    it('should collapse patch hide button after 3 seconds', () => {
+      vi.useFakeTimers()
+      render(<CloudSyncSection {...mockConfiguredProps} />)
+
+      const hideButton = screen.getByLabelText('隐藏补丁卡片')
+      fireEvent.click(hideButton)
+
+      expect(hideButton.className).toContain('expanded')
+
+      act(() => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      expect(hideButton.className).not.toContain('expanded')
+    })
+
+    it('should hide the patch card after confirmation click', () => {
+      render(<CloudSyncSection {...mockConfiguredProps} />)
+
+      const hideButton = screen.getByLabelText('隐藏补丁卡片')
+      fireEvent.click(hideButton)
+      fireEvent.click(screen.getByLabelText('确认隐藏补丁卡片'))
+
+      expect(screen.queryByText('数据库补丁')).not.toBeInTheDocument()
     })
   })
 })

@@ -40,6 +40,14 @@ interface UseSupabaseSyncReturn {
   clearSyncError: () => void
 }
 
+type PullSyncFn = (shouldForce?: boolean, shouldSkipFirstImport?: boolean) => Promise<boolean>
+type PushSyncFn = (dataToPush: ChecklistData) => Promise<void>
+
+const RETRY_DELAYS = [MS.ERROR_RECOVERY, MS.ERROR_RECOVERY * 3, MS.ERROR_RECOVERY * 9] as const
+type RetryKind = 'pull' | 'push'
+const CROSS_TAB_SYNC_KEY = 'flowboard-sync-event'
+const CROSS_TAB_CHANNEL = 'flowboard-sync'
+
 export function useSupabaseSync({
   data,
   onDataImport,
@@ -59,8 +67,14 @@ export function useSupabaseSync({
 
   const isPullingRef = useRef(false)
   const hasLocalChangesRef = useRef(false)
+  const retryAttemptRef = useRef(0)
+  const retryKindRef = useRef<RetryKind>('pull')
+  const instanceIdRef = useRef(Math.random().toString(36).slice(2))
   const isInitialMountRef = useRef(true)
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pullSyncRef = useRef<PullSyncFn | null>(null)
+  const pushSyncRef = useRef<PushSyncFn | null>(null)
   const dataRef = useRef(data)
   const configRef = useRef<SupabaseConfig | null>(null)
   const onDataImportRef = useRef(onDataImport)
@@ -77,6 +91,26 @@ export function useSupabaseSync({
   useEffect(() => {
     onSettingsImportRef.current = onSettingsImport
   }, [onSettingsImport])
+
+  const scheduleRetry = useCallback(() => {
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = null
+    }
+
+    const delay = RETRY_DELAYS[Math.min(retryAttemptRef.current, RETRY_DELAYS.length - 1)]
+    errorTimerRef.current = setTimeout(() => {
+      retryAttemptRef.current += 1
+      setSyncStatus('syncing')
+
+      if (retryKindRef.current === 'push') {
+        void pushSyncRef.current?.(dataRef.current)
+        return
+      }
+
+      void pullSyncRef.current?.(true)
+    }, delay)
+  }, [])
 
   // --- 拉取同步 ---
   // 返回 true 表示远程数据已导入本地（调用方不应再 push）
@@ -99,6 +133,7 @@ export function useSupabaseSync({
       try {
         const result = await pullData(config)
         if (!result) {
+          retryAttemptRef.current = 0
           setSyncStatus('connected')
           setSyncError(null)
           return false
@@ -129,37 +164,29 @@ export function useSupabaseSync({
         saveLastSeenTime(result.updatedAt)
         saveLastSyncTime(new Date().toISOString())
         setLastSyncTime(new Date().toISOString())
+        retryAttemptRef.current = 0
         setSyncStatus('connected')
         setSyncError(null)
         return isImported
       } catch (error) {
+        retryKindRef.current = 'pull'
         setSyncError(classifySyncError(error))
         setSyncStatus('error')
+        scheduleRetry()
         return false
       } finally {
         isPullingRef.current = false
       }
     },
-    [],
+    [scheduleRetry],
   )
+  pullSyncRef.current = pullSync
 
-  // 错误后 5 秒自动恢复
-  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    if (syncStatus === 'error') {
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
-      errorTimerRef.current = setTimeout(() => {
-        if (configRef.current) {
-          pullSync().catch(() => {})
-        } else {
-          setSyncStatus('disconnected')
-        }
-      }, MS.ERROR_RECOVERY)
-    }
     return () => {
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
     }
-  }, [syncStatus, pullSync])
+  }, [])
 
   // --- 推送同步 ---
   const pushSync = useCallback(
@@ -174,16 +201,30 @@ export function useSupabaseSync({
         saveLastSeenTime(updatedAt)
         saveLastSyncTime(new Date().toISOString())
         setLastSyncTime(new Date().toISOString())
+        retryAttemptRef.current = 0
         setSyncStatus('connected')
         setSyncError(null)
         hasLocalChangesRef.current = false
+        if (typeof BroadcastChannel !== 'undefined') {
+          const channel = new BroadcastChannel(CROSS_TAB_CHANNEL)
+          channel.postMessage({ type: 'sync-updated', updatedAt, source: instanceIdRef.current })
+          channel.close()
+        } else {
+          localStorage.setItem(
+            CROSS_TAB_SYNC_KEY,
+            JSON.stringify({ updatedAt, source: instanceIdRef.current }),
+          )
+        }
       } catch (error) {
+        retryKindRef.current = 'push'
         setSyncError(classifySyncError(error))
         setSyncStatus('error')
+        scheduleRetry()
       }
     },
-    [includeSettings, settings],
+    [includeSettings, scheduleRetry, settings],
   )
+  pushSyncRef.current = pushSync
 
   // --- 启动：加载配置并连接 ---
   useEffect(() => {
@@ -234,6 +275,59 @@ export function useSupabaseSync({
     MS.PERIODIC_PULL,
     isConfigured,
   )
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (!configRef.current) return
+      if (hasLocalChangesRef.current) {
+        void pushSync(dataRef.current)
+        return
+      }
+      void pullSync(true)
+    }
+
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [pullSync, pushSync])
+
+  useEffect(() => {
+    const handleCrossTabSync = () => {
+      if (!configRef.current) return
+      void pullSync(true)
+    }
+
+    const channel =
+      typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CROSS_TAB_CHANNEL) : null
+
+    if (channel) {
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'sync-updated' && event.data?.source !== instanceIdRef.current) {
+          handleCrossTabSync()
+        }
+      }
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== CROSS_TAB_SYNC_KEY || !event.newValue) return
+      try {
+        const payload = JSON.parse(event.newValue) as { source?: string }
+        if (payload.source === instanceIdRef.current) return
+        handleCrossTabSync()
+      } catch {
+        handleCrossTabSync()
+      }
+    }
+
+    window.addEventListener('storage', handleStorage)
+
+    return () => {
+      channel?.close()
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [pullSync])
 
   // --- 跟踪本地变更 ---
   useEffect(() => {

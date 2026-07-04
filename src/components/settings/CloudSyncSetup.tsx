@@ -58,7 +58,24 @@ AS $$
   SELECT data, updated_at FROM sync_data WHERE id = 'NTE Flowboard';
 $$;
 
--- 6. 启用 Realtime
+-- 6. 自动维护 updated_at（兼容未来直写表）
+CREATE OR REPLACE FUNCTION set_sync_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS sync_data_set_updated_at ON sync_data;
+CREATE TRIGGER sync_data_set_updated_at
+  BEFORE UPDATE ON sync_data
+  FOR EACH ROW
+  EXECUTE FUNCTION set_sync_updated_at();
+
+-- 7. 启用 Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE sync_data;`
 
 interface CloudSyncSetupProps {

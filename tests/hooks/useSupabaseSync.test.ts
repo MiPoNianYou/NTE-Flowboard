@@ -27,6 +27,29 @@ import * as supabase from '../../src/utils/supabase'
 
 const mocked = vi.mocked(supabase)
 
+class MockBroadcastChannel {
+  static instances: MockBroadcastChannel[] = []
+
+  name: string
+  onmessage: ((event: MessageEvent) => void) | null = null
+  close = vi.fn()
+
+  constructor(name: string) {
+    this.name = name
+    MockBroadcastChannel.instances.push(this)
+  }
+
+  postMessage(_message: unknown) {}
+
+  dispatch(message: unknown) {
+    this.onmessage?.({ data: message } as MessageEvent)
+  }
+
+  static reset() {
+    MockBroadcastChannel.instances = []
+  }
+}
+
 const mockData: ChecklistData = {
   daily: [{ id: 'sb1', text: '任务1', isCompleted: false, isHidden: false, order: 1, tags: [] }],
   weekly: [],
@@ -41,6 +64,7 @@ describe('useSupabaseSync', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
+    MockBroadcastChannel.reset()
     mocked.loadSupabaseConfig.mockReturnValue(null)
   })
 
@@ -288,6 +312,144 @@ describe('useSupabaseSync', () => {
     })
 
     expect(result.current.syncStatus).toBe('connected')
+  })
+
+  it('backs off retry delay across repeated pull failures', async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockRejectedValue(
+      new (supabase.SyncError as unknown as new (msg: string, code: string) => Error)(
+        '网络异常',
+        'PULL_ERROR',
+      ),
+    )
+
+    renderHook(() =>
+      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(mocked.pullData).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MS.ERROR_RECOVERY + 100)
+    })
+
+    expect(mocked.pullData).toHaveBeenCalledTimes(2)
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), MS.ERROR_RECOVERY)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), MS.ERROR_RECOVERY * 3)
+  })
+
+  it('forces a push when network comes back and local changes are pending', async () => {
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValue(null)
+    mocked.pushData.mockResolvedValue(new Date().toISOString())
+
+    const { rerender } = renderHook(
+      ({ data }) => useSupabaseSync({ data, onDataImport: vi.fn() }),
+      { initialProps: { data: mockData } },
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    mocked.pushData.mockClear()
+
+    rerender({
+      data: {
+        ...mockData,
+        daily: [
+          {
+            ...mockData.daily[0],
+            text: '本地已修改',
+          },
+        ],
+      },
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    window.dispatchEvent(new Event('offline'))
+
+    await act(async () => {
+      window.dispatchEvent(new Event('online'))
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(mocked.pushData).toHaveBeenCalledTimes(1)
+  })
+
+  it('pulls after receiving a cross-tab sync message through BroadcastChannel', async () => {
+    vi.stubGlobal('BroadcastChannel', MockBroadcastChannel)
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValue(null)
+
+    renderHook(() =>
+      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    mocked.pullData.mockClear()
+
+    await act(async () => {
+      MockBroadcastChannel.instances[0]?.dispatch({ type: 'sync-updated' })
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(mocked.pullData).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to storage events and cleans up cross-tab listeners on unmount', async () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValue(null)
+
+    const { unmount } = renderHook(() =>
+      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    mocked.pullData.mockClear()
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'flowboard-sync-event',
+          newValue: String(Date.now()),
+        }),
+      )
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    expect(mocked.pullData).toHaveBeenCalledTimes(1)
+
+    unmount()
+
+    expect(addEventListenerSpy).toHaveBeenCalledWith('storage', expect.any(Function))
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('storage', expect.any(Function))
   })
 
   it('pullData returning null means no remote data', async () => {

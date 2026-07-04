@@ -11,7 +11,7 @@
 [**在线使用 →**](https://miponianyou.github.io/NTE-Flowboard/)
 
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Tests](https://img.shields.io/badge/Tests-376_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-386_passing-brightgreen)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
@@ -33,7 +33,7 @@
 | Liquid Glass 暗色主题 | 深色设计系统，玻璃态表面层 |
 | 离线提示 | 断网时显示状态 |
 | 无障碍支持 | WAI-ARIA 标签、焦点陷阱、键盘导航 |
-| 单元测试 | 376 个测试用例覆盖核心逻辑 |
+| 单元测试 | 386 个测试用例覆盖核心逻辑 |
 
 </div>
 
@@ -77,7 +77,7 @@ src/
 │   ├── ChecklistItemRow/      # 清单项行（拖拽 + 编辑）
 │   ├── settings/              # 设置页面（11 个）
 │   └── ...                    # 业务组件
-├── hooks/                     # 自定义 Hooks（15 个）
+├── hooks/                     # 自定义 Hooks（16 个）
 ├── utils/                     # 工具函数（12 个）
 ├── types.ts                   # 共享类型定义
 ├── system.css                 # Liquid Glass 设计令牌
