@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from 'react'
 import { useChecklist } from './hooks/useChecklist'
-import { useSupabaseSync } from './hooks/useSupabaseSync'
+import { useCloudSyncProps } from './hooks/useCloudSyncProps'
 import { useTabManagement } from './hooks/useTabManagement'
 import { useLocalStorageBoolean } from './hooks/useLocalStorageBoolean'
 import { useIsMobile } from './hooks/useIsMobile'
@@ -59,12 +59,11 @@ function AppContent() {
     cleanupRegistry(allTags)
   }, [data])
 
-  const supabaseSync = useSupabaseSync({
+  const cloudSyncProps = useCloudSyncProps({
     data,
+    settings,
     onDataImport: importFullData,
     onSettingsImport: updateSettings,
-    includeSettings: true,
-    settings,
   })
 
   const currentItems = useMemo(() => data[activeTab], [data, activeTab])
@@ -84,29 +83,6 @@ function AppContent() {
     activeTab: activeTab,
     serverRegion: settings.serverRegion,
   })
-
-  const cloudSyncProps = useMemo(
-    () => ({
-      syncStatus: supabaseSync.syncStatus,
-      lastSyncTime: supabaseSync.lastSyncTime,
-      syncError: supabaseSync.syncError,
-      isConfigured: supabaseSync.isConfigured,
-      onSetupSupabase: supabaseSync.setupSupabase,
-      onTriggerSync: supabaseSync.triggerSync,
-      onTeardownSupabase: supabaseSync.teardownSupabase,
-      onClearSyncError: supabaseSync.clearSyncError,
-    }),
-    [
-      supabaseSync.syncStatus,
-      supabaseSync.lastSyncTime,
-      supabaseSync.syncError,
-      supabaseSync.isConfigured,
-      supabaseSync.setupSupabase,
-      supabaseSync.triggerSync,
-      supabaseSync.teardownSupabase,
-      supabaseSync.clearSyncError,
-    ],
-  )
 
   return (
     <>

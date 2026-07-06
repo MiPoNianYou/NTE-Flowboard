@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SettingsPanel } from '../../src/components/SettingsPanel'
 import type { ChecklistData } from '../../src/types'
-import * as storage from '../../src/utils/storage'
+import * as serialization from '../../src/utils/serialization'
 
 vi.mock('../../src/context/SettingsContext', () => ({
   useSettings: () => ({
@@ -133,7 +133,7 @@ describe('SettingsPanel', () => {
   })
 
   it('should call exportData when export button clicked', () => {
-    const exportSpy = vi.spyOn(storage, 'exportData').mockReturnValue('')
+    const exportSpy = vi.spyOn(serialization, 'exportData').mockReturnValue('')
     render(
       <SettingsPanel
         data={mockData}

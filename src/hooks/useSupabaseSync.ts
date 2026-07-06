@@ -17,9 +17,10 @@ import {
   subscribeToChanges,
   classifySyncError,
 } from '../utils/supabase'
-import { toOrderedData } from '../utils/storage'
+import { toOrderedData } from '../utils/serialization'
 import * as syncPolicy from '../utils/syncPolicy'
 import { useVisibilityInterval } from './useVisibilityInterval'
+import { useRetryScheduler } from './useRetryScheduler'
 
 interface UseSupabaseSyncOptions {
   data: ChecklistData
@@ -44,7 +45,6 @@ type PullSyncFn = (shouldForce?: boolean, shouldSkipFirstImport?: boolean) => Pr
 type PushSyncFn = (dataToPush: ChecklistData) => Promise<void>
 
 const RETRY_DELAYS = [MS.ERROR_RECOVERY, MS.ERROR_RECOVERY * 3, MS.ERROR_RECOVERY * 9] as const
-type RetryKind = 'pull' | 'push'
 const CROSS_TAB_SYNC_KEY = 'flowboard-sync-event'
 const CROSS_TAB_CHANNEL = 'flowboard-sync'
 
@@ -67,12 +67,9 @@ export function useSupabaseSync({
 
   const isPullingRef = useRef(false)
   const hasLocalChangesRef = useRef(false)
-  const retryAttemptRef = useRef(0)
-  const retryKindRef = useRef<RetryKind>('pull')
   const instanceIdRef = useRef(Math.random().toString(36).slice(2))
   const isInitialMountRef = useRef(true)
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pullSyncRef = useRef<PullSyncFn | null>(null)
   const pushSyncRef = useRef<PushSyncFn | null>(null)
   const dataRef = useRef(data)
@@ -92,25 +89,14 @@ export function useSupabaseSync({
     onSettingsImportRef.current = onSettingsImport
   }, [onSettingsImport])
 
-  const scheduleRetry = useCallback(() => {
-    if (errorTimerRef.current) {
-      clearTimeout(errorTimerRef.current)
-      errorTimerRef.current = null
-    }
-
-    const delay = RETRY_DELAYS[Math.min(retryAttemptRef.current, RETRY_DELAYS.length - 1)]
-    errorTimerRef.current = setTimeout(() => {
-      retryAttemptRef.current += 1
+  const { scheduleRetry, resetAttempts } = useRetryScheduler({
+    delays: RETRY_DELAYS,
+    onRetry: useCallback((kind) => {
       setSyncStatus('syncing')
-
-      if (retryKindRef.current === 'push') {
-        void pushSyncRef.current?.(dataRef.current)
-        return
-      }
-
-      void pullSyncRef.current?.(true)
-    }, delay)
-  }, [])
+      if (kind === 'push') void pushSyncRef.current?.(dataRef.current)
+      else void pullSyncRef.current?.(true)
+    }, []),
+  })
 
   // --- 拉取同步 ---
   // 返回 true 表示远程数据已导入本地（调用方不应再 push）
@@ -133,7 +119,7 @@ export function useSupabaseSync({
       try {
         const result = await pullData(config)
         if (!result) {
-          retryAttemptRef.current = 0
+          resetAttempts()
           setSyncStatus('connected')
           setSyncError(null)
           return false
@@ -164,15 +150,14 @@ export function useSupabaseSync({
         saveLastSeenTime(result.updatedAt)
         saveLastSyncTime(new Date().toISOString())
         setLastSyncTime(new Date().toISOString())
-        retryAttemptRef.current = 0
+        resetAttempts()
         setSyncStatus('connected')
         setSyncError(null)
         return isImported
       } catch (error) {
-        retryKindRef.current = 'pull'
         setSyncError(classifySyncError(error))
         setSyncStatus('error')
-        scheduleRetry()
+        scheduleRetry('pull')
         return false
       } finally {
         isPullingRef.current = false
@@ -181,12 +166,6 @@ export function useSupabaseSync({
     [scheduleRetry],
   )
   pullSyncRef.current = pullSync
-
-  useEffect(() => {
-    return () => {
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
-    }
-  }, [])
 
   // --- 推送同步 ---
   const pushSync = useCallback(
@@ -201,7 +180,7 @@ export function useSupabaseSync({
         saveLastSeenTime(updatedAt)
         saveLastSyncTime(new Date().toISOString())
         setLastSyncTime(new Date().toISOString())
-        retryAttemptRef.current = 0
+        resetAttempts()
         setSyncStatus('connected')
         setSyncError(null)
         hasLocalChangesRef.current = false
@@ -216,10 +195,9 @@ export function useSupabaseSync({
           )
         }
       } catch (error) {
-        retryKindRef.current = 'push'
         setSyncError(classifySyncError(error))
         setSyncStatus('error')
-        scheduleRetry()
+        scheduleRetry('push')
       }
     },
     [includeSettings, scheduleRetry, settings],

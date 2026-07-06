@@ -20,7 +20,7 @@ import { useMeasuredHeight } from '../hooks/useMeasuredHeight'
 import { CARD_STYLES } from '../utils/stylePresets'
 import { cn } from '../utils/cn'
 import { UI } from '../utils/constants'
-import { SPRING, ENTRY, PAGE } from '../utils/motion'
+import { SPRING, ENTRY, PAGE, DRAG_LAYOUT, DROP_ANIMATION_MS } from '../utils/motion'
 
 interface ChecklistPanelProps {
   visibleItems: ChecklistItem[]
@@ -125,6 +125,7 @@ export function ChecklistPanel({
   )
 
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [lastDroppedId, setLastDroppedId] = useState<string | null>(null)
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id))
@@ -132,10 +133,13 @@ export function ChecklistPanel({
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      setActiveId(null)
       const { active, over } = event
+      const droppedId = String(active.id)
+      setActiveId(null)
+      setLastDroppedId(droppedId)
+      setTimeout(() => setLastDroppedId(null), DROP_ANIMATION_MS)
       if (over && active.id !== over.id) {
-        onReorder(activeTab, String(active.id), String(over.id))
+        onReorder(activeTab, droppedId, String(over.id))
       }
     },
     [onReorder, activeTab],
@@ -202,8 +206,14 @@ export function ChecklistPanel({
                             key={item.id}
                             layout="position"
                             initial={animation.initial}
-                            animate={animation.animate}
-                            transition={animation.transition}
+                            animate={item.id === lastDroppedId ? { opacity: 0 } : animation.animate}
+                            transition={
+                              item.id === lastDroppedId
+                                ? { duration: 0 }
+                                : activeId
+                                  ? DRAG_LAYOUT
+                                  : animation.transition
+                            }
                             onAnimationComplete={animation.onAnimationComplete}
                           >
                             <ChecklistItemRow

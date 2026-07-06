@@ -1,14 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { BehaviorSettings, ServerRegion } from '../types'
 import { isServerRegion } from '../utils/validation'
+import { DEFAULT_SETTINGS } from '../utils/seed'
 
 const SETTINGS_KEY = 'flowboard-settings'
-
-const DEFAULT_SETTINGS: BehaviorSettings = {
-  serverRegion: 'asia',
-  isAutoMoveEnabled: true,
-  shouldConfirmDelete: true,
-}
 
 function loadSettings(): BehaviorSettings {
   const raw = localStorage.getItem(SETTINGS_KEY)
@@ -56,12 +51,12 @@ function loadSettings(): BehaviorSettings {
 export function useSettingsState() {
   const [settings, setSettings] = useState<BehaviorSettings>(() => loadSettings())
 
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+  }, [settings])
+
   const updateSettings = useCallback((partial: Partial<BehaviorSettings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...partial }
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
-      return next
-    })
+    setSettings((prev) => ({ ...prev, ...partial }))
   }, [])
 
   return { settings, updateSettings }

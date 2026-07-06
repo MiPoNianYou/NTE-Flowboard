@@ -1,6 +1,12 @@
 /** Apple standard spring: stiffness 120, damping 20 */
 export const SPRING = { type: 'spring' as const, stiffness: 120, damping: 20 }
 
+/** Drag layout spring: snappier for list reorder displacement */
+export const DRAG_LAYOUT = { type: 'spring' as const, stiffness: 350, damping: 35, mass: 0.8 }
+
+/** DragOverlay drop animation duration in ms — keep in sync with SortList.tsx DROP_ANIMATION */
+export const DROP_ANIMATION_MS = 180
+
 /** Apple standard easing: cubic-bezier(0.2, 0.8, 0.2, 1.0) */
 export const APPLE_EASE = [0.2, 0.8, 0.2, 1.0] as const
 

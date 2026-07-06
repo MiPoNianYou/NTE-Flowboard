@@ -3,6 +3,7 @@ import { AnimatePresence } from 'motion/react'
 import {
   DndContext,
   DragOverlay,
+  type DropAnimation,
   type DragStartEvent,
   type DragEndEvent,
   type DragCancelEvent,
@@ -11,6 +12,12 @@ import {
   type SensorOptions,
 } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { DROP_ANIMATION_MS } from '../utils/motion'
+
+const DROP_ANIMATION: DropAnimation = {
+  duration: DROP_ANIMATION_MS,
+  easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+}
 
 interface SortListProps {
   sortedItemIds: string[]
@@ -44,7 +51,7 @@ export function SortList({
       <SortableContext items={sortedItemIds} strategy={verticalListSortingStrategy}>
         <AnimatePresence mode="popLayout">{children}</AnimatePresence>
       </SortableContext>
-      <DragOverlay dropAnimation={null}>{overlay}</DragOverlay>
+      <DragOverlay dropAnimation={DROP_ANIMATION}>{overlay}</DragOverlay>
     </DndContext>
   )
 }

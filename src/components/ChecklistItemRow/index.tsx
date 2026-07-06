@@ -128,6 +128,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
         ? {
             transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
             zIndex: 100,
+            willChange: 'transform',
           }
         : {}
 
@@ -232,7 +233,6 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
     <motion.div
       ref={mergedRef}
       style={sortableStyle}
-      layout
       initial={suppressMountAnimation ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: FADE_OUT }}

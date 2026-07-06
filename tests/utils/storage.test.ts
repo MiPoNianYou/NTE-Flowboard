@@ -1,18 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
-  shouldResetDaily,
-  shouldResetWeekly,
-  shouldResetMonthly,
   resetItems,
   loadData,
   saveData,
   saveDataImmediate,
+} from '../../src/utils/storage'
+import {
   exportData,
   importData,
-  SERVER_REGIONS,
   toOrderedData,
-} from '../../src/utils/storage'
-import { isUSDST, isEUDST, getServerUTCOffset, getServerDate } from '../../src/utils/timezone'
+} from '../../src/utils/serialization'
+import { SERVER_REGIONS } from '../../src/utils/seed'
+import {
+  shouldResetDaily,
+  shouldResetWeekly,
+  shouldResetMonthly,
+  isUSDST,
+  isEUDST,
+  getServerUTCOffset,
+  getServerDate,
+} from '../../src/utils/timezone'
 import { isChecklistData } from '../../src/utils/validation'
 import { mergeChecklistData } from '../../src/utils/dataMigration'
 import type { ChecklistData, ChecklistItem, ServerRegion } from '../../src/types'
@@ -147,65 +154,42 @@ function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistDat
 
 describe('shouldResetDaily', () => {
   it('should return false when last reset is recent', () => {
-    const data = makeChecklistData({
-      lastDailyReset: new Date().toISOString(),
-    })
-    expect(shouldResetDaily(data)).toBe(false)
+    expect(shouldResetDaily(new Date().toISOString(), 'asia')).toBe(false)
   })
 
   it('should return true when last reset was before today\'s reset time', () => {
-    // Set last reset to 2 days ago
     const twoDaysAgo = new Date()
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
-    const data = makeChecklistData({
-      lastDailyReset: twoDaysAgo.toISOString(),
-    })
-    expect(shouldResetDaily(data)).toBe(true)
+    expect(shouldResetDaily(twoDaysAgo.toISOString(), 'asia')).toBe(true)
   })
 
   it('should default to asia region when resetConfig missing serverRegion', () => {
-    const data = makeChecklistData({
-      settings: { serverRegion: 'asia' as ServerRegion, isAutoMoveEnabled: true, shouldConfirmDelete: true },
-      lastDailyReset: new Date(Date.now() - 2 * 86400000).toISOString(),
-    })
-    // Should not throw
-    expect(typeof shouldResetDaily(data)).toBe('boolean')
+    const lastReset = new Date(Date.now() - 2 * 86400000).toISOString()
+    expect(typeof shouldResetDaily(lastReset, 'asia')).toBe('boolean')
   })
 })
 
 describe('shouldResetWeekly', () => {
   it('should return false when last reset is recent', () => {
-    const data = makeChecklistData({
-      lastWeeklyReset: new Date().toISOString(),
-    })
-    expect(shouldResetWeekly(data)).toBe(false)
+    expect(shouldResetWeekly(new Date().toISOString(), 'asia')).toBe(false)
   })
 
   it('should return true when last reset was more than a week ago', () => {
     const twoWeeksAgo = new Date()
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
-    const data = makeChecklistData({
-      lastWeeklyReset: twoWeeksAgo.toISOString(),
-    })
-    expect(shouldResetWeekly(data)).toBe(true)
+    expect(shouldResetWeekly(twoWeeksAgo.toISOString(), 'asia')).toBe(true)
   })
 })
 
 describe('shouldResetMonthly', () => {
   it('should return false when last reset is recent', () => {
-    const data = makeChecklistData({
-      lastMonthlyReset: new Date().toISOString(),
-    })
-    expect(shouldResetMonthly(data)).toBe(false)
+    expect(shouldResetMonthly(new Date().toISOString(), 'asia')).toBe(false)
   })
 
   it('should return true when last reset was more than a month ago', () => {
     const twoMonthsAgo = new Date()
     twoMonthsAgo.setDate(twoMonthsAgo.getDate() - 60)
-    const data = makeChecklistData({
-      lastMonthlyReset: twoMonthsAgo.toISOString(),
-    })
-    expect(shouldResetMonthly(data)).toBe(true)
+    expect(shouldResetMonthly(twoMonthsAgo.toISOString(), 'asia')).toBe(true)
   })
 })
 

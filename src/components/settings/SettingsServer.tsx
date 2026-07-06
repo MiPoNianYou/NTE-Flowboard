@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Check } from 'lucide-react'
 import type { ServerRegion } from '../../types'
-import { SERVER_REGIONS } from '../../utils/storage'
+import { SERVER_REGIONS } from '../../utils/seed'
 import { cn } from '../../utils/cn'
 import { SettingsPage } from './SettingsPage'
 import { Card } from '../base/Card'
