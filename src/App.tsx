@@ -4,12 +4,11 @@ import { useCloudSyncProps } from './hooks/useCloudSyncProps'
 import { useTabManagement } from './hooks/useTabManagement'
 import { useLocalStorageBoolean } from './hooks/useLocalStorageBoolean'
 import { useIsMobile } from './hooks/useIsMobile'
-import { SettingsProvider, useSettings } from './context/SettingsContext'
+import { SettingsContext } from './context/SettingsContext'
 
 import { useNextResetLabel } from './hooks/useNextResetLabel'
-import { setStorageErrorHandler } from './utils/storage'
 import { cleanupRegistry } from './utils/tagColors'
-import { injectColorTokens, pageGradient } from './utils/colors'
+import { injectColorTokens, PAGE_GRADIENT } from './utils/colors'
 import { TabSwitch } from './components/TabSwitch'
 import { ProgressCard } from './components/ProgressCard'
 import { HiddenSection } from './components/HiddenSection'
@@ -17,7 +16,7 @@ import { ChecklistPanel } from './components/ChecklistPanel'
 import { AddItemForm } from './components/AddItemForm'
 import { Header } from './components/Header'
 import { ErrorBoundary } from './components/base/ErrorBoundary'
-import { StorageToast, showStorageToast } from './components/StorageToast'
+import { StorageToast } from './components/StorageToast'
 import { Badge } from './components/base/Badge'
 
 function AppContent() {
@@ -26,23 +25,15 @@ function AppContent() {
   )
 
   useEffect(() => {
-    setStorageErrorHandler((error, context) => {
-      showStorageToast(`${context}：${error.message}`)
-    })
-    return () => setStorageErrorHandler(null)
-  }, [])
-
-  useEffect(() => {
     injectColorTokens()
   }, [])
 
-  const { settings, updateSettings } = useSettings()
-
-  const { setActiveTab, activeTab, direction } = useTabManagement()
-  const isMobile = useIsMobile()
-
   const {
     data,
+    settings,
+    updateSettings,
+    uiPreferences,
+    updateUiPreferences,
     toggleItem,
     addItem,
     editItem,
@@ -52,7 +43,7 @@ function AppContent() {
     reorderItem,
     manualReset,
     importFullData,
-  } = useChecklist(settings)
+  } = useChecklist()
 
   useEffect(() => {
     const allTags = [...data.daily, ...data.weekly, ...data.monthly].flatMap((item) => item.tags)
@@ -61,10 +52,11 @@ function AppContent() {
 
   const cloudSyncProps = useCloudSyncProps({
     data,
-    settings,
     onDataImport: importFullData,
-    onSettingsImport: updateSettings,
   })
+
+  const { setActiveTab, activeTab, direction } = useTabManagement()
+  const isMobile = useIsMobile()
 
   const currentItems = useMemo(() => data[activeTab], [data, activeTab])
   const visibleItems = useMemo(() => currentItems.filter((item) => !item.isHidden), [currentItems])
@@ -85,13 +77,15 @@ function AppContent() {
   })
 
   return (
-    <>
+    <SettingsContext.Provider
+      value={{ settings, updateSettings, uiPreferences, updateUiPreferences }}
+    >
       <StorageToast />
 
       <div
         className="relative min-h-[100dvh] flex flex-col transition-colors duration-[480ms] page-gradient"
         style={{
-          background: pageGradient(),
+          background: PAGE_GRADIENT,
         }}
       >
         <div className="relative max-w-lg md:max-w-[1280px] mx-auto px-6 py-8 sm:py-12 md:py-10 flex-1 w-full">
@@ -178,16 +172,14 @@ function AppContent() {
           )}
         </div>
       </div>
-    </>
+    </SettingsContext.Provider>
   )
 }
 
 export default function App() {
   return (
     <ErrorBoundary>
-      <SettingsProvider>
-        <AppContent />
-      </SettingsProvider>
+      <AppContent />
     </ErrorBoundary>
   )
 }

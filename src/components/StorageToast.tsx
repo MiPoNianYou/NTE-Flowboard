@@ -4,25 +4,16 @@ import { AlertTriangle, X } from 'lucide-react'
 import { MS } from '../utils/constants'
 import { SPRING } from '../utils/motion'
 import { Button } from './base/Button'
-
-interface Toast {
-  id: number
-  message: string
-  type: 'error' | 'warning'
-}
-
-let toastId = 0
-let toastListeners: Array<(toast: Toast) => void> = []
+import { toastBus, type ToastPayload } from '../utils/toastBus'
 
 export function showStorageToast(message: string, type: 'error' | 'warning' = 'error'): void {
-  const toast: Toast = { id: ++toastId, message, type }
-  toastListeners.forEach((listener) => listener(toast))
+  toastBus.emit(message, type)
 }
 
 export function StorageToast() {
-  const [toasts, setToasts] = useState<Toast[]>([])
+  const [toasts, setToasts] = useState<ToastPayload[]>([])
 
-  const addToast = useCallback((toast: Toast) => {
+  const addToast = useCallback((toast: ToastPayload) => {
     setToasts((prev) => [...prev, toast])
     setTimeout(() => {
       setToasts((prev) => prev.filter((existingToast) => existingToast.id !== toast.id))
@@ -30,10 +21,7 @@ export function StorageToast() {
   }, [])
 
   useEffect(() => {
-    toastListeners.push(addToast)
-    return () => {
-      toastListeners = toastListeners.filter((listener) => listener !== addToast)
-    }
+    return toastBus.subscribe(addToast)
   }, [addToast])
 
   return (

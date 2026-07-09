@@ -8,6 +8,8 @@ vi.mock('../../src/context/SettingsContext', () => ({
   useSettings: () => ({
     settings: { serverRegion: 'asia', isAutoMoveEnabled: true, shouldConfirmDelete: true },
     updateSettings: vi.fn(),
+    uiPreferences: { cloudPatchHidden: false },
+    updateUiPreferences: vi.fn(),
   }),
 }))
 
@@ -16,6 +18,7 @@ const mockData: ChecklistData = {
   weekly: [],
   monthly: [],
   settings: { serverRegion: 'asia', isAutoMoveEnabled: true, shouldConfirmDelete: true },
+  uiPreferences: { cloudPatchHidden: false },
   lastDailyReset: new Date().toISOString(),
   lastWeeklyReset: new Date().toISOString(),
   lastMonthlyReset: new Date().toISOString(),

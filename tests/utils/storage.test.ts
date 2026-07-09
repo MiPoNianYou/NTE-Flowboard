@@ -22,7 +22,7 @@ import {
 } from '../../src/utils/timezone'
 import { isChecklistData } from '../../src/utils/validation'
 import { mergeChecklistData } from '../../src/utils/dataMigration'
-import type { ChecklistData, ChecklistItem, ServerRegion } from '../../src/types'
+import type { ChecklistData, ChecklistItem } from '../../src/types'
 
 // --- DST Tests ---
 
@@ -36,8 +36,8 @@ describe('isUSDST', () => {
     expect(isUSDST(new Date(2024, 2, 9, 1, 59, 59))).toBe(false)
   })
 
-  it('should return true after DST starts (March 10, 2024 3:00 AM)', () => {
-    expect(isUSDST(new Date(2024, 2, 10, 3, 0, 0))).toBe(true)
+  it('should return true after DST starts (March 10, 2024 UTC)', () => {
+    expect(isUSDST(new Date('2024-03-10T08:00:00Z'))).toBe(true)
   })
 
   it('should return true during summer (July 2024)', () => {
@@ -48,8 +48,8 @@ describe('isUSDST', () => {
     expect(isUSDST(new Date(2024, 10, 2, 1, 59, 59))).toBe(true)
   })
 
-  it('should return false after DST ends (Nov 3, 2024 3:00 AM)', () => {
-    expect(isUSDST(new Date(2024, 10, 3, 3, 0, 0))).toBe(false)
+  it('should return false after DST ends (Nov 3, 2024 UTC)', () => {
+    expect(isUSDST(new Date('2024-11-03T07:00:00Z'))).toBe(false)
   })
 
   it('should return false in December (standard time)', () => {
@@ -58,10 +58,10 @@ describe('isUSDST', () => {
 
   // 2025 DST: Mar 9 - Nov 2
   it('should handle 2025 DST boundaries', () => {
-    expect(isUSDST(new Date(2025, 2, 8))).toBe(false)
-    expect(isUSDST(new Date(2025, 2, 9, 3))).toBe(true)
-    expect(isUSDST(new Date(2025, 10, 1))).toBe(true)
-    expect(isUSDST(new Date(2025, 10, 2, 3))).toBe(false)
+    expect(isUSDST(new Date('2025-03-08T12:00:00Z'))).toBe(false)
+    expect(isUSDST(new Date('2025-03-09T08:00:00Z'))).toBe(true)
+    expect(isUSDST(new Date('2025-11-01T12:00:00Z'))).toBe(true)
+    expect(isUSDST(new Date('2025-11-02T07:00:00Z'))).toBe(false)
   })
 })
 
@@ -145,6 +145,7 @@ function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistDat
     ],
     monthly: [],
     settings: { serverRegion: 'asia', isAutoMoveEnabled: true, shouldConfirmDelete: true },
+    uiPreferences: { cloudPatchHidden: false },
     lastDailyReset: new Date().toISOString(),
     lastWeeklyReset: new Date().toISOString(),
     lastMonthlyReset: new Date().toISOString(),
@@ -366,7 +367,7 @@ describe('saveData / saveDataImmediate', () => {
 describe('exportData', () => {
   it('should produce valid JSON', () => {
     const data = makeChecklistData()
-    const json = exportData(data, true, data.settings)
+    const json = exportData(data)
     const parsed = JSON.parse(json)
 
     expect(parsed.daily).toBeDefined()
@@ -435,6 +436,7 @@ describe('mergeChecklistData', () => {
       weekly: [],
       monthly: [],
       settings: { serverRegion: 'asia', isAutoMoveEnabled: true, shouldConfirmDelete: true },
+      uiPreferences: { cloudPatchHidden: false },
       lastDailyReset: new Date().toISOString(),
       lastWeeklyReset: new Date().toISOString(),
       lastMonthlyReset: new Date().toISOString(),
@@ -455,37 +457,34 @@ describe('toOrderedData', () => {
     expect(keys[1]).toBe('weekly')
   })
 
-  it('should include settings when provided', () => {
-    const data = makeChecklistData()
-    const settings = { serverRegion: 'asia' as ServerRegion, isAutoMoveEnabled: true, shouldConfirmDelete: false }
-    const ordered = toOrderedData(data, settings)
-    expect(ordered.settings).toEqual(settings)
-  })
-
-  it('should not include settings when not provided', () => {
+  it('should always include settings', () => {
     const data = makeChecklistData()
     const ordered = toOrderedData(data)
-    expect(ordered.settings).toBeUndefined()
+    expect(ordered.settings).toEqual(data.settings)
+  })
+
+  it('should always include uiPreferences', () => {
+    const data = makeChecklistData()
+    const ordered = toOrderedData(data)
+    expect(ordered.uiPreferences).toEqual(data.uiPreferences)
   })
 })
 
-// --- exportData with settings ---
+// --- exportData ---
 
 describe('exportData with settings', () => {
-  it('should include settings when includeSettings is true', () => {
+  it('should include settings in exported JSON', () => {
     const data = makeChecklistData()
-    const settings = { serverRegion: 'asia' as ServerRegion, isAutoMoveEnabled: true, shouldConfirmDelete: false }
-    const json = exportData(data, true, settings)
+    const json = exportData(data)
     const parsed = JSON.parse(json)
-    expect(parsed.settings).toEqual(settings)
+    expect(parsed.settings).toEqual(data.settings)
   })
 
-  it('should not include settings when includeSettings is false', () => {
+  it('should include uiPreferences in exported JSON', () => {
     const data = makeChecklistData()
-    const settings = { serverRegion: 'asia' as ServerRegion, isAutoMoveEnabled: true, shouldConfirmDelete: false }
-    const json = exportData(data, false, settings)
+    const json = exportData(data)
     const parsed = JSON.parse(json)
-    expect(parsed.settings).toBeUndefined()
+    expect(parsed.uiPreferences).toEqual(data.uiPreferences)
   })
 })
 
@@ -558,6 +557,6 @@ describe('importData backward compatibility', () => {
     }
     const result = importData(JSON.stringify(data))
     expect(result).not.toBeNull()
-    expect(result!.settings).toEqual({ serverRegion: 'asia', isAutoMoveEnabled: false, shouldConfirmDelete: true })
+    expect(result!.data.settings).toEqual({ serverRegion: 'asia', isAutoMoveEnabled: false, shouldConfirmDelete: true })
   })
 })

@@ -1,33 +1,26 @@
-import type { ChecklistData, BehaviorSettings, ServerRegion } from '../types'
+import type { ChecklistData } from '../types'
 import { migrateDataStructure, mergeChecklistData } from './dataMigration'
-import { isChecklistData, isServerRegion } from './validation'
+import { isChecklistData } from './validation'
 
 export interface ImportResult {
   data: ChecklistData
-  settings?: BehaviorSettings
 }
 
-export function toOrderedData(
-  data: ChecklistData,
-  settings?: BehaviorSettings,
-): Record<string, unknown> {
+export function toOrderedData(data: ChecklistData): Record<string, unknown> {
   return {
     daily: data.daily,
     weekly: data.weekly,
     monthly: data.monthly,
-    ...(settings ? { settings } : {}),
+    settings: data.settings,
+    uiPreferences: data.uiPreferences,
     lastDailyReset: data.lastDailyReset,
     lastWeeklyReset: data.lastWeeklyReset,
     lastMonthlyReset: data.lastMonthlyReset,
   }
 }
 
-export function exportData(
-  data: ChecklistData,
-  includeSettings?: boolean,
-  settings?: BehaviorSettings,
-): string {
-  return JSON.stringify(toOrderedData(data, includeSettings ? settings : undefined), null, 2)
+export function exportData(data: ChecklistData): string {
+  return JSON.stringify(toOrderedData(data), null, 2)
 }
 
 export function importData(json: string): ImportResult | null {
@@ -44,21 +37,7 @@ export function importData(json: string): ImportResult | null {
       parsedObject.lastMonthlyReset = new Date().toISOString()
     if (!isChecklistData(parsedObject)) return null
     const data = mergeChecklistData(parsedObject)
-    let settings: BehaviorSettings | undefined
-    if (parsedObject.settings && typeof parsedObject.settings === 'object') {
-      const s = parsedObject.settings as unknown as Record<string, unknown>
-      const region: ServerRegion =
-        typeof s.serverRegion === 'string' && isServerRegion(s.serverRegion)
-          ? (s.serverRegion as ServerRegion)
-          : 'asia'
-      settings = {
-        serverRegion: region,
-        isAutoMoveEnabled: typeof s.isAutoMoveEnabled === 'boolean' ? s.isAutoMoveEnabled : true,
-        shouldConfirmDelete:
-          typeof s.shouldConfirmDelete === 'boolean' ? s.shouldConfirmDelete : true,
-      }
-    }
-    return { data, settings }
+    return { data }
   } catch {
     return null
   }

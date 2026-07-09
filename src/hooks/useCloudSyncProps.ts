@@ -1,28 +1,18 @@
 import { useMemo } from 'react'
 import type { CloudSyncProps } from '../components/settings/CloudSyncSection'
 import { useSupabaseSync } from './useSupabaseSync'
-import type { ChecklistData, BehaviorSettings } from '../types'
+import type { ChecklistData } from '../types'
 
 interface UseCloudSyncPropsOptions {
   data: ChecklistData
-  settings: BehaviorSettings
   onDataImport: (data: ChecklistData) => void
-  onSettingsImport: (settings: BehaviorSettings) => void
 }
 
 export function useCloudSyncProps({
   data,
-  settings,
   onDataImport,
-  onSettingsImport,
 }: UseCloudSyncPropsOptions): CloudSyncProps {
-  const sync = useSupabaseSync({
-    data,
-    onDataImport,
-    onSettingsImport,
-    includeSettings: true,
-    settings,
-  })
+  const sync = useSupabaseSync({ data, onDataImport })
 
   return useMemo(
     () => ({

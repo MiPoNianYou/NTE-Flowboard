@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { AlertCircle, RotateCcw } from 'lucide-react'
-import { pageGradient } from '../../utils/colors'
+import { PAGE_GRADIENT } from '../../utils/colors'
 import { Button } from './Button'
 import NanallyError from '../../assets/nanally-error.webp'
 
@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div
           className="min-h-[100dvh] flex items-center justify-center page-gradient"
-          style={{ background: pageGradient() }}
+          style={{ background: PAGE_GRADIENT }}
         >
           <div className="text-center w-full max-w-[680px] max-h-[85dvh] glass-strong border border-border rounded-2xl p-6 shadow-glass flex flex-col overflow-auto">
             <div className="flex flex-col items-center">

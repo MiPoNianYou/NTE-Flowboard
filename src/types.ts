@@ -29,6 +29,7 @@ export interface ChecklistData {
   lastWeeklyReset: string
   lastMonthlyReset: string
   settings: BehaviorSettings
+  uiPreferences: UiPreferences
 }
 
 export type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error'

@@ -1,27 +1,19 @@
-import { createContext, useContext, type ReactNode } from 'react'
-import type { BehaviorSettings } from '../types'
-import { useSettingsState } from '../hooks/useSettings'
+import { createContext, useContext } from 'react'
+import type { BehaviorSettings, UiPreferences } from '../types'
 
-interface SettingsContextValue {
+export interface SettingsContextValue {
   settings: BehaviorSettings
   updateSettings: (partial: Partial<BehaviorSettings>) => void
+  uiPreferences: UiPreferences
+  updateUiPreferences: (partial: Partial<UiPreferences>) => void
 }
 
-const SettingsContext = createContext<SettingsContextValue | null>(null)
-
-export function SettingsProvider({ children }: { children: ReactNode }) {
-  const { settings, updateSettings } = useSettingsState()
-  return (
-    <SettingsContext.Provider value={{ settings, updateSettings }}>
-      {children}
-    </SettingsContext.Provider>
-  )
-}
+export const SettingsContext = createContext<SettingsContextValue | null>(null)
 
 export function useSettings(): SettingsContextValue {
   const context = useContext(SettingsContext)
   if (!context) {
-    throw new Error('useSettings must be used within a SettingsProvider')
+    throw new Error('useSettings must be used within a SettingsContext.Provider')
   }
   return context
 }

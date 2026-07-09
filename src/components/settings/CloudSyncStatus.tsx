@@ -13,7 +13,7 @@ import {
 import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { APPLE_EASE } from '../../utils/motion'
-import { useUiPreferencesState } from '../../hooks/useUiPreferences'
+import { useSettings } from '../../context/SettingsContext'
 import { Button } from '../base/Button'
 import { Card } from '../base/Card'
 import { StatusMessage } from '../base/StatusMessage'
@@ -70,7 +70,7 @@ export function CloudSyncStatus({
   onTriggerSync,
   onTeardownSupabase,
 }: CloudSyncStatusProps) {
-  const { uiPreferences, updateUiPreferences } = useUiPreferencesState()
+  const { uiPreferences, updateUiPreferences } = useSettings()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDisconnectExpanded, setIsDisconnectExpanded] = useState(false)
   const [isPatchExpanded, setIsPatchExpanded] = useState(false)

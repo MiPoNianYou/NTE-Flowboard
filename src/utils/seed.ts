@@ -1,4 +1,10 @@
-import type { ChecklistData, ChecklistItem, ServerRegion, BehaviorSettings } from '../types'
+import type {
+  ChecklistData,
+  ChecklistItem,
+  ServerRegion,
+  BehaviorSettings,
+  UiPreferences,
+} from '../types'
 
 export const SERVER_REGIONS: Record<
   ServerRegion,
@@ -41,11 +47,16 @@ export const DEFAULT_SETTINGS: BehaviorSettings = {
   shouldConfirmDelete: true,
 }
 
+export const DEFAULT_UI_PREFERENCES: UiPreferences = {
+  cloudPatchHidden: false,
+}
+
 export const DEFAULT_CHECKLIST_DATA: ChecklistData = {
   daily: defaultDailyItems,
   weekly: defaultWeeklyItems,
   monthly: defaultMonthlyItems,
   settings: DEFAULT_SETTINGS,
+  uiPreferences: DEFAULT_UI_PREFERENCES,
   lastDailyReset: new Date().toISOString(),
   lastWeeklyReset: new Date().toISOString(),
   lastMonthlyReset: new Date().toISOString(),

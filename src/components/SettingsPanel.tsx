@@ -9,7 +9,6 @@ import { NAV_ITEMS, type SubPage } from './settings/SettingsNav'
 import { SPRING, PAGE } from '../utils/motion'
 import { Button } from './base/Button'
 import { useTimedToggle } from '../hooks/useTimedToggle'
-import { useSettings } from '../context/SettingsContext'
 
 interface SettingsPanelProps {
   data: ChecklistData
@@ -24,8 +23,6 @@ export function SettingsPanel({
   onImport,
   cloudSyncProps: rawCloudSyncProps,
 }: SettingsPanelProps) {
-  const { settings, updateSettings } = useSettings()
-
   const [isOpen, setIsOpen] = useState(false)
   const { isShown: isImportError, trigger: triggerImportError } = useTimedToggle()
   const { isShown: isImportSuccess, trigger: triggerImportSuccess } = useTimedToggle()
@@ -57,12 +54,7 @@ export function SettingsPanel({
   }, [isOpen])
 
   const handleExport = useCallback(() => {
-    const settingsData = {
-      serverRegion: settings.serverRegion,
-      isAutoMoveEnabled: settings.isAutoMoveEnabled,
-      shouldConfirmDelete: settings.shouldConfirmDelete,
-    }
-    const json = exportData(data, true, settingsData)
+    const json = exportData(data)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -73,7 +65,7 @@ export function SettingsPanel({
     document.body.removeChild(anchor)
     URL.revokeObjectURL(url)
     triggerExportSuccess()
-  }, [data, settings, triggerExportSuccess])
+  }, [data, triggerExportSuccess])
 
   const handleImportFile = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -85,9 +77,6 @@ export function SettingsPanel({
         const result = importData(text)
         if (result) {
           onImport(result.data)
-          if (result.settings) {
-            updateSettings(result.settings)
-          }
           triggerImportSuccess()
         } else {
           triggerImportError()
@@ -96,7 +85,7 @@ export function SettingsPanel({
       reader.readAsText(file)
       if (fileInputRef.current) fileInputRef.current.value = ''
     },
-    [onImport, updateSettings, triggerImportSuccess, triggerImportError],
+    [onImport, triggerImportSuccess, triggerImportError],
   )
 
   const layoutProps = useMemo(

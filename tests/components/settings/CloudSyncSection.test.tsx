@@ -2,8 +2,18 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { CloudSyncSection } from '../../../src/components/settings/CloudSyncSection'
 
+let mockCloudPatchHidden = false
 
-
+vi.mock('../../../src/context/SettingsContext', () => ({
+  useSettings: () => ({
+    settings: { serverRegion: 'asia', isAutoMoveEnabled: true, shouldConfirmDelete: true },
+    updateSettings: vi.fn(),
+    uiPreferences: { cloudPatchHidden: mockCloudPatchHidden },
+    updateUiPreferences: vi.fn((partial: Record<string, unknown>) => {
+      if ('cloudPatchHidden' in partial) mockCloudPatchHidden = partial.cloudPatchHidden as boolean
+    }),
+  }),
+}))
 const mockNotConfiguredProps = {
   syncStatus: 'disconnected' as const,
   lastSyncTime: null,
@@ -27,7 +37,11 @@ const mockConfiguredProps = {
 }
 
 describe('CloudSyncSection', () => {
-  afterEach(() => { vi.useRealTimers() })
+  afterEach(() => {
+    vi.useRealTimers()
+    mockCloudPatchHidden = false
+  })
+
   describe('not configured', () => {
     it('should render project ID input', () => {
       render(<CloudSyncSection {...mockNotConfiguredProps} />)
@@ -70,7 +84,7 @@ describe('CloudSyncSection', () => {
 
   describe('configured', () => {
     it('should hide patch card when cloudPatchHidden is true in ui preferences', () => {
-      localStorage.setItem('flowboard-ui-preferences', JSON.stringify({ cloudPatchHidden: true }))
+      mockCloudPatchHidden = true
 
       render(<CloudSyncSection {...mockConfiguredProps} />)
 
@@ -79,6 +93,7 @@ describe('CloudSyncSection', () => {
 
     it('should ignore legacy patch hidden key', () => {
       localStorage.setItem('flowboard-cloud-patch-hidden', 'true')
+      mockCloudPatchHidden = false
 
       render(<CloudSyncSection {...mockConfiguredProps} />)
 

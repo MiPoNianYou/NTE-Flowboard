@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { ChecklistData, BehaviorSettings, SyncStatus } from '../types'
+import type { ChecklistData, SyncStatus } from '../types'
 import { MS } from '../utils/constants'
 import type { SupabaseConfig } from '../utils/supabase'
 import {
@@ -21,13 +21,11 @@ import { toOrderedData } from '../utils/serialization'
 import * as syncPolicy from '../utils/syncPolicy'
 import { useVisibilityInterval } from './useVisibilityInterval'
 import { useRetryScheduler } from './useRetryScheduler'
+import { useCrossTabSync } from './useCrossTabSync'
 
 interface UseSupabaseSyncOptions {
   data: ChecklistData
   onDataImport: (data: ChecklistData) => void
-  onSettingsImport?: (settings: BehaviorSettings) => void
-  includeSettings?: boolean
-  settings?: BehaviorSettings
 }
 
 interface UseSupabaseSyncReturn {
@@ -45,15 +43,10 @@ type PullSyncFn = (shouldForce?: boolean, shouldSkipFirstImport?: boolean) => Pr
 type PushSyncFn = (dataToPush: ChecklistData) => Promise<void>
 
 const RETRY_DELAYS = [MS.ERROR_RECOVERY, MS.ERROR_RECOVERY * 3, MS.ERROR_RECOVERY * 9] as const
-const CROSS_TAB_SYNC_KEY = 'flowboard-sync-event'
-const CROSS_TAB_CHANNEL = 'flowboard-sync'
 
 export function useSupabaseSync({
   data,
   onDataImport,
-  onSettingsImport,
-  includeSettings,
-  settings,
 }: UseSupabaseSyncOptions): UseSupabaseSyncReturn {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
     const config = loadSupabaseConfig()
@@ -67,7 +60,6 @@ export function useSupabaseSync({
 
   const isPullingRef = useRef(false)
   const hasLocalChangesRef = useRef(false)
-  const instanceIdRef = useRef(Math.random().toString(36).slice(2))
   const isInitialMountRef = useRef(true)
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pullSyncRef = useRef<PullSyncFn | null>(null)
@@ -83,11 +75,6 @@ export function useSupabaseSync({
   useEffect(() => {
     onDataImportRef.current = onDataImport
   }, [onDataImport])
-
-  const onSettingsImportRef = useRef(onSettingsImport)
-  useEffect(() => {
-    onSettingsImportRef.current = onSettingsImport
-  }, [onSettingsImport])
 
   const { scheduleRetry, resetAttempts } = useRetryScheduler({
     delays: RETRY_DELAYS,
@@ -137,9 +124,6 @@ export function useSupabaseSync({
             const remoteData = result.data
             if (remoteData.daily && remoteData.weekly && remoteData.monthly) {
               onDataImportRef.current({ ...remoteData })
-              if (remoteData.settings && onSettingsImportRef.current) {
-                onSettingsImportRef.current(remoteData.settings)
-              }
               isImported = true
             }
           } catch {
@@ -163,9 +147,17 @@ export function useSupabaseSync({
         isPullingRef.current = false
       }
     },
-    [scheduleRetry],
+    [resetAttempts, scheduleRetry],
   )
   pullSyncRef.current = pullSync
+
+  // --- 跨 tab 同步 ---
+  const { broadcast } = useCrossTabSync({
+    onRemoteUpdate: useCallback(() => {
+      if (!configRef.current) return
+      void pullSyncRef.current?.(true)
+    }, []),
+  })
 
   // --- 推送同步 ---
   const pushSync = useCallback(
@@ -173,7 +165,7 @@ export function useSupabaseSync({
       const config = configRef.current
       if (!config || isPullingRef.current) return
 
-      const orderedData = toOrderedData(dataToPush, includeSettings ? settings : undefined)
+      const orderedData = toOrderedData(dataToPush)
 
       try {
         const updatedAt = await pushData(config, orderedData)
@@ -184,23 +176,14 @@ export function useSupabaseSync({
         setSyncStatus('connected')
         setSyncError(null)
         hasLocalChangesRef.current = false
-        if (typeof BroadcastChannel !== 'undefined') {
-          const channel = new BroadcastChannel(CROSS_TAB_CHANNEL)
-          channel.postMessage({ type: 'sync-updated', updatedAt, source: instanceIdRef.current })
-          channel.close()
-        } else {
-          localStorage.setItem(
-            CROSS_TAB_SYNC_KEY,
-            JSON.stringify({ updatedAt, source: instanceIdRef.current }),
-          )
-        }
+        broadcast(updatedAt)
       } catch (error) {
         setSyncError(classifySyncError(error))
         setSyncStatus('error')
         scheduleRetry('push')
       }
     },
-    [includeSettings, scheduleRetry, settings],
+    [broadcast, resetAttempts, scheduleRetry],
   )
   pushSyncRef.current = pushSync
 
@@ -270,42 +253,6 @@ export function useSupabaseSync({
       window.removeEventListener('online', handleOnline)
     }
   }, [pullSync, pushSync])
-
-  useEffect(() => {
-    const handleCrossTabSync = () => {
-      if (!configRef.current) return
-      void pullSync(true)
-    }
-
-    const channel =
-      typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CROSS_TAB_CHANNEL) : null
-
-    if (channel) {
-      channel.onmessage = (event) => {
-        if (event.data?.type === 'sync-updated' && event.data?.source !== instanceIdRef.current) {
-          handleCrossTabSync()
-        }
-      }
-    }
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key !== CROSS_TAB_SYNC_KEY || !event.newValue) return
-      try {
-        const payload = JSON.parse(event.newValue) as { source?: string }
-        if (payload.source === instanceIdRef.current) return
-        handleCrossTabSync()
-      } catch {
-        handleCrossTabSync()
-      }
-    }
-
-    window.addEventListener('storage', handleStorage)
-
-    return () => {
-      channel?.close()
-      window.removeEventListener('storage', handleStorage)
-    }
-  }, [pullSync])
 
   // --- 跟踪本地变更 ---
   useEffect(() => {

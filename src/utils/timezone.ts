@@ -3,21 +3,21 @@ import { RESET_HOUR } from './constants'
 
 /**
  * 检查给定日期是否在美国夏令时期间。
- * 夏令时开始：3 月第二个周日 2:00 AM
- * 夏令时结束：11 月第一个周日 2:00 AM
+ * 夏令时开始：3 月第二个周日 7:00 UTC（= EST 2:00 AM）
+ * 夏令时结束：11 月第一个周日 6:00 UTC（= EDT 2:00 AM）
  */
 export function isUSDST(date: Date): boolean {
   const year = date.getFullYear()
 
   const march1 = new Date(year, 2, 1)
   const march1stSun = march1.getDay() === 0 ? 1 : 7 - march1.getDay() + 1
-  const dstStart = new Date(year, 2, march1stSun + 7, 2, 0, 0)
+  const dstStart = new Date(Date.UTC(year, 2, march1stSun + 7, 7, 0, 0))
 
   const november1 = new Date(year, 10, 1)
   const nov1stSun = november1.getDay() === 0 ? 1 : 7 - november1.getDay() + 1
-  const dstEnd = new Date(year, 10, nov1stSun, 2, 0, 0)
+  const dstEnd = new Date(Date.UTC(year, 10, nov1stSun, 6, 0, 0))
 
-  return date >= dstStart && date < dstEnd
+  return date.getTime() >= dstStart.getTime() && date.getTime() < dstEnd.getTime()
 }
 
 /**
@@ -36,15 +36,7 @@ export function isEUDST(date: Date): boolean {
   const octLastSun = 31 - october31.getDay()
   const dstEnd = new Date(Date.UTC(year, 9, octLastSun, 1, 0, 0))
 
-  const nowUTC = Date.UTC(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    date.getHours(),
-    date.getMinutes(),
-    date.getSeconds(),
-  )
-  return nowUTC >= dstStart.getTime() && nowUTC < dstEnd.getTime()
+  return date.getTime() >= dstStart.getTime() && date.getTime() < dstEnd.getTime()
 }
 
 /**

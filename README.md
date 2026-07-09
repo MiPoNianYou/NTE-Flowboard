@@ -11,7 +11,7 @@
 [**在线使用 →**](https://miponianyou.github.io/NTE-Flowboard/)
 
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Tests](https://img.shields.io/badge/Tests-396_passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-410_passing-brightgreen)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
@@ -54,6 +54,16 @@
 ![Vitest](https://img.shields.io/badge/Vitest-4.1-729B1B?style=flat&logo=vitest&logoColor=white)
 
 </div>
+
+---
+
+## 云端同步安全说明
+
+云端同步使用你自己的 Supabase 项目，数据存储在你控制的数据库中。
+
+**Anon Key 会明文保存在本地浏览器（localStorage）。** 这是 Supabase 前端集成的固有设计——Anon Key 本身是公开凭据，真正的访问控制由 **Row Level Security（RLS）策略** 负责。
+
+建表脚本已包含启用 RLS 的语句。如果你跳过了 RLS 配置，任何持有你的 Project ID 和 Anon Key 的人都可以读写你的云端数据。
 
 ---
 

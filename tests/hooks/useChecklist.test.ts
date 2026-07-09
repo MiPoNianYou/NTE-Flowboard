@@ -1,15 +1,8 @@
-import { renderHook, act } from '@testing-library/react'
+﻿import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useChecklist } from '../../src/hooks/useChecklist'
 import * as storage from '../../src/utils/storage'
 import { MS } from '../../src/utils/constants'
-import type { BehaviorSettings } from '../../src/types'
-
-const defaultSettings: BehaviorSettings = {
-  serverRegion: 'asia',
-  isAutoMoveEnabled: true,
-  shouldConfirmDelete: true,
-}
 
 const defaultData = storage.loadData()
 
@@ -26,13 +19,28 @@ describe('useChecklist', () => {
   })
 
   it('loads data on init', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     expect(result.current.data.daily).toBeInstanceOf(Array)
     expect(result.current.data.weekly).toBeInstanceOf(Array)
   })
 
+  it('exposes settings from data.settings', () => {
+    const { result } = renderHook(() => useChecklist())
+    expect(result.current.settings.serverRegion).toBe('asia')
+    expect(result.current.settings.isAutoMoveEnabled).toBe(true)
+    expect(result.current.settings.shouldConfirmDelete).toBe(true)
+  })
+
+  it('updateSettings merges partial settings into data.settings', () => {
+    const { result } = renderHook(() => useChecklist())
+    act(() => result.current.updateSettings({ isAutoMoveEnabled: false }))
+    expect(result.current.settings.isAutoMoveEnabled).toBe(false)
+    expect(result.current.settings.shouldConfirmDelete).toBe(true)
+    expect(result.current.data.settings.isAutoMoveEnabled).toBe(false)
+  })
+
   it('addItem appends to correct tab with next order', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const beforeLen = result.current.data.daily.length
 
     act(() => {
@@ -51,7 +59,7 @@ describe('useChecklist', () => {
   })
 
   it('addItem to weekly tab', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const beforeLen = result.current.data.weekly.length
 
     act(() => {
@@ -62,7 +70,7 @@ describe('useChecklist', () => {
   })
 
   it('toggleItem flips completed', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const firstId = result.current.data.daily[0].id
     const before = result.current.data.daily[0].isCompleted
 
@@ -74,7 +82,7 @@ describe('useChecklist', () => {
   })
 
   it('toggleItem only affects matching id', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const second = result.current.data.daily[1]
 
     act(() => {
@@ -86,7 +94,7 @@ describe('useChecklist', () => {
   })
 
   it('editItem updates text and tags', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const id = result.current.data.daily[0].id
 
     act(() => {
@@ -99,7 +107,7 @@ describe('useChecklist', () => {
   })
 
   it('removeItem removes item by id', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const beforeLen = result.current.data.daily.length
     const id = result.current.data.daily[2].id
 
@@ -112,7 +120,7 @@ describe('useChecklist', () => {
   })
 
   it('hideItem sets hidden=true', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const id = result.current.data.daily[0].id
 
     act(() => {
@@ -123,7 +131,7 @@ describe('useChecklist', () => {
   })
 
   it('showItem sets hidden=false', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const id = result.current.data.daily[0].id
 
     act(() => {
@@ -137,7 +145,7 @@ describe('useChecklist', () => {
   })
 
   it('reorderItem swaps two items and normalizes orders', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const first = result.current.data.daily[0]
     const second = result.current.data.daily[1]
 
@@ -153,7 +161,7 @@ describe('useChecklist', () => {
   })
 
   it('reorderItem no-ops if same position', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const id = result.current.data.daily[0].id
     const snapshot = JSON.parse(JSON.stringify(result.current.data.daily))
 
@@ -165,7 +173,7 @@ describe('useChecklist', () => {
   })
 
   it('manualReset clears completed status', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
 
     act(() => {
       result.current.toggleItem('daily', result.current.data.daily[0].id)
@@ -180,7 +188,7 @@ describe('useChecklist', () => {
   })
 
   it('manualReset updates lastDailyReset timestamp', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const before = result.current.data.lastDailyReset
 
     vi.advanceTimersByTime(1000)
@@ -192,7 +200,7 @@ describe('useChecklist', () => {
   })
 
   it('importFullData replaces all data', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
     const custom = {
       ...defaultData,
       daily: [
@@ -211,13 +219,12 @@ describe('useChecklist', () => {
   })
 
   it('persists data on change via saveData', () => {
-    const { result } = renderHook(() => useChecklist(defaultSettings))
+    const { result } = renderHook(() => useChecklist())
 
     act(() => {
       result.current.addItem('daily', '测试持久化', [])
     })
 
-    // saveData is debounced, advance past debounce
     act(() => {
       vi.advanceTimersByTime(MS.STORAGE_DEBOUNCE + 50)
     })

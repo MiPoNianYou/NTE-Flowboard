@@ -26,11 +26,6 @@ export function shouldImport(decision: ImportDecision): boolean {
   return !decision.lastSeenTime || remoteTime > new Date(decision.lastSeenTime)
 }
 
-export function resolveConflict(
-  hasLocalChanges: boolean,
-  _localUpdatedAt: string,
-  _remoteUpdatedAt: string,
-): 'local' | 'remote' {
-  if (hasLocalChanges) return 'local'
-  return 'remote'
+export function resolveConflict(hasLocalChanges: boolean): 'local' | 'remote' {
+  return hasLocalChanges ? 'local' : 'remote'
 }

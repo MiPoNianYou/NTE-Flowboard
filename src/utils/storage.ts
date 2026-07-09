@@ -3,23 +3,17 @@ import { MS } from './constants'
 import { isChecklistData } from './validation'
 import { migrateDataStructure, mergeChecklistData } from './dataMigration'
 import { DEFAULT_CHECKLIST_DATA } from './seed'
+import { toastBus } from './toastBus'
 
 const STORAGE_KEY = 'flowboard-checklist'
 const CORRUPTED_BACKUP_KEY = 'flowboard-corrupted-backup'
 
 // --- 错误通知 ---
 
-type StorageErrorHandler = (error: Error, context: string) => void
-let storageErrorHandler: StorageErrorHandler | null = null
-
-export function setStorageErrorHandler(handler: StorageErrorHandler | null): void {
-  storageErrorHandler = handler
-}
-
 function notifyStorageError(error: unknown, context: string): void {
   const errorInstance = error instanceof Error ? error : new Error(String(error))
   console.error(`[Storage] ${context}:`, errorInstance.message)
-  storageErrorHandler?.(errorInstance, context)
+  toastBus.emit(`${context}：${errorInstance.message}`, 'error')
 }
 
 // --- 一次性 key 迁移 ---
@@ -57,6 +51,46 @@ function migrateLegacyKeys(): void {
       localStorage.setItem(newKey, val)
       localStorage.removeItem(oldKey)
     }
+  }
+
+  // 将独立的 flowboard-settings 合并进 flowboard-checklist.settings，然后删除独立 key
+  const rawSettings = localStorage.getItem('flowboard-settings')
+  if (rawSettings) {
+    try {
+      const parsedSettings = JSON.parse(rawSettings) as Record<string, unknown>
+      const rawChecklist = localStorage.getItem(STORAGE_KEY)
+      if (rawChecklist) {
+        const parsedChecklist = JSON.parse(rawChecklist) as Record<string, unknown>
+        parsedChecklist.settings = {
+          ...(parsedChecklist.settings as Record<string, unknown> | undefined),
+          ...parsedSettings,
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedChecklist))
+      }
+    } catch {
+      // 迁移失败无需阻断，ChecklistData.settings 会使用默认值
+    }
+    localStorage.removeItem('flowboard-settings')
+  }
+
+  // 将独立的 flowboard-ui-preferences 合并进 flowboard-checklist.uiPreferences，然后删除独立 key
+  const rawUiPrefs = localStorage.getItem('flowboard-ui-preferences')
+  if (rawUiPrefs) {
+    try {
+      const parsedUiPrefs = JSON.parse(rawUiPrefs) as Record<string, unknown>
+      const rawChecklist = localStorage.getItem(STORAGE_KEY)
+      if (rawChecklist) {
+        const parsedChecklist = JSON.parse(rawChecklist) as Record<string, unknown>
+        parsedChecklist.uiPreferences = {
+          ...(parsedChecklist.uiPreferences as Record<string, unknown> | undefined),
+          ...parsedUiPrefs,
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedChecklist))
+      }
+    } catch {
+      // 迁移失败无需阻断，ChecklistData.uiPreferences 会使用默认值
+    }
+    localStorage.removeItem('flowboard-ui-preferences')
   }
 }
 

@@ -139,3 +139,6 @@ export function injectColorTokens() {
 export function pageGradient(): string {
   return `linear-gradient(160deg, ${colord(BACKGROUND_PALETTE.subtle).toHex()} 0%, ${colord(BACKGROUND_PALETTE.base).toHex()} 40%, ${colord(BACKGROUND_PALETTE.muted).toHex()} 100%)`
 }
+
+/** 页面背景渐变常量，避免每次渲染重复求值 */
+export const PAGE_GRADIENT = pageGradient()

@@ -1,11 +1,8 @@
-import type { ChecklistData, ChecklistItem, BehaviorSettings } from '../types'
+import type { ChecklistData, ChecklistItem, BehaviorSettings, UiPreferences } from '../types'
 import { DEFAULT_CHECKLIST_DATA } from './seed'
+import { generateId } from './id'
 
 const defaultData = DEFAULT_CHECKLIST_DATA
-
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 10)
-}
 
 /** 按当前顺序将 order 重编为从 1 开始的连续整数，去掉残留的旧字段 */
 function normalizeOrders(items: ChecklistItem[]): ChecklistItem[] {
@@ -104,11 +101,20 @@ export function mergeChecklistData(parsed: ChecklistData): ChecklistData {
       parsedSettings?.shouldConfirmDelete ?? defaultData.settings.shouldConfirmDelete,
   }
 
+  const parsedUi = parsed.uiPreferences
+  const uiPreferences: UiPreferences = {
+    cloudPatchHidden:
+      typeof parsedUi?.cloudPatchHidden === 'boolean'
+        ? parsedUi.cloudPatchHidden
+        : defaultData.uiPreferences.cloudPatchHidden,
+  }
+
   return {
     daily,
     weekly,
     monthly,
     settings,
+    uiPreferences,
     lastDailyReset: parsed.lastDailyReset ?? new Date().toISOString(),
     lastWeeklyReset: parsed.lastWeeklyReset ?? new Date().toISOString(),
     lastMonthlyReset: parsed.lastMonthlyReset ?? new Date().toISOString(),

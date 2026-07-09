@@ -1,13 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { ChecklistData, BehaviorSettings, ServerRegion, TabType } from '../types'
+import type {
+  ChecklistData,
+  BehaviorSettings,
+  UiPreferences,
+  ServerRegion,
+  TabType,
+} from '../types'
 import { MS } from '../utils/constants'
 import { loadData, saveData, saveDataImmediate, resetItems } from '../utils/storage'
 import { shouldResetDaily, shouldResetWeekly, shouldResetMonthly } from '../utils/timezone'
 import { useVisibilityInterval } from './useVisibilityInterval'
-
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 10)
-}
+import { generateId } from '../utils/id'
 
 function applyReset(data: ChecklistData, serverRegion: ServerRegion): ChecklistData {
   let shouldUpdate = false
@@ -30,10 +33,17 @@ function applyReset(data: ChecklistData, serverRegion: ServerRegion): ChecklistD
   return shouldUpdate ? next : data
 }
 
-export function useChecklist(settings: BehaviorSettings) {
-  const [data, setData] = useState<ChecklistData>(() =>
-    applyReset(loadData(), settings.serverRegion),
-  )
+export function useChecklist() {
+  const [data, setData] = useState<ChecklistData>(() => {
+    const loaded = loadData()
+    return applyReset(loaded, loaded.settings.serverRegion)
+  })
+
+  // BehaviorSettings 的唯一 source of truth 是 data.settings（存储于 flowboard-checklist）
+  const settings: BehaviorSettings = data.settings
+
+  // UiPreferences 的唯一 source of truth 是 data.uiPreferences（存储于 flowboard-checklist）
+  const uiPreferences: UiPreferences = data.uiPreferences
 
   useEffect(() => {
     saveData(data)
@@ -46,8 +56,22 @@ export function useChecklist(settings: BehaviorSettings) {
   }, [data])
 
   useVisibilityInterval(() => {
-    setData((prev) => applyReset(prev, settings.serverRegion))
+    setData((prev) => applyReset(prev, prev.settings.serverRegion))
   }, MS.RESET_POLL)
+
+  const updateSettings = useCallback((partial: Partial<BehaviorSettings>) => {
+    setData((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, ...partial },
+    }))
+  }, [])
+
+  const updateUiPreferences = useCallback((partial: Partial<UiPreferences>) => {
+    setData((prev) => ({
+      ...prev,
+      uiPreferences: { ...prev.uiPreferences, ...partial },
+    }))
+  }, [])
 
   const toggleItem = useCallback((tab: TabType, id: string) => {
     setData((prev) => ({
@@ -135,6 +159,10 @@ export function useChecklist(settings: BehaviorSettings) {
 
   return {
     data,
+    settings,
+    updateSettings,
+    uiPreferences,
+    updateUiPreferences,
     toggleItem,
     addItem,
     editItem,

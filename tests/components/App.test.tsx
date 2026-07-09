@@ -33,6 +33,7 @@ vi.mock('../../src/utils/tagColors', () => ({
 vi.mock('../../src/utils/colors', () => ({
   injectColorTokens: vi.fn(),
   pageGradient: vi.fn(() => ''),
+  PAGE_GRADIENT: '',
 }))
 
 describe('App', () => {
