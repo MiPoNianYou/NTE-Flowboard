@@ -1,5 +1,3 @@
-/** 同步策略：纯决策函数，无 I/O，无副作用 */
-
 interface PullGuards {
   isPulling: boolean
   hasLocalChanges: boolean

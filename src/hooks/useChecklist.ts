@@ -39,10 +39,8 @@ export function useChecklist() {
     return applyReset(loaded, loaded.settings.serverRegion)
   })
 
-  // BehaviorSettings 的唯一 source of truth 是 data.settings（存储于 flowboard-checklist）
   const settings: BehaviorSettings = data.settings
 
-  // UiPreferences 的唯一 source of truth 是 data.uiPreferences（存储于 flowboard-checklist）
   const uiPreferences: UiPreferences = data.uiPreferences
 
   useEffect(() => {

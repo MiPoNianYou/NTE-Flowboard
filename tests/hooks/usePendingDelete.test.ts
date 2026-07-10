@@ -107,7 +107,6 @@ describe('usePendingDelete', () => {
       result.current.handleDelete('a')
     })
 
-    // Even after clicking, isPending returns false because shouldConfirmDelete is false
     expect(result.current.isPending('a')).toBe(false)
   })
 
@@ -122,7 +121,6 @@ describe('usePendingDelete', () => {
 
     unmount()
 
-    // Advancing timers after unmount should not cause errors
     act(() => {
       vi.advanceTimersByTime(MS.DELETE_CONFIRM + 100)
     })

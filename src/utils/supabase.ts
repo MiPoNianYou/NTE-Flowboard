@@ -5,8 +5,6 @@ import { mergeChecklistData } from './dataMigration'
 
 const SYNC_TABLE = 'sync_data'
 
-// --- 配置 ---
-
 export interface SupabaseConfig {
   projectId: string
   anonKey: string
@@ -20,9 +18,6 @@ function buildSupabaseUrl(projectId: string): string {
   return `https://${projectId}.supabase.co`
 }
 
-/**
- * 从 localStorage 加载 Supabase 配置。
- */
 export function loadSupabaseConfig(): SupabaseConfig | null {
   const raw = localStorage.getItem(CONFIG_KEY)
   if (!raw) return null
@@ -42,7 +37,6 @@ export function loadSupabaseConfig(): SupabaseConfig | null {
   return null
 }
 
-/** 保存 Supabase 配置到 localStorage（明文，无加密） */
 export function saveSupabaseConfig(config: SupabaseConfig): void {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
 }
@@ -69,8 +63,6 @@ export function saveLastSeenTime(isoString: string): void {
   localStorage.setItem(LAST_SEEN_KEY, isoString)
 }
 
-// --- 客户端 ---
-
 let client: SupabaseClient | null = null
 let cachedConfig: SupabaseConfig | null = null
 
@@ -91,8 +83,6 @@ export function resetClient(): void {
   cachedConfig = null
 }
 
-// --- 实时订阅 ---
-
 export function subscribeToChanges(
   config: SupabaseConfig,
   onChange: () => void,
@@ -111,8 +101,6 @@ export function subscribeToChanges(
   }
 }
 
-// --- 接口 ---
-
 export class SyncError extends Error {
   code: string
   constructor(message: string, code: string) {
@@ -121,7 +109,6 @@ export class SyncError extends Error {
   }
 }
 
-/** 将 SyncError 映射为用户友好的中文提示 */
 export function classifySyncError(error: unknown): string {
   if (!(error instanceof SyncError)) return '同步失败'
 
@@ -153,7 +140,6 @@ export type ValidateReason =
 
 export type ValidateResult = { ok: true } | { ok: false; reason: ValidateReason; detail?: string }
 
-/** 通过检查连通性来验证 Supabase 配置 */
 export async function validateConfig(projectId: string, anonKey: string): Promise<ValidateResult> {
   try {
     const url = buildSupabaseUrl(projectId)
@@ -194,7 +180,6 @@ export async function validateConfig(projectId: string, anonKey: string): Promis
   }
 }
 
-/** 通过 RPC 推送本地数据 */
 export async function pushData(
   config: SupabaseConfig,
   data: Record<string, unknown>,
@@ -215,7 +200,6 @@ export async function pushData(
   return result
 }
 
-/** 通过 RPC 拉取远程数据 */
 export async function pullData(
   config: SupabaseConfig,
 ): Promise<{ data: ChecklistData; updatedAt: string } | null> {

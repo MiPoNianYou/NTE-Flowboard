@@ -48,19 +48,16 @@ describe('useVisibilityInterval', () => {
 
     renderHook(() => useVisibilityInterval(callback, 1000))
 
-    // 先触发一次确认正常工作
     act(() => {
       vi.advanceTimersByTime(1000)
     })
     expect(callback).toHaveBeenCalledTimes(1)
 
-    // 页面隐藏
     act(() => {
       setVisible(false)
       dispatchVisibilityChange()
     })
 
-    // 推进时间，callback 不应被调用
     act(() => {
       vi.advanceTimersByTime(5000)
     })
@@ -73,22 +70,18 @@ describe('useVisibilityInterval', () => {
 
     renderHook(() => useVisibilityInterval(callback, 1000))
 
-    // 隐藏页面
     act(() => {
       setVisible(false)
       dispatchVisibilityChange()
     })
 
-    // 恢复可见
     act(() => {
       setVisible(true)
       dispatchVisibilityChange()
     })
 
-    // 恢复时立即调用一次
     expect(callback).toHaveBeenCalledTimes(1)
 
-    // interval 重新启动
     act(() => {
       vi.advanceTimersByTime(1000)
     })
@@ -117,13 +110,11 @@ describe('useVisibilityInterval', () => {
 
     unmount()
 
-    // unmount 后推进 timer 不应调用 callback
     act(() => {
       vi.advanceTimersByTime(5000)
     })
     expect(callback).not.toHaveBeenCalled()
 
-    // visibilitychange 监听应被移除
     expect(removeSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
   })
 
@@ -141,7 +132,6 @@ describe('useVisibilityInterval', () => {
     })
     expect(callback).toHaveBeenCalledTimes(1)
 
-    // 改变间隔
     rerender({ ms: 1000 })
 
     act(() => {
@@ -165,7 +155,6 @@ describe('useVisibilityInterval', () => {
     })
     expect(callback1).toHaveBeenCalledTimes(1)
 
-    // 更新 callback
     rerender({ cb: callback2 })
 
     act(() => {

@@ -1,11 +1,6 @@
 import type { ServerRegion } from '../types'
 import { RESET_HOUR } from './constants'
 
-/**
- * 检查给定日期是否在美国夏令时期间。
- * 夏令时开始：3 月第二个周日 7:00 UTC（= EST 2:00 AM）
- * 夏令时结束：11 月第一个周日 6:00 UTC（= EDT 2:00 AM）
- */
 export function isUSDST(date: Date): boolean {
   const year = date.getFullYear()
 
@@ -20,11 +15,6 @@ export function isUSDST(date: Date): boolean {
   return date.getTime() >= dstStart.getTime() && date.getTime() < dstEnd.getTime()
 }
 
-/**
- * 检查给定日期是否在欧洲夏令时期间。
- * 夏令时开始：3 月最后一个周日 1:00 AM UTC
- * 夏令时结束：10 月最后一个周日 1:00 AM UTC
- */
 export function isEUDST(date: Date): boolean {
   const year = date.getFullYear()
 
@@ -39,12 +29,6 @@ export function isEUDST(date: Date): boolean {
   return date.getTime() >= dstStart.getTime() && date.getTime() < dstEnd.getTime()
 }
 
-/**
- * 获取服务器区域的当前 UTC 偏移量。
- * @param region - 服务器区域
- * @param date - 要检查的日期（默认为当前时间）
- * @returns UTC 偏移量（小时）
- */
 export function getServerUTCOffset(region: ServerRegion, date: Date = new Date()): number {
   switch (region) {
     case 'asia':
@@ -56,9 +40,6 @@ export function getServerUTCOffset(region: ServerRegion, date: Date = new Date()
   }
 }
 
-/**
- * 获取根据服务器区域时区调整后的当前日期/时间。
- */
 export function getServerDate(region: ServerRegion): Date {
   const offset = getServerUTCOffset(region)
   const now = new Date()
@@ -66,17 +47,12 @@ export function getServerDate(region: ServerRegion): Date {
   return new Date(utc + offset * 3600000)
 }
 
-/** 将服务器时区的本地时间转换回 UTC Date，以便与 ISO 时间戳比较 */
 export function serverTimeToUTC(localTime: Date, region: ServerRegion): Date {
   const offset = getServerUTCOffset(region)
   const now = new Date()
   return new Date(localTime.getTime() - (offset * 3600000 + now.getTimezoneOffset() * 60000))
 }
 
-/**
- * 检查是否应触发每日重置。
- * 重置时间固定为服务器时区的 RESET_HOUR:00 AM。
- */
 export function shouldResetDaily(lastDailyReset: string, serverRegion: ServerRegion): boolean {
   const now = getServerDate(serverRegion)
   const last = new Date(lastDailyReset)
@@ -88,14 +64,10 @@ export function shouldResetDaily(lastDailyReset: string, serverRegion: ServerReg
   return last < serverTimeToUTC(todayReset, serverRegion)
 }
 
-/**
- * 检查是否应触发每周重置。
- * 重置时间固定为服务器时区的周一 RESET_HOUR:00 AM。
- */
 export function shouldResetWeekly(lastWeeklyReset: string, serverRegion: ServerRegion): boolean {
   const now = getServerDate(serverRegion)
   const last = new Date(lastWeeklyReset)
-  const resetDay = 1 // 周一
+  const resetDay = 1
 
   const thisWeekReset = new Date(now)
   const currentDay = now.getDay()
@@ -108,10 +80,6 @@ export function shouldResetWeekly(lastWeeklyReset: string, serverRegion: ServerR
   return last < serverTimeToUTC(thisWeekReset, serverRegion)
 }
 
-/**
- * 检查是否应触发每月重置。
- * 重置时间固定为服务器时区的每月 1 日 RESET_HOUR:00 AM。
- */
 export function shouldResetMonthly(lastMonthlyReset: string, serverRegion: ServerRegion): boolean {
   const now = getServerDate(serverRegion)
   const last = new Date(lastMonthlyReset)

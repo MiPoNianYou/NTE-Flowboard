@@ -6,8 +6,6 @@ type HeightMap = Map<string, number>
 const STORAGE_KEY = 'flowboard-item-heights'
 const SAVE_DEBOUNCE = 500
 
-// --- 缓存 ---
-
 function loadCache(): Map<TabType, HeightMap> {
   const maps = new Map<TabType, HeightMap>()
   try {
@@ -27,7 +25,7 @@ function loadCache(): Map<TabType, HeightMap> {
       }
     }
   } catch {
-    /* 忽略损坏数据 */
+    void 0
   }
   return maps
 }
@@ -47,17 +45,13 @@ function saveCache(maps: Map<TabType, HeightMap>) {
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
     } catch {
-      /* 存储不可用，静默忽略 */
+      void 0
     }
   }, SAVE_DEBOUNCE)
 }
 
-// --- Hook ---
-
 interface UseItemHeightsResult {
-  /** 由 ChecklistItemRow 调用，报告自身高度 */
   reportHeight: (id: string, height: number) => void
-  /** 获取某项的高度（缓存） */
   getHeight: (id: string) => number | undefined
 }
 

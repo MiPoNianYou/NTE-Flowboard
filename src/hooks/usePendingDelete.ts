@@ -5,7 +5,6 @@ export function usePendingDelete(shouldConfirmDelete: boolean, onDelete: (id: st
   const [pendingId, setPendingId] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 卸载时清理计时器
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)

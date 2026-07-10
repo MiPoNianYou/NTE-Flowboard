@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { ChecklistItemRow } from '../../src/components/ChecklistItemRow'
-import type { ChecklistItem } from '../../src/types'
+import { ChecklistItemRow } from '../../../src/components/ChecklistItemRow'
+import type { ChecklistItem } from '../../../src/types'
 
 
 vi.mock('@dnd-kit/sortable', () => ({
@@ -14,12 +14,12 @@ vi.mock('@dnd-kit/sortable', () => ({
   })),
 }))
 
-vi.mock('../../src/utils/tagColors', () => ({
+vi.mock('../../../src/utils/tagColors', () => ({
   getTagColors: vi.fn(() => ({ text: '#EF4444', backgroundColor: '#ef444424' })),
   previewTagColors: vi.fn(() => ({ text: '#EF4444', backgroundColor: '#ef444424' })),
 }))
 
-vi.mock('../../src/hooks/usePendingDelete', () => {
+vi.mock('../../../src/hooks/usePendingDelete', () => {
   const actual = { handleDelete: vi.fn(), isPending: vi.fn(() => false) }
   return { usePendingDelete: vi.fn(() => actual) }
 })

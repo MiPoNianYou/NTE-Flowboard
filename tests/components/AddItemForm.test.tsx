@@ -10,6 +10,11 @@ vi.mock('../../src/utils/tagColors', () => ({
 
 const getTagButton = () => screen.getByRole('button', { name: /标签/ })
 
+const isFormHidden = () => {
+  const input = screen.getByPlaceholderText('输入任务名称...')
+  return input.closest('[aria-hidden]')?.getAttribute('aria-hidden') === 'true'
+}
+
 describe('AddItemForm', () => {
   it('should show "添加新任务" button by default', () => {
     render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
@@ -45,14 +50,14 @@ describe('AddItemForm', () => {
     fireEvent.click(screen.getByText('添加新任务'))
     expect(screen.getByPlaceholderText('输入任务名称...')).toBeInTheDocument()
     fireEvent.keyDown(screen.getByPlaceholderText('输入任务名称...'), { key: 'Escape' })
-    expect(screen.queryByPlaceholderText('输入任务名称...')).not.toBeInTheDocument()
+    expect(isFormHidden()).toBe(true)
   })
 
   it('should close form on cancel button', () => {
     render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
     fireEvent.click(screen.getByText('添加新任务'))
     fireEvent.click(screen.getByText('取消'))
-    expect(screen.queryByPlaceholderText('输入任务名称...')).not.toBeInTheDocument()
+    expect(isFormHidden()).toBe(true)
   })
 
   it('should trim whitespace from submitted text', () => {
@@ -160,11 +165,9 @@ describe('AddItemForm', () => {
       const tagInput = screen.getByPlaceholderText('标签名')
       fireEvent.change(tagInput, { target: { value: `标签${i}` } })
       fireEvent.keyDown(tagInput, { key: 'Enter' })
-      // Blur to close input so tag button reappears for next iteration
       fireEvent.blur(screen.getByPlaceholderText('标签名'))
     }
 
-    // At limit, button should be disabled
     expect(getTagButton()).toBeDisabled()
   })
 
@@ -179,7 +182,6 @@ describe('AddItemForm', () => {
 
     expect(screen.getByText('标签1')).toBeInTheDocument()
 
-    // Blur to close tag input, then tag button reappears
     fireEvent.blur(screen.getByPlaceholderText('标签名'))
 
     const removeButton = screen.getByText('标签1').closest('span')!.querySelector('button')!
@@ -201,7 +203,7 @@ describe('AddItemForm', () => {
 
     fireEvent.click(screen.getByText('添加'))
 
-    expect(screen.queryByPlaceholderText('输入任务名称...')).not.toBeInTheDocument()
+    expect(isFormHidden()).toBe(true)
     expect(screen.getByText('添加新任务')).toBeInTheDocument()
   })
 

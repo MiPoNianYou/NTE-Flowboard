@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isUSDST, isEUDST, getServerUTCOffset } from '../../src/utils/timezone'
 
-// 测试用 Date 构造辅助：直接传 ISO 字符串，确保时区无关
 function utc(iso: string) {
   return new Date(iso)
 }
@@ -16,7 +15,6 @@ describe('isUSDST', () => {
   })
 
   it('returns false just before DST starts (2026-03-08 06:59 UTC)', () => {
-    // 2026: March 8 is the second Sunday; DST starts at 07:00 UTC
     expect(isUSDST(utc('2026-03-08T06:59:00Z'))).toBe(false)
   })
 
@@ -25,7 +23,6 @@ describe('isUSDST', () => {
   })
 
   it('returns true just before DST ends (2026-11-01 05:59 UTC)', () => {
-    // 2026: November 1 is the first Sunday; DST ends at 06:00 UTC
     expect(isUSDST(utc('2026-11-01T05:59:00Z'))).toBe(true)
   })
 
@@ -44,7 +41,6 @@ describe('isEUDST', () => {
   })
 
   it('returns false just before DST starts (2026-03-29 00:59 UTC)', () => {
-    // 2026: March 29 is last Sunday of March; EU DST starts at 01:00 UTC
     expect(isEUDST(utc('2026-03-29T00:59:00Z'))).toBe(false)
   })
 
@@ -53,7 +49,6 @@ describe('isEUDST', () => {
   })
 
   it('returns false at EU DST end (2026-10-25 01:00 UTC)', () => {
-    // 2026: October 25 is last Sunday of October
     expect(isEUDST(utc('2026-10-25T01:00:00Z'))).toBe(false)
   })
 })

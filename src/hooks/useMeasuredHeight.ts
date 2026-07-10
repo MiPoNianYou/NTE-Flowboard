@@ -1,13 +1,5 @@
 import { useRef, useState, useCallback, useLayoutEffect } from 'react'
 
-/**
- * Observes an element's contentBox height via ResizeObserver.
- * Returns a callback ref (re-observes on element change) and the
- * measured height in pixels, or null before the first measurement.
- *
- * @param debounceMs - Debounce interval to batch rapid height changes
- *                     (e.g. during item enter/exit animations). Default 100ms.
- */
 export function useMeasuredHeight<T extends HTMLElement>(
   debounceMs = 100,
 ): [(element: T | null) => void, number | null] {

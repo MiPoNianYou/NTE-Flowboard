@@ -44,7 +44,6 @@ describe('useItemHeights', () => {
       result.current.reportHeight('a', 48.5)
     })
 
-    // Should still be 48 (rounded), not updated
     expect(result.current.getHeight('a')).toBe(48)
   })
 
@@ -74,7 +73,6 @@ describe('useItemHeights', () => {
 
     rerender({ tab: 'weekly' as TabType })
 
-    // Weekly tab should not see daily's height
     expect(result.current.getHeight('a')).toBeUndefined()
 
     act(() => {
@@ -83,7 +81,6 @@ describe('useItemHeights', () => {
 
     expect(result.current.getHeight('a')).toBe(60)
 
-    // Switch back to daily — should still have daily's height
     rerender({ tab: 'daily' })
     expect(result.current.getHeight('a')).toBe(48)
   })

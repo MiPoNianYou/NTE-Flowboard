@@ -85,10 +85,6 @@ export function useSupabaseSync({
     }, []),
   })
 
-  // --- 拉取同步 ---
-  // 返回 true 表示远程数据已导入本地（调用方不应再 push）
-  // 返回 false 表示需要 push 或 pull 失败/跳过
-  // skipFirstImport=true: lastSeen 为 null 时不导入（手动同步用，优先保留本地数据）
   const pullSync = useCallback(
     async (shouldForce = false, shouldSkipFirstImport = false): Promise<boolean> => {
       const config = configRef.current
@@ -151,7 +147,6 @@ export function useSupabaseSync({
   )
   pullSyncRef.current = pullSync
 
-  // --- 跨 tab 同步 ---
   const { broadcast } = useCrossTabSync({
     onRemoteUpdate: useCallback(() => {
       if (!configRef.current) return
@@ -159,7 +154,6 @@ export function useSupabaseSync({
     }, []),
   })
 
-  // --- 推送同步 ---
   const pushSync = useCallback(
     async (dataToPush: ChecklistData) => {
       const config = configRef.current
@@ -187,7 +181,6 @@ export function useSupabaseSync({
   )
   pushSyncRef.current = pushSync
 
-  // --- 启动：加载配置并连接 ---
   useEffect(() => {
     const config = loadSupabaseConfig()
     if (!config) return
@@ -198,7 +191,7 @@ export function useSupabaseSync({
       validateConfig(config.projectId, config.anonKey).then((valid) => {
         if (valid.ok) {
           setSyncStatus('syncing')
-          pullSync(true)
+          void pullSyncRef.current?.(true)
         } else {
           setSyncStatus('disconnected')
           setIsConfigured(false)
@@ -207,9 +200,8 @@ export function useSupabaseSync({
       })
     }, 0)
     return () => clearTimeout(timer)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- 仅在组件挂载时执行一次
+  }, [])
 
-  // --- 实时订阅 ---
   useEffect(() => {
     const config = configRef.current
     if (!config) return
@@ -228,7 +220,6 @@ export function useSupabaseSync({
     }
   }, [isConfigured, pullSync])
 
-  // --- 定时拉取 + 可见性恢复 ---
   useVisibilityInterval(
     () => {
       if (configRef.current) pullSync()
@@ -254,7 +245,6 @@ export function useSupabaseSync({
     }
   }, [pullSync, pushSync])
 
-  // --- 跟踪本地变更 ---
   useEffect(() => {
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false
@@ -263,7 +253,6 @@ export function useSupabaseSync({
     hasLocalChangesRef.current = true
   }, [data])
 
-  // --- 数据变更时自动推送（3 秒防抖） ---
   useEffect(() => {
     if (syncStatus !== 'connected') return
     if (!configRef.current) return
@@ -278,7 +267,6 @@ export function useSupabaseSync({
     }
   }, [data, syncStatus, pushSync])
 
-  // --- 配置：验证并保存 ---
   const setupSupabase = useCallback(
     async (projectId: string, anonKey: string) => {
       setSyncStatus('connecting')
@@ -321,7 +309,6 @@ export function useSupabaseSync({
     [pullSync, pushSync],
   )
 
-  // --- 手动触发同步 ---
   const triggerSync = useCallback(async () => {
     setSyncStatus('syncing')
     setSyncError(null)
@@ -332,7 +319,6 @@ export function useSupabaseSync({
     }
   }, [pullSync, pushSync])
 
-  // --- 断开连接 ---
   const teardownSupabase = useCallback(() => {
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     clearSyncConfig()

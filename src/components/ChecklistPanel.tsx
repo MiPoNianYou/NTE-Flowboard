@@ -84,9 +84,8 @@ export function ChecklistPanel({
   }, [])
 
   const itemIds = useMemo(() => sortedItems.map((i) => i.id), [sortedItems])
-  const itemSpacing = sortedItems.length > 1 ? (sortedItems.length - 1) * 6 : 0 // space-y-1.5 = 6px
+  const itemSpacing = sortedItems.length > 1 ? (sortedItems.length - 1) * 6 : 0
 
-  // 直接计算，不缓存，确保 getHeight 最新返回值被使用
   let measuredHeight: number | null = null
   if (sortedItems.length > 0) {
     const measuredTotal = itemIds.reduce((sum, id) => {
@@ -101,7 +100,6 @@ export function ChecklistPanel({
     measuredHeight = emptyContentHeight + verticalPadding
   }
 
-  // 当测量完成时更新 totalHeight（只在值变化时调用，避免 framer-motion 重置动画）
   useLayoutEffect(() => {
     if (
       measuredHeight !== null &&
@@ -113,7 +111,6 @@ export function ChecklistPanel({
     }
   }, [measuredHeight, verticalPadding])
 
-  // 首次 totalHeight 设置后，标记为非首次（在渲染后执行，确保 transition 正确）
   useEffect(() => {
     if (totalHeight !== null && isFirstSetRef.current) {
       isFirstSetRef.current = false

@@ -29,13 +29,11 @@ export function useItemAnimations({
   onDelete,
   onHide,
 }: UseItemAnimationsOptions): UseItemAnimationsResult {
-  // --- 新增项追踪 ---
   const prevItemsRef = useRef<ChecklistItem[]>(visibleItems)
   const newOrdersRef = useRef<Set<string>>(new Set())
   const newIdsRef = useRef<string[]>([])
   const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Tab 切换时同步清空新项追踪（在渲染期间，不在 useEffect 中）
   const prevTabRef = useRef<TabType>(activeTab)
   if (prevTabRef.current !== activeTab) {
     newOrdersRef.current.clear()
@@ -83,7 +81,6 @@ export function useItemAnimations({
     [onHide],
   )
 
-  // --- 动画计算（新增项入场动画，退出动画由 AnimatePresence 接管） ---
   const getItemAnimation = useCallback(
     (id: string, { targetTab: _targetTab }: { targetTab: TabType }): ItemAnimationValues => {
       const isNew = newOrdersRef.current.has(id)

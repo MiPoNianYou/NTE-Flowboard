@@ -34,7 +34,6 @@ export interface ChecklistData {
 
 export type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error'
 
-// Re-export component prop types from their canonical locations
 export type { CloudSyncProps } from './components/settings/CloudSyncSection'
 
 export type { SettingsPageBaseProps } from './components/settings/SettingsPage'

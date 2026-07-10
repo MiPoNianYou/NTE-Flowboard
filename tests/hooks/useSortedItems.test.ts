@@ -50,7 +50,6 @@ describe('useSortedItems', () => {
     const allCompleted = mockItems.map(i => ({ ...i, isCompleted: true }))
     const { result } = renderHook(() => useSortedItems(allCompleted, true))
     expect(result.current.sortedItems).toHaveLength(4)
-    // All are completed, so order is preserved
     expect(result.current.sortedItems.map(i => i.text)).toEqual(['A', 'B', 'C', 'D'])
   })
 

@@ -44,7 +44,6 @@ describe('softColor', () => {
 
 describe('injectColorTokens', () => {
   const ALL_EXPECTED_VARS = [
-    // 语义色 base/hover/pressed/soft/glow
     ...Object.keys(PALETTE).flatMap(name => [
       `--color-${name}`,
       `--color-${name}-hover`,
@@ -52,32 +51,25 @@ describe('injectColorTokens', () => {
       `--color-${name}-soft`,
       `--color-${name}-glow`,
     ]),
-    // 背景色
     '--color-background',
     '--color-background-subtle',
     '--color-background-muted',
-    // 表面色
     '--color-surface',
     '--color-surface-hover',
     '--color-elevated',
     '--color-overlay',
-    // 玻璃效果
     '--color-glass',
     '--color-glass-border',
     '--color-glass-strong',
-    // 边框
     '--color-border',
     '--color-border-strong',
     '--color-border-soft',
-    // 文本色
     '--color-text-primary',
     '--color-text-secondary',
     '--color-text-muted',
-    // 虹彩渐变
     '--color-iridescent-1',
     '--color-iridescent-2',
     '--color-iridescent-3',
-    // 装饰径向渐变
     '--color-ambient-1',
     '--color-ambient-2',
     '--color-ambient-3',
@@ -94,15 +86,10 @@ describe('injectColorTokens', () => {
     injectColorTokens()
     for (const name of Object.keys(PALETTE)) {
       const hex = PALETTE[name as keyof typeof PALETTE].toLowerCase()
-      // base
       expect(document.documentElement.style.getPropertyValue(`--color-${name}`)).toBe(hex)
-      // hover — lighten(0.12) produces valid hex
       expect(document.documentElement.style.getPropertyValue(`--color-${name}-hover`)).toMatch(/^#[0-9a-f]{6}$/)
-      // pressed — darken(0.08) produces valid hex
       expect(document.documentElement.style.getPropertyValue(`--color-${name}-pressed`)).toMatch(/^#[0-9a-f]{6}$/)
-      // soft — alpha-blended 8-char hex
       expect(document.documentElement.style.getPropertyValue(`--color-${name}-soft`)).toMatch(/^#[0-9a-f]{8}$/)
-      // glow — alpha-blended 8-char hex
       expect(document.documentElement.style.getPropertyValue(`--color-${name}-glow`)).toMatch(/^#[0-9a-f]{8}$/)
     }
   })

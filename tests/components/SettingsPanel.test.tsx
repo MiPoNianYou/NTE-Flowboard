@@ -105,7 +105,6 @@ describe('SettingsPanel', () => {
     expect(document.body.style.overflow).toBe('hidden')
   })
 
-  // New deeper tests
   it('should restore body scroll after closing', () => {
     render(
       <SettingsPanel

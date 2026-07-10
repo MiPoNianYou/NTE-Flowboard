@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import { useState, useEffect, useMemo } from 'react'
 import { Counter } from './Counter'
 import { SPRING, PAGE } from '../utils/motion'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface ProgressRingProps {
   completed: number
@@ -12,6 +13,8 @@ export function ProgressRing({ completed, total }: ProgressRingProps) {
   const percentage = total === 0 ? 0 : Math.round((completed / total) * 100)
   const circumference = 2 * Math.PI * 32
   const [hasMounted, setHasMounted] = useState(false)
+  const isBelowDesktop = useIsMobile(1024)
+  const counterFontSize = isBelowDesktop ? 12 : 15
 
   useEffect(() => {
     setHasMounted(true)
@@ -51,10 +54,10 @@ export function ProgressRing({ completed, total }: ProgressRingProps) {
           className={percentage === 100 ? 'text-success' : 'text-primary'}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[10px] lg:text-sm font-bold text-text-primary tabular-nums">
+      <span className="absolute inset-0 flex items-center justify-center font-bold text-text-primary tabular-nums">
         <Counter
           value={percentage}
-          fontSize={12}
+          fontSize={counterFontSize}
           gap={0}
           padding={0}
           horizontalPadding={0}

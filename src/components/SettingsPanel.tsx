@@ -146,7 +146,6 @@ export function SettingsPanel({
       <AnimatePresence mode="wait">
         {isOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               key="settings-backdrop"
               initial={{ opacity: 0 }}
@@ -157,7 +156,6 @@ export function SettingsPanel({
               onClick={handleClose}
             />
 
-            {/* Mobile: Bottom sheet */}
             <motion.div
               key="settings-sheet-mobile"
               initial={{ y: '100%' }}
@@ -177,7 +175,6 @@ export function SettingsPanel({
               <SettingsLayout {...layoutProps} renderHeader={renderSettingsHeader} />
             </motion.div>
 
-            {/* Desktop: Centered dialog */}
             <div className="hidden md:flex fixed inset-0 z-[300] items-center justify-center p-4 pointer-events-none">
               <motion.div
                 key="settings-dialog"

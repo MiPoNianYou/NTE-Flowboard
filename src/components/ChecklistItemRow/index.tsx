@@ -63,7 +63,6 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
   const observerRef = useRef<ResizeObserver | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // 测量行高度并报告给父组件
   const measuredRef = useCallback(
     (element: HTMLDivElement | null) => {
       observerRef.current?.disconnect()

@@ -24,10 +24,7 @@ import { isChecklistData } from '../../src/utils/validation'
 import { mergeChecklistData } from '../../src/utils/dataMigration'
 import type { ChecklistData, ChecklistItem } from '../../src/types'
 
-// --- DST Tests ---
-
 describe('isUSDST', () => {
-  // 2024 DST: Mar 10 - Nov 3
   it('should return false in January (standard time)', () => {
     expect(isUSDST(new Date(2024, 0, 15))).toBe(false)
   })
@@ -56,7 +53,6 @@ describe('isUSDST', () => {
     expect(isUSDST(new Date(2024, 11, 15))).toBe(false)
   })
 
-  // 2025 DST: Mar 9 - Nov 2
   it('should handle 2025 DST boundaries', () => {
     expect(isUSDST(new Date('2025-03-08T12:00:00Z'))).toBe(false)
     expect(isUSDST(new Date('2025-03-09T08:00:00Z'))).toBe(true)
@@ -66,9 +62,7 @@ describe('isUSDST', () => {
 })
 
 describe('isEUDST', () => {
-  // 2024 EU DST: Mar 31 - Oct 27
   it('should return false in January (standard time)', () => {
-    // Use UTC to avoid local timezone issues
     const date = new Date(Date.UTC(2024, 0, 15, 12, 0, 0))
     expect(isEUDST(date)).toBe(false)
   })
@@ -83,7 +77,6 @@ describe('isEUDST', () => {
     expect(isEUDST(date)).toBe(false)
   })
 
-  // 2025 EU DST: Mar 30 - Oct 26
   it('should handle 2025 EU DST boundaries', () => {
     expect(isEUDST(new Date(Date.UTC(2025, 2, 29, 12)))).toBe(false)
     expect(isEUDST(new Date(Date.UTC(2025, 2, 30, 12)))).toBe(true)
@@ -124,15 +117,11 @@ describe('getServerDate', () => {
   it('should return approximately current time adjusted for region offset', () => {
     const now = new Date()
     const serverDate = getServerDate('asia')
-    // getServerDate converts to UTC then adds offset
-    // So the result should be approximately: now.getTimezoneOffset() offset + 8h from now
     const expectedUtc = now.getTime() + now.getTimezoneOffset() * 60000 + 8 * 3600000
     const diff = Math.abs(serverDate.getTime() - expectedUtc)
-    expect(diff).toBeLessThan(2000) // Within 2 seconds
+    expect(diff).toBeLessThan(2000)
   })
 })
-
-// --- Reset Logic Tests ---
 
 function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistData {
   return {
@@ -205,7 +194,6 @@ describe('resetItems', () => {
     const result = resetItems(items)
 
     expect(result.every((item) => item.isCompleted === false)).toBe(true)
-    // isHidden and other fields should be preserved
     expect(result[0].text).toBe('A')
     expect(result[1].isHidden).toBe(true)
     expect(result[1].tags).toEqual(['tag'])
@@ -216,8 +204,6 @@ describe('resetItems', () => {
     expect(resetItems([])).toEqual([])
   })
 })
-
-// --- Validation Tests ---
 
 describe('isChecklistData', () => {
   it('should return true for valid data', () => {
@@ -262,12 +248,9 @@ describe('isChecklistData', () => {
       lastWeeklyReset: '',
       lastMonthlyReset: '',
     }
-    // tags 缺失时应被接受（旧数据兼容）
     expect(isChecklistData(data)).toBe(true)
   })
 })
-
-// --- localStorage Tests ---
 
 const mockLocalStorage = (() => {
   let store: Record<string, string> = {}
@@ -321,14 +304,14 @@ describe('loadData', () => {
     mockLocalStorage.setItem('flowboard-checklist', '{invalid json')
 
     const data = loadData()
-    expect(data.daily.length).toBeGreaterThan(0) // defaults
+    expect(data.daily.length).toBeGreaterThan(0)
   })
 
   it('should return defaults for invalid data structure', () => {
     mockLocalStorage.setItem('flowboard-checklist', JSON.stringify({ foo: 'bar' }))
 
     const data = loadData()
-    expect(data.daily.length).toBeGreaterThan(0) // defaults
+    expect(data.daily.length).toBeGreaterThan(0)
   })
 })
 
@@ -353,13 +336,10 @@ describe('saveData / saveDataImmediate', () => {
     saveData(data)
     saveData(data)
 
-    // Should not have written yet
     expect(mockLocalStorage.setItem).not.toHaveBeenCalled()
 
-    // Advance past debounce
     vi.advanceTimersByTime(300)
 
-    // Should have written only once
     expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(1)
   })
 })
@@ -415,8 +395,6 @@ describe('SERVER_REGIONS', () => {
   })
 })
 
-// --- mergeChecklistData Tests ---
-
 describe('mergeChecklistData', () => {
   it('should normalize orders in daily/weekly', () => {
     const data = makeChecklistData({
@@ -446,8 +424,6 @@ describe('mergeChecklistData', () => {
   })
 })
 
-// --- toOrderedData Tests ---
-
 describe('toOrderedData', () => {
   it('should produce object with correct field order', () => {
     const data = makeChecklistData()
@@ -470,8 +446,6 @@ describe('toOrderedData', () => {
   })
 })
 
-// --- exportData ---
-
 describe('exportData with settings', () => {
   it('should include settings in exported JSON', () => {
     const data = makeChecklistData()
@@ -487,8 +461,6 @@ describe('exportData with settings', () => {
     expect(parsed.uiPreferences).toEqual(data.uiPreferences)
   })
 })
-
-// --- importData backward compatibility ---
 
 describe('importData backward compatibility', () => {
   it('should fill missing lastDailyReset with current date', () => {

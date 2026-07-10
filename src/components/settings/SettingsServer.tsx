@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
-import { Check } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { ServerRegion } from '../../types'
 import { SERVER_REGIONS } from '../../utils/seed'
 import { cn } from '../../utils/cn'
+import { SPRING } from '../../utils/motion'
 import { SettingsPage } from './SettingsPage'
 import { Card } from '../base/Card'
-import { IconBox } from '../base/IconBox'
 import { useSettings } from '../../context/SettingsContext'
 
 interface SettingsServerProps {
@@ -15,17 +14,6 @@ interface SettingsServerProps {
 
 export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
   const { settings, updateSettings } = useSettings()
-  const [glowingRegion, setGlowingRegion] = useState<ServerRegion | null>(null)
-  const prevRegionRef = useRef<ServerRegion>(settings.serverRegion)
-
-  useEffect(() => {
-    if (prevRegionRef.current !== settings.serverRegion) {
-      setGlowingRegion(settings.serverRegion)
-      prevRegionRef.current = settings.serverRegion
-      const timer = setTimeout(() => setGlowingRegion(null), 600)
-      return () => clearTimeout(timer)
-    }
-  }, [settings.serverRegion])
 
   return (
     <SettingsPage title="服务器设置" onBack={onBack} isEmbedded={isEmbedded}>
@@ -38,19 +26,26 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
             ][]
           ).map(([region, regionInfo]) => {
             const isSelected = settings.serverRegion === region
-            const isGlowing = glowingRegion === region
 
             return (
-              <button
+              <motion.button
                 key={region}
                 type="button"
                 onClick={() => updateSettings({ serverRegion: region })}
+                initial={false}
+                animate={{
+                  scale: isSelected ? 1.04 : 0.97,
+                  opacity: isSelected ? 1 : 0.6,
+                  boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.25)' : '0 0 0 0 transparent',
+                  zIndex: isSelected ? 1 : 0,
+                }}
+                transition={SPRING}
+                whileTap={{ scale: isSelected ? 1.01 : 0.94 }}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-3 text-left rounded-xl transition-all duration-200 hover:scale-[1.03]',
+                  'w-full flex items-center gap-3 px-3 py-3 text-left rounded-xl',
                   isSelected
-                    ? 'bg-primary-soft border border-primary/30 hover:bg-primary/15'
-                    : 'bg-surface border border-border hover:bg-elevated',
-                  isGlowing && 'animate-pulse-glow',
+                    ? 'bg-primary-soft border border-primary/30'
+                    : 'bg-surface border border-border',
                 )}
               >
                 <span className="font-mono text-sm font-medium text-text-muted flex-shrink-0 w-8 text-center">
@@ -67,24 +62,7 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
                   </p>
                   <p className="text-xs text-text-secondary">{regionInfo.description}</p>
                 </div>
-                <div
-                  className={cn(
-                    'transition-[transform,opacity]',
-                    isSelected ? 'scale-100 opacity-100 rotate-0' : 'scale-0 opacity-0 -rotate-90',
-                    isSelected
-                      ? 'duration-[480ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]'
-                      : 'duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)]',
-                  )}
-                >
-                  <IconBox
-                    icon={<Check size={12} className="text-[var(--color-text-on-accent)]" />}
-                    size="xs"
-                    variant="primary"
-                    shape="circle"
-                    className="!backdrop-blur-none"
-                  />
-                </div>
-              </button>
+              </motion.button>
             )
           })}
         </div>

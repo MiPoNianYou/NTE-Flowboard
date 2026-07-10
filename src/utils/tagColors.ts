@@ -74,7 +74,7 @@ function loadMap(): Map<string, StoredAssignment> {
       }
     }
   } catch {
-    /* 数据损坏，重新开始 */
+    void 0
   }
   cachedMap = new Map()
   return cachedMap
@@ -85,7 +85,7 @@ function saveMap(map: Map<string, StoredAssignment>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...map]))
   } catch {
-    /* 存储已满或不可用，静默忽略 */
+    void 0
   }
 }
 

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import type { TabType, ServerRegion } from '../types'
 import { MS, RESET_HOUR } from '../utils/constants'
-import { getServerDate } from '../utils/timezone'
+import { getServerUTCOffset } from '../utils/timezone'
 import { useVisibilityInterval } from './useVisibilityInterval'
 
 interface UseNextResetLabelProps {
@@ -16,7 +16,10 @@ export function useNextResetLabel({ activeTab, serverRegion }: UseNextResetLabel
 
   const nextResetLabel = useMemo(() => {
     const region = serverRegion ?? 'asia'
-    const serverDate = getServerDate(region)
+    const offset = getServerUTCOffset(region)
+    const nowDate = new Date(now)
+    const utc = nowDate.getTime() + nowDate.getTimezoneOffset() * 60000
+    const serverDate = new Date(utc + offset * 3600000)
     let target: Date
 
     if (activeTab === 'daily') {
@@ -24,7 +27,7 @@ export function useNextResetLabel({ activeTab, serverRegion }: UseNextResetLabel
       target.setHours(RESET_HOUR, 0, 0, 0)
       if (serverDate >= target) target.setDate(target.getDate() + 1)
     } else if (activeTab === 'weekly') {
-      const resetDay = 1 // 周一
+      const resetDay = 1
       const currentDay = serverDate.getDay()
       const daysToReset = (resetDay - currentDay + 7) % 7
       target = new Date(serverDate)
@@ -34,7 +37,6 @@ export function useNextResetLabel({ activeTab, serverRegion }: UseNextResetLabel
         target.setDate(target.getDate() + 7)
       }
     } else {
-      // 每月清单 — 每月 1 日重置
       target = new Date(serverDate)
       target.setDate(1)
       target.setHours(RESET_HOUR, 0, 0, 0)
@@ -53,7 +55,6 @@ export function useNextResetLabel({ activeTab, serverRegion }: UseNextResetLabel
       return `${days}天${remainHours}小时后重置`
     }
     return `${hours}小时${minutes}分钟后重置`
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 'now' 是触发器，不直接使用
   }, [activeTab, serverRegion, now])
 
   return nextResetLabel

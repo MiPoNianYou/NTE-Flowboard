@@ -4,7 +4,6 @@ import { generateId } from './id'
 
 const defaultData = DEFAULT_CHECKLIST_DATA
 
-/** 按当前顺序将 order 重编为从 1 开始的连续整数，去掉残留的旧字段 */
 function normalizeOrders(items: ChecklistItem[]): ChecklistItem[] {
   return items
     .sort((leftItem, rightItem) => leftItem.order - rightItem.order)
@@ -22,7 +21,6 @@ function normalizeOrders(items: ChecklistItem[]): ChecklistItem[] {
     })
 }
 
-/** 将旧数据结构字段名转换为新格式（storage load 与 import 共用） */
 export function migrateDataStructure(raw: unknown): unknown {
   if (typeof raw !== 'object' || raw === null) return raw
   const data = raw as Record<string, unknown>
@@ -87,7 +85,6 @@ export function migrateDataStructure(raw: unknown): unknown {
   return data
 }
 
-/** 合并 parsed 数据，缺失字段用 defaultData 补齐 */
 export function mergeChecklistData(parsed: ChecklistData): ChecklistData {
   const daily = normalizeOrders(parsed.daily)
   const weekly = normalizeOrders(parsed.weekly ?? defaultData.weekly)

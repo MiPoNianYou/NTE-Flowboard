@@ -127,7 +127,6 @@ export function SettingsLayout({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
-      {/* Mobile layout */}
       <div className="md:hidden flex-1 flex flex-col min-h-0 overflow-hidden">
         {renderHeader?.(activeTab, handleTabChange)}
         <AnimatePresence mode="wait">
@@ -157,7 +156,6 @@ export function SettingsLayout({
         </AnimatePresence>
       </div>
 
-      {/* Desktop layout */}
       <div className="hidden md:flex flex-1 min-h-0">
         <div className="w-[240px] lg:w-[260px] border-r border-border flex-shrink-0 flex flex-col p-3">
           <SettingsNav

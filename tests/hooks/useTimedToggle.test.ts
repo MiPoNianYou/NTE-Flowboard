@@ -73,7 +73,6 @@ describe('useTimedToggle', () => {
     })
     expect(result.current.isShown).toBe(true)
 
-    // 再次 trigger 重置计时器
     act(() => {
       result.current.trigger()
     })
@@ -81,7 +80,6 @@ describe('useTimedToggle', () => {
     act(() => {
       vi.advanceTimersByTime(2_000)
     })
-    // 还没到 3 秒，仍然显示
     expect(result.current.isShown).toBe(true)
 
     act(() => {
@@ -134,7 +132,6 @@ describe('useTimedToggle', () => {
 
     unmount()
 
-    // unmount 后推进 timer 不应报错
     act(() => {
       vi.advanceTimersByTime(MS.SUCCESS_HINT + 1_000)
     })

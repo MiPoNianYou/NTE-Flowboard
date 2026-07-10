@@ -1,42 +1,24 @@
-// ─── 时间间隔（毫秒）─────────────────────────────────────
 export const MS = {
-  /** 重置检查轮询间隔（useChecklist） */
   RESET_POLL: 60_000,
-  /** 倒计时标签刷新间隔（useNextResetLabel） */
   LABEL_REFRESH: 60_000,
-  /** localStorage 防抖写入（storage.ts） */
   STORAGE_DEBOUNCE: 300,
-  /** 同步推送防抖（useSupabaseSync） */
   PUSH_DEBOUNCE: 3_000,
-  /** 同步错误恢复等待（useSupabaseSync） */
   ERROR_RECOVERY: 5_000,
-  /** 定时拉取间隔（useSupabaseSync） */
   PERIODIC_PULL: 5 * 60_000,
-  /** Realtime 变更防抖（useSupabaseSync） */
   REALTIME_DEBOUNCE: 500,
-  /** 新增项动画窗口（useItemAnimations） */
   ANIMATION_WINDOW: 500,
-  /** 删除确认超时（ChecklistItemRow） */
   DELETE_CONFIRM: 2_000,
-  /** Toast 自动消失（StorageToast） */
   TOAST_DISMISS: 6_000,
-  /** 操作成功提示消失（SettingsPanel / CloudSyncSection） */
   SUCCESS_HINT: 3_000,
 } as const
 
-// ─── 界面 / 布局 ──────────────────────────────────────────
 export const UI = {
-  /** 拖拽激活距离 px */
   DRAG_DISTANCE: 8,
-  /** 单项目标签上限 */
   TAG_LIMIT: 5,
 } as const
 
-// ─── 重置 ──────────────────────────────────────────────────
 import type { TabType } from '../types'
 
-/** 服务器时区重置小时（固定 5:00 AM） */
 export const RESET_HOUR = 5
 
-/** Tab 排序映射 */
 export const TAB_ORDER: Record<TabType, number> = { daily: 0, weekly: 1, monthly: 2 }

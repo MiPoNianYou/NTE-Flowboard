@@ -8,15 +8,11 @@ import { toastBus } from './toastBus'
 const STORAGE_KEY = 'flowboard-checklist'
 const CORRUPTED_BACKUP_KEY = 'flowboard-corrupted-backup'
 
-// --- 错误通知 ---
-
 function notifyStorageError(error: unknown, context: string): void {
   const errorInstance = error instanceof Error ? error : new Error(String(error))
   console.error(`[Storage] ${context}:`, errorInstance.message)
   toastBus.emit(`${context}：${errorInstance.message}`, 'error')
 }
-
-// --- 一次性 key 迁移 ---
 
 function migrateLegacyKeys(): void {
   const oldDataKey = 'nte-checklist-data'
@@ -53,7 +49,6 @@ function migrateLegacyKeys(): void {
     }
   }
 
-  // 将独立的 flowboard-settings 合并进 flowboard-checklist.settings，然后删除独立 key
   const rawSettings = localStorage.getItem('flowboard-settings')
   if (rawSettings) {
     try {
@@ -68,12 +63,11 @@ function migrateLegacyKeys(): void {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedChecklist))
       }
     } catch {
-      // 迁移失败无需阻断，ChecklistData.settings 会使用默认值
+      void 0
     }
     localStorage.removeItem('flowboard-settings')
   }
 
-  // 将独立的 flowboard-ui-preferences 合并进 flowboard-checklist.uiPreferences，然后删除独立 key
   const rawUiPrefs = localStorage.getItem('flowboard-ui-preferences')
   if (rawUiPrefs) {
     try {
@@ -88,7 +82,7 @@ function migrateLegacyKeys(): void {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(parsedChecklist))
       }
     } catch {
-      // 迁移失败无需阻断，ChecklistData.uiPreferences 会使用默认值
+      void 0
     }
     localStorage.removeItem('flowboard-ui-preferences')
   }
@@ -99,11 +93,9 @@ function backupCorruptedData(raw: string): void {
     localStorage.setItem(CORRUPTED_BACKUP_KEY, raw)
     notifyStorageError(new Error('数据格式异常，已备份原始数据'), '数据恢复')
   } catch {
-    // 备份失败无能为力
+    void 0
   }
 }
-
-// --- 公开 I/O ---
 
 export function loadData(): ChecklistData {
   try {

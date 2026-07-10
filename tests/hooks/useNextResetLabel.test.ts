@@ -45,9 +45,8 @@ describe('useNextResetLabel', () => {
   })
 
   it('should show "X小时Y分钟后重置" for daily tab', () => {
-    // Set time to 10:00 AM server time → reset is tomorrow 05:00 → 19h away
     vi.useFakeTimers()
-    vi.setSystemTime(new Date('2025-06-15T02:00:00Z')) // 10:00 UTC+8
+    vi.setSystemTime(new Date('2025-06-15T02:00:00Z'))
     const { result } = renderHook(() => useNextResetLabel({
       activeTab: 'daily',
       serverRegion: 'asia',
@@ -56,7 +55,6 @@ describe('useNextResetLabel', () => {
   })
 
   it('should show "X天Y小时后重置" for weekly tab when > 24h away', () => {
-    // Wednesday June 18, 10:00 UTC+8 → next Monday is June 23 → ~5 days 19h away
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-06-18T02:00:00Z'))
     const { result } = renderHook(() => useNextResetLabel({

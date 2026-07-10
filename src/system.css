@@ -1,25 +1,13 @@
 @theme {
-  /* Liquid Glass Design System */
-
-  /* ─── 字体 ─────────────────────────────────────────────── */
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC',
     'Microsoft YaHei', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* ─── 字体粗细 (DESIGN.md §10) ─────────────────────────── */
   --font-weight-body: 400;
   --font-weight-ui: 500;
   --font-weight-display: 700;
 
-  /*
-   * ─── 颜色令牌 ────────────────────────────────────────────
-   * 以下所有颜色值为 SSR/首屏兜底，运行时由 injectColorTokens()
-   * 从 PALETTE (colors.ts) 经 Colord 计算后统一覆写。
-   * 勿手动修改此处色值，需与 colors.ts PALETTE 保持一致。
-   */
-
-  /* ─── 基础色 (Colord 预计算 hex) ───────────────────────── */
   --color-background: #0d0d12;
   --color-background-subtle: #0a0c14;
   --color-background-muted: #0f1118;
@@ -28,23 +16,19 @@
   --color-elevated: #ffffff1a;
   --color-overlay: #0d0d12cc;
 
-  /* ─── 玻璃效果 (Colord 预计算 hex) ─────────────────────── */
   --color-glass: #ffffff0d;
   --color-glass-border: #ffffff1a;
   --color-glass-strong: #ffffff14;
 
-  /* ─── 边框 (Colord 预计算 hex) ─────────────────────────── */
   --color-border: #ffffff14;
   --color-border-strong: #ffffff26;
   --color-border-soft: #ffffff0a;
 
-  /* ─── 文本色 (Colord 预计算 hex) ───────────────────────── */
   --color-text-primary: #fffffff2;
   --color-text-secondary: #ffffffa6;
   --color-text-muted: #ffffff66;
   --color-text-on-accent: #ffffff;
 
-  /* ─── 语义色 (DESIGN.md §14: HSL 饱和度≤80%) ──────────── */
   --color-primary: #9080f0;
   --color-primary-hover: #a090f4;
   --color-primary-pressed: #7060d0;
@@ -59,12 +43,10 @@
   --color-danger: #e85252;
   --color-danger-soft: #e8525224;
 
-  /* ─── 虹彩渐变 (DESIGN.md §14: HSL 饱和度≤80%) ──────────── */
   --color-iridescent-1: #e018684d;
   --color-iridescent-2: #1868e04d;
   --color-iridescent-3: #6818e04d;
 
-  /* ─── 阴影 (DESIGN.md §14: 使用 off-black) ─────────────── */
   --shadow-sm: 0 1px 2px #0a0a0a33;
   --shadow-md: 0 4px 16px #0a0a0a4d;
   --shadow-lg: 0 12px 40px #0a0a0a66;
@@ -85,14 +67,11 @@
   --text-body: 1rem;
   --text-small: 0.875rem;
 
-  /* ─── 行高 ─────────────────────────────────────────────── */
   --leading-body: 1.6;
 
-  /* ─── 焦点 & 选择 ─────────────────────────────────────── */
   --focus-ring: color-mix(in srgb, var(--color-primary) 40%, transparent);
   --selection-bg: color-mix(in srgb, var(--color-primary) 30%, transparent);
 
-  /* ─── 动画 (DESIGN.md §6) ──────────────────────────────── */
   --morph-duration: 500ms;
   --blur-amount: 15px;
   --saturate-amount: 1.2;
@@ -100,11 +79,9 @@
   --iridescent: true;
   --blend-mode: screen;
   --smooth-transitions: true;
-  /* ─── 间距节奏 (DESIGN.md §12) ──────────────────────────── */
   --space-unit: 0.5rem;
   --section-gap: clamp(4rem, 8vw, 8rem);
 
-  /* ─── z-index 层级 (DESIGN.md §12) ──────────────────────── */
   --z-base: 0;
   --z-sticky: 100;
   --z-overlay: 200;
@@ -112,7 +89,6 @@
   --z-toast: 500;
 }
 
-/* ─── Body — Liquid Glass substrate ─────────────────────── */
 body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
@@ -121,12 +97,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── 图标线宽 ──────────────────────────────────────────── */
 .lucide {
   stroke-width: 1.5;
 }
 
-/* ─── 全局隐藏滚动条 ────────────────────────────────────── */
 ::-webkit-scrollbar {
   display: none;
 }
@@ -134,14 +108,12 @@ body {
   scrollbar-width: none;
 }
 
-/* ─── 移动端安全区域 ────────────────────────────────────── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
-/* ─── Grid 展开/折叠动画 ────────────────────────────────── */
 .collapse-closed {
   grid-template-rows: 0fr;
 }
@@ -149,19 +121,16 @@ body {
   grid-template-rows: 1fr;
 }
 
-/* ─── 焦点环 ────────────────────────────────────────────── */
 :focus-visible:not(input, textarea, select) {
   outline: none;
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* ─── 文本选择 ──────────────────────────────────────────── */
 ::selection {
   background: var(--selection-bg);
   color: inherit;
 }
 
-/* ─── 减少动画 ──────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -173,7 +142,6 @@ body {
   }
 }
 
-/* ─── 输入框组样式 ──────────────────────────────────────── */
 .input-group {
   width: 100%;
 }
@@ -319,7 +287,6 @@ body {
   letter-spacing: 0.01em;
 }
 
-/* ─── 虹彩渐变动画 ──────────────────────────────────────── */
 @keyframes iridescent {
   0% {
     background-position: 0% 50%;
@@ -344,7 +311,6 @@ body {
   animation: iridescent 8s ease infinite;
 }
 
-/* ─── 选中项光晕脉冲 ──────────────────────────────────────── */
 @keyframes pulse-glow {
   0% {
     box-shadow: 0 0 0 0 var(--color-primary-glow);
@@ -363,7 +329,6 @@ body {
   animation: pulse-glow 600ms ease-out;
 }
 
-/* ─── 同步状态动画 ──────────────────────────────────────────── */
 @keyframes status-breathe {
   0%,
   100% {
@@ -418,7 +383,6 @@ body {
   animation: status-blink 1s ease-in-out infinite;
 }
 
-/* ─── 玻璃效果（::before 分离 backdrop-filter，避免 scale 模糊文字）── */
 .glass {
   position: relative;
   background: var(--glass-bg, var(--color-glass));
@@ -442,14 +406,12 @@ body {
   border: 1px solid var(--color-border-strong);
 }
 
-/* ─── 玻璃遮罩（Liquid Glass 毛玻璃背景）────────────────── */
 .glass-overlay {
   background: var(--color-overlay);
   -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
   backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
 }
 
-/* ─── 页面背景渐变（Liquid Glass 噪点纹理风格）────────────────── */
 .page-gradient {
   position: relative;
   overflow: hidden;
@@ -483,14 +445,12 @@ body {
   z-index: 1;
 }
 
-/* ─── Completion text transition ──────────────────────────── */
 .completion-text {
   transition:
     color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
     text-decoration-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ─── Chromatic Aberration (DESIGN.md §7) ─────────────────── */
 .chromatic-aberration {
   text-shadow:
     -1px 0 rgba(255, 0, 80, 0.35),
@@ -502,7 +462,6 @@ body {
     1px 0 0 rgba(0, 128, 255, 0.25);
 }
 
-/* ─── Morphing Animation (DESIGN.md §7) ──────────────────── */
 @keyframes morph {
   0%,
   100% {
