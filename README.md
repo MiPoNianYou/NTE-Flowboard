@@ -1,73 +1,58 @@
-<div align="center">
+<p align="center">
+  <img src="src/assets/nanally.webp" width="112" alt="NTE Flowboard" />
+</p>
 
-<img src="src/assets/nanally.webp" width="180" style="border-radius: 50%;" />
+<h1 align="center">NTE Flowboard</h1>
 
-# NTE Flowboard
+<p align="center">
+  每日 · 每周 · 每月任务追踪看板<br />
+  <a href="https://miponianyou.github.io/NTE-Flowboard/">在线使用</a>
+  <span>&nbsp;·&nbsp;</span>
+  <a href="#云端同步">云端同步</a>
+</p>
 
-**每日 · 每周 · 每月任务追踪看板**
-
-*多设备云端同步 · 拖拽排序 · 标签分类*
-
-[**在线使用 →**](https://miponianyou.github.io/NTE-Flowboard/)
-
-![License](https://img.shields.io/badge/License-MIT-green)
-![Tests](https://img.shields.io/badge/Tests-410_passing-brightgreen)
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
-
-</div>
-
----
-
-## 功能特性
-
-<div align="center">
-
-| 功能 | 说明 |
-|:---:|:---|
-| 每日/每周/每月清单 | 自动按服务器时区重置（含夏令时） |
-| 拖拽排序 | dnd-kit 流畅拖拽体验 |
-| 标签分类 | 10 种颜色标签，按序自动分配 |
-| 云端同步 | Supabase Realtime 跨设备实时同步 |
-| Liquid Glass 暗色主题 | 深色设计系统，玻璃态表面层 |
-| 离线提示 | 断网时显示状态 |
-| 无障碍支持 | WAI-ARIA 标签、焦点陷阱、键盘导航 |
-| 单元测试 | 396 个测试用例覆盖核心逻辑 |
-
-</div>
+<p align="center">
+  <img src="https://img.shields.io/badge/React_19-20232A?logo=react&logoColor=61DAFB" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript_6-20232A?logo=typescript&logoColor=3178C6" alt="TypeScript 6" />
+  <img src="https://img.shields.io/badge/Vite_8-20232A?logo=vite&logoColor=646CFF" alt="Vite 8" />
+</p>
 
 ---
 
-## 技术栈
+## NTE 周期事项
 
-<div align="center">
+| 周期 | 追踪内容 | 重置时点 |
+| --- | --- | --- |
+| 每日 | 地图交互、咖舍收益、角色羁遇、像素与家具材料 | 每日 05:00 |
+| 每周 | 异象巡礼、都市活力、宝库、送货、拍卖与通行证任务 | 每周一 05:00 |
+| 每月 | 集市迷迭、大亨猎人、玩法异境等商店兑换 | 每月 1 日 05:00 |
 
-![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat&logo=vite&logoColor=white)
+每日 05:00、每周一 05:00、每月 1 日 05:00 重置。可按游戏服务器选择亚太服、美服或欧服；美服和欧服的夏令时会自动处理。
 
-![Supabase](https://img.shields.io/badge/Supabase-2.107-3FCF8E?style=flat&logo=supabase&logoColor=white)
-![Motion](https://img.shields.io/badge/Motion-12.40-4F4F4F?style=flat&logo=motion&logoColor=white)
-![dnd-kit](https://img.shields.io/badge/dnd--kit-6.3-FF6B6B?style=flat&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-4.1-729B1B?style=flat&logo=vitest&logoColor=white)
+## 清单功能
 
-</div>
+| 添加与编辑 | 整理 | 完成 | 保留 |
+| --- | --- | --- | --- |
+| 添加自定义事项，修改文字和标签 | 拖拽排序，按标签查找 | 勾选完成，可自动移到列表末尾 | 隐藏暂时不做的事项，随时恢复 |
 
----
+任务支持键盘操作和删除二次确认。进度环显示每份清单的完成数量。数据保存在浏览器中，离线可用；打开多个标签页时会自动同步。
 
-## 云端同步安全说明
+## 云端同步
 
-云端同步使用你自己的 Supabase 项目，数据存储在你控制的数据库中。
+默认只使用浏览器本地存储。填入自己的 Supabase 项目配置后，数据会在设备间同步。
 
-**Anon Key 会明文保存在本地浏览器（localStorage）。** 这是 Supabase 前端集成的固有设计——Anon Key 本身是公开凭据，真正的访问控制由 **Row Level Security（RLS）策略** 负责。
+```text
+本地变更  →  upsert_sync  →  Supabase
+Supabase  →  pull_sync    →  本地状态
+```
 
-建表脚本已包含启用 RLS 的语句。如果你跳过了 RLS 配置，任何持有你的 Project ID 和 Anon Key 的人都可以读写你的云端数据。
+Project ID 与 Anon Key 保存在当前浏览器的 `localStorage`。Anon Key 是前端公开凭据，数据访问由 Supabase 的 **Row Level Security (RLS)** 控制。
 
----
+> 配置同步前，先在 Supabase 项目中启用并验证 RLS。RLS 配置错误时，持有项目公开凭据的人可能读写同步数据。
 
-## 快速开始
+## 本地运行
+
+需要 Node.js 20+。
 
 ```bash
 git clone https://github.com/MiPoNianYou/NTE-Flowboard.git
@@ -76,44 +61,45 @@ npm install
 npm run dev
 ```
 
----
-
-## 项目结构
-
-```
-src/
-├── components/                # UI 组件
-│   ├── base/                  # 基础组件（9 个）
-│   ├── ChecklistItemRow/      # 清单项行（拖拽 + 编辑）
-│   ├── settings/              # 设置页面（11 个）
-│   └── ...                    # 业务组件
-├── hooks/                     # 自定义 Hooks（19 个）
-├── utils/                     # 工具函数（14 个）
-├── types.ts                   # 共享类型定义
-├── system.css                 # Liquid Glass 设计令牌
-└── App.tsx                    # 根组件
-```
-
----
-
-## 开发命令
+## 开发
 
 | 命令 | 说明 |
-|:---|:---|
+| --- | --- |
 | `npm run dev` | 启动开发服务器 |
-| `npm run build` | 构建生产版本（含 lint + typecheck） |
-| `npm run test` | 运行单元测试 |
-| `npm run test:watch` | 监听模式运行测试 |
-| `npm run typecheck` | TypeScript 类型检查 |
-| `npm run lint` | ESLint 代码检查 |
-| `npm run lint:fix` | 自动修复 lint 问题 |
-| `npm run format` | Prettier 代码格式化 |
-| `npm run format:check` | 检查代码格式（CI 用） |
+| `npm run test` | 运行 Vitest 测试 |
+| `npm run test:watch` | 监听测试变更 |
+| `npm run lint` | 检查 `src/` |
+| `npm run typecheck` | TypeScript 检查 |
+| `npm run format:check` | Prettier 检查 |
+| `npm run build` | lint、类型检查、生产构建 |
 
----
+提交前验证：
 
-<div align="center">
+```bash
+npm run format:check
+npm run test
+npm run build
+```
 
-**License:** MIT
+## 结构
 
-</div>
+```text
+src/
+  components/       界面与交互组件
+  context/          全局设置状态
+  hooks/            清单、同步、交互逻辑
+  utils/            存储、迁移、时间与服务接口
+  system.css        Liquid Glass 设计令牌
+
+tests/              对应业务行为与数据契约的测试
+```
+
+## 技术
+
+`React 19` · `TypeScript` · `Vite 8` · `Tailwind CSS 4` · `Motion` · `dnd-kit` · `Supabase` · `Vitest`
+
+## 发布
+
+推送 `main` 后，GitHub Actions 自动完成格式检查、测试、构建和 GitHub Pages 部署。
+
+<p align="center"><sub>MIT License</sub></p>

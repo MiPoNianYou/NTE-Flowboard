@@ -15,7 +15,7 @@ import { SettingsGeneral } from './SettingsGeneral'
 import { SettingsServer } from './SettingsServer'
 import { SettingsData } from './SettingsData'
 import { CloudSyncSection } from './CloudSyncSection'
-import { SERVER_REGIONS } from '../../utils/seed'
+import { SERVER_REGIONS } from '../../utils/defaultData'
 import { PAGE } from '../../utils/motion'
 import { useSettings } from '../../context/SettingsContext'
 

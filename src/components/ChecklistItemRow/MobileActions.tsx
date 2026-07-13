@@ -18,12 +18,8 @@ export function MobileActions({
   return (
     <div className={cn(GRID_COLLAPSE, isExpanded ? 'collapse-open' : 'collapse-closed')}>
       <div className="overflow-hidden">
-        <div className="flex items-center justify-end gap-1 pb-1 pt-1 px-1">
-          <Button
-            variant="primary-soft"
-            onClick={onEdit}
-            className="px-2 py-1.5 text-xs justify-center"
-          >
+        <div className="grid grid-cols-3 gap-2 px-3 pb-3 pt-2">
+          <Button variant="primary-soft" onClick={onEdit} className="h-10 px-2 text-xs">
             <Pencil size={13} />
             <span>编辑</span>
           </Button>
@@ -33,7 +29,7 @@ export function MobileActions({
               event.stopPropagation()
               onHide()
             }}
-            className="px-2 py-1.5 text-xs justify-center"
+            className="h-10 px-2 text-xs"
           >
             <EyeOff size={13} />
             <span>隐藏</span>
@@ -41,10 +37,10 @@ export function MobileActions({
           <Button
             variant={isPending ? 'danger' : 'danger-soft'}
             onClick={onDelete}
-            className="px-2 py-1.5 text-xs justify-center"
+            className="h-10 px-2 text-xs"
           >
             <Trash2 size={13} />
-            <span>{isPending ? '确认' : '删除'}</span>
+            <span>{isPending ? '确认删除' : '删除'}</span>
           </Button>
         </div>
       </div>

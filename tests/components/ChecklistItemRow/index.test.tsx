@@ -19,10 +19,11 @@ vi.mock('../../../src/utils/tagColors', () => ({
   previewTagColors: vi.fn(() => ({ text: '#EF4444', backgroundColor: '#ef444424' })),
 }))
 
-vi.mock('../../../src/hooks/usePendingDelete', () => {
-  const actual = { handleDelete: vi.fn(), isPending: vi.fn(() => false) }
-  return { usePendingDelete: vi.fn(() => actual) }
-})
+let pendingDeleteState = { handleDelete: vi.fn(), isPending: vi.fn(() => false) }
+
+vi.mock('../../../src/hooks/usePendingDelete', () => ({
+  usePendingDelete: vi.fn(() => pendingDeleteState),
+}))
 
 const mockItem: ChecklistItem = {
   id: 'test1',
@@ -33,7 +34,87 @@ const mockItem: ChecklistItem = {
   tags: ['地图'],
 }
 
+function setTouchDevice(isTouch: boolean) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches: isTouch && (query === '(hover: none)' || query === '(pointer: coarse)'),
+    })),
+  )
+}
+
 describe('ChecklistItemRow', () => {
+  beforeEach(() => {
+    pendingDeleteState = { handleDelete: vi.fn(), isPending: vi.fn(() => false) }
+  })
+
+  it('shows the mobile action bar after tapping a task', () => {
+    setTouchDevice(true)
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('测试任务'))
+
+    expect(screen.getByRole('button', { name: '编辑' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '隐藏' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '删除' })).toBeInTheDocument()
+  })
+
+  it('uses the mobile edit action bar in the agreed order', () => {
+    setTouchDevice(true)
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('测试任务'))
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }))
+
+    expect(screen.getAllByRole('button').slice(-3).map((button) => button.textContent)).toEqual([
+      '取消',
+      '新增标签',
+      '保存',
+    ])
+  })
+
+  it('shows a confirm-delete action while deletion is pending', () => {
+    setTouchDevice(true)
+    pendingDeleteState = {
+      handleDelete: vi.fn(),
+      isPending: vi.fn(() => true),
+    }
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete
+      />,
+    )
+
+    fireEvent.click(screen.getByText('测试任务'))
+
+    expect(screen.getByRole('button', { name: '确认删除' })).toBeInTheDocument()
+  })
   it('should render item text', () => {
     render(
       <ChecklistItemRow

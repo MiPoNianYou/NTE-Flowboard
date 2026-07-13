@@ -1,5 +1,5 @@
 import type { ChecklistData, ChecklistItem, BehaviorSettings, UiPreferences } from '../types'
-import { DEFAULT_CHECKLIST_DATA } from './seed'
+import { DEFAULT_CHECKLIST_DATA } from './defaultData'
 import { generateId } from './id'
 
 const defaultData = DEFAULT_CHECKLIST_DATA
@@ -37,6 +37,7 @@ export function migrateDataStructure(raw: unknown): unknown {
         item.isHidden = item.hidden
         delete item.hidden
       }
+      if (typeof item.isHidden !== 'boolean') item.isHidden = false
       delete item.id
       delete item.isPreset
       return item

@@ -1,6 +1,6 @@
 import { motion } from 'motion/react'
 import type { ServerRegion } from '../../types'
-import { SERVER_REGIONS } from '../../utils/seed'
+import { SERVER_REGIONS } from '../../utils/defaultData'
 import { cn } from '../../utils/cn'
 import { SPRING } from '../../utils/motion'
 import { SettingsPage } from './SettingsPage'

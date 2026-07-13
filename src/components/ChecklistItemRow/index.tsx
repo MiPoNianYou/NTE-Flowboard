@@ -309,34 +309,61 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                     onEditStateChange={setIsTagEditorBusy}
                   />
 
-                  <div className="flex items-center gap-1 shrink-0">
+                  {!isTouch && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="tertiary"
+                        onClick={cancelEdit}
+                        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_INFO)}
+                        aria-label="取消"
+                      >
+                        <X size={15} />
+                      </Button>
+                      <Button
+                        variant="tertiary"
+                        onClick={() => setTagAddRequest((count) => count + 1)}
+                        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
+                        aria-label="新增标签"
+                        disabled={isTagEditorBusy}
+                      >
+                        <TagPlus size={15} />
+                      </Button>
+                      <Button
+                        variant="tertiary"
+                        onClick={() => handleSave(draftText)}
+                        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_SUCCESS)}
+                        aria-label="保存"
+                      >
+                        <Save size={15} />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {isTouch && (
+                  <div className="mt-3 grid grid-cols-3 gap-2 pt-2">
+                    <Button variant="info-soft" onClick={cancelEdit} className="h-10 px-2 text-xs">
+                      <X size={15} />
+                      <span>取消</span>
+                    </Button>
                     <Button
-                      variant="tertiary"
+                      variant="primary-soft"
                       onClick={() => setTagAddRequest((count) => count + 1)}
-                      className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
-                      aria-label="新增标签"
+                      className="h-10 px-2 text-xs"
                       disabled={isTagEditorBusy}
                     >
                       <TagPlus size={15} />
+                      <span>新增标签</span>
                     </Button>
                     <Button
-                      variant="tertiary"
-                      onClick={cancelEdit}
-                      className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_INFO)}
-                      aria-label="取消"
-                    >
-                      <X size={15} />
-                    </Button>
-                    <Button
-                      variant="tertiary"
+                      variant="success-soft"
                       onClick={() => handleSave(draftText)}
-                      className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_SUCCESS)}
-                      aria-label="保存"
+                      className="h-10 px-2 text-xs"
                     >
                       <Save size={15} />
+                      <span>保存</span>
                     </Button>
                   </div>
-                </div>
+                )}
               </div>
             </motion.div>
           ) : (

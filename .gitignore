@@ -37,6 +37,7 @@ desktop.ini
 AGENTS.md
 docs/
 .opencode/
+.mimocode/
 
 # Design docs
 DESIGN.md

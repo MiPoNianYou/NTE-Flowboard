@@ -10,7 +10,7 @@ import {
   importData,
   toOrderedData,
 } from '../../src/utils/serialization'
-import { SERVER_REGIONS } from '../../src/utils/seed'
+import { SERVER_REGIONS } from '../../src/utils/defaultData'
 import {
   shouldResetDaily,
   shouldResetWeekly,

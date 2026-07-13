@@ -2,7 +2,7 @@ import type { ChecklistData, ChecklistItem } from '../types'
 import { MS } from './constants'
 import { isChecklistData } from './validation'
 import { migrateDataStructure, mergeChecklistData } from './dataMigration'
-import { DEFAULT_CHECKLIST_DATA } from './seed'
+import { DEFAULT_CHECKLIST_DATA } from './defaultData'
 import { toastBus } from './toastBus'
 
 const STORAGE_KEY = 'flowboard-checklist'
