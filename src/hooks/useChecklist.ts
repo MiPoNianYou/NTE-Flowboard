@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type {
   ChecklistData,
   BehaviorSettings,
@@ -7,7 +7,14 @@ import type {
   TabType,
 } from '../types'
 import { MS } from '../utils/constants'
-import { loadData, saveData, saveDataImmediate, resetItems } from '../utils/storage'
+import {
+  cancelPendingSave,
+  isChecklistStorageKey,
+  loadData,
+  saveData,
+  saveDataImmediate,
+  resetItems,
+} from '../utils/storage'
 import { shouldResetDaily, shouldResetWeekly, shouldResetMonthly } from '../utils/timezone'
 import { useVisibilityInterval } from './useVisibilityInterval'
 import { generateId } from '../utils/id'
@@ -42,8 +49,14 @@ export function useChecklist() {
   const settings: BehaviorSettings = data.settings
 
   const uiPreferences: UiPreferences = data.uiPreferences
+  const [externalDataVersion, setExternalDataVersion] = useState(0)
+  const isApplyingExternalDataRef = useRef(false)
 
   useEffect(() => {
+    if (isApplyingExternalDataRef.current) {
+      isApplyingExternalDataRef.current = false
+      return
+    }
     saveData(data)
   }, [data])
 
@@ -53,9 +66,26 @@ export function useChecklist() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [data])
 
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (!isChecklistStorageKey(event.key)) return
+      cancelPendingSave()
+      isApplyingExternalDataRef.current = true
+      setData(loadData())
+      setExternalDataVersion((version) => version + 1)
+    }
+
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
+
   useVisibilityInterval(() => {
     setData((prev) => applyReset(prev, prev.settings.serverRegion))
   }, MS.RESET_POLL)
+
+  useEffect(() => {
+    setData((prev) => applyReset(prev, prev.settings.serverRegion))
+  }, [settings.serverRegion])
 
   const updateSettings = useCallback((partial: Partial<BehaviorSettings>) => {
     setData((prev) => ({
@@ -157,6 +187,7 @@ export function useChecklist() {
 
   return {
     data,
+    externalDataVersion,
     settings,
     updateSettings,
     uiPreferences,

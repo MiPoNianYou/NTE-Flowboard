@@ -41,53 +41,125 @@ export function getServerUTCOffset(region: ServerRegion, date: Date = new Date()
 }
 
 export function getServerDate(region: ServerRegion): Date {
-  const offset = getServerUTCOffset(region)
   const now = new Date()
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000
-  return new Date(utc + offset * 3600000)
+  return new Date(
+    now.getTime() + now.getTimezoneOffset() * 60000 + getServerUTCOffset(region, now) * 3600000,
+  )
 }
 
 export function serverTimeToUTC(localTime: Date, region: ServerRegion): Date {
-  const offset = getServerUTCOffset(region)
-  const now = new Date()
-  return new Date(localTime.getTime() - (offset * 3600000 + now.getTimezoneOffset() * 60000))
+  return zonedTimeToUTC(
+    localTime.getUTCFullYear(),
+    localTime.getUTCMonth(),
+    localTime.getUTCDate(),
+    localTime.getUTCHours(),
+    region,
+  )
 }
 
 export function shouldResetDaily(lastDailyReset: string, serverRegion: ServerRegion): boolean {
-  const now = getServerDate(serverRegion)
-  const last = new Date(lastDailyReset)
-
-  const todayReset = new Date(now)
-  todayReset.setHours(RESET_HOUR, 0, 0, 0)
-  if (now < todayReset) todayReset.setDate(todayReset.getDate() - 1)
-
-  return last < serverTimeToUTC(todayReset, serverRegion)
+  const now = zonedParts(new Date(), serverRegion)
+  const resetDate = new Date(now.timestamp)
+  if (now.hour < RESET_HOUR) resetDate.setUTCDate(resetDate.getUTCDate() - 1)
+  return (
+    new Date(lastDailyReset) <
+    zonedTimeToUTC(
+      resetDate.getUTCFullYear(),
+      resetDate.getUTCMonth(),
+      resetDate.getUTCDate(),
+      RESET_HOUR,
+      serverRegion,
+    )
+  )
 }
 
 export function shouldResetWeekly(lastWeeklyReset: string, serverRegion: ServerRegion): boolean {
-  const now = getServerDate(serverRegion)
-  const last = new Date(lastWeeklyReset)
-  const resetDay = 1
-
-  const thisWeekReset = new Date(now)
-  const currentDay = now.getDay()
-  let dayDiff = currentDay - resetDay
-  if (dayDiff < 0) dayDiff += 7
-  thisWeekReset.setDate(now.getDate() - dayDiff)
-  thisWeekReset.setHours(RESET_HOUR, 0, 0, 0)
-  if (now < thisWeekReset) thisWeekReset.setDate(thisWeekReset.getDate() - 7)
-
-  return last < serverTimeToUTC(thisWeekReset, serverRegion)
+  const now = zonedParts(new Date(), serverRegion)
+  const resetDate = new Date(now.timestamp)
+  const daysSinceMonday = (now.weekday + 6) % 7
+  resetDate.setUTCDate(resetDate.getUTCDate() - daysSinceMonday)
+  if (now.weekday === 1 && now.hour < RESET_HOUR) resetDate.setUTCDate(resetDate.getUTCDate() - 7)
+  return (
+    new Date(lastWeeklyReset) <
+    zonedTimeToUTC(
+      resetDate.getUTCFullYear(),
+      resetDate.getUTCMonth(),
+      resetDate.getUTCDate(),
+      RESET_HOUR,
+      serverRegion,
+    )
+  )
 }
 
 export function shouldResetMonthly(lastMonthlyReset: string, serverRegion: ServerRegion): boolean {
-  const now = getServerDate(serverRegion)
-  const last = new Date(lastMonthlyReset)
+  const now = zonedParts(new Date(), serverRegion)
+  const resetDate = new Date(Date.UTC(now.year, now.month, 1))
+  if (now.day === 1 && now.hour < RESET_HOUR) resetDate.setUTCMonth(resetDate.getUTCMonth() - 1)
+  return (
+    new Date(lastMonthlyReset) <
+    zonedTimeToUTC(
+      resetDate.getUTCFullYear(),
+      resetDate.getUTCMonth(),
+      resetDate.getUTCDate(),
+      RESET_HOUR,
+      serverRegion,
+    )
+  )
+}
 
-  const thisMonthReset = new Date(now)
-  thisMonthReset.setDate(1)
-  thisMonthReset.setHours(RESET_HOUR, 0, 0, 0)
-  if (now < thisMonthReset) thisMonthReset.setMonth(thisMonthReset.getMonth() - 1)
+const TIME_ZONES: Record<ServerRegion, string> = {
+  asia: 'Asia/Shanghai',
+  america: 'America/New_York',
+  europe: 'Europe/Berlin',
+}
 
-  return last < serverTimeToUTC(thisMonthReset, serverRegion)
+interface ZonedParts {
+  year: number
+  month: number
+  day: number
+  hour: number
+  weekday: number
+  timestamp: number
+}
+
+function zonedParts(date: Date, region: ServerRegion): ZonedParts {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: TIME_ZONES[region],
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    weekday: 'short',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value)
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const year = value('year')
+  const month = value('month') - 1
+  const day = value('day')
+  const hour = value('hour')
+  return {
+    year,
+    month,
+    day,
+    hour,
+    weekday: weekdays.indexOf(parts.find((part) => part.type === 'weekday')?.value ?? ''),
+    timestamp: Date.UTC(year, month, day, hour),
+  }
+}
+
+function zonedTimeToUTC(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  region: ServerRegion,
+): Date {
+  const localTimestamp = Date.UTC(year, month, day, hour)
+  let utcTimestamp = localTimestamp
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    utcTimestamp += localTimestamp - zonedParts(new Date(utcTimestamp), region).timestamp
+  }
+  return new Date(utcTimestamp)
 }

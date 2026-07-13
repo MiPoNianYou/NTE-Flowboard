@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { resolveConflict, shouldImport, shouldPull } from '../../src/utils/syncPolicy'
+import {
+  resolveConflict,
+  shouldImport,
+  shouldImportInitialRemoteData,
+  shouldPull,
+} from '../../src/utils/syncPolicy'
+import { DEFAULT_CHECKLIST_DATA } from '../../src/utils/defaultData'
 
 describe('shouldPull', () => {
   it('skips overlapping pulls and protects unsynced local changes', () => {
@@ -59,5 +65,23 @@ describe('resolveConflict', () => {
   it('keeps unsynced local data and otherwise accepts remote data', () => {
     expect(resolveConflict(true)).toBe('local')
     expect(resolveConflict(false)).toBe('remote')
+  })
+})
+
+describe('shouldImportInitialRemoteData', () => {
+  it('imports remote data only when every local task still matches defaults', () => {
+    expect(shouldImportInitialRemoteData(structuredClone(DEFAULT_CHECKLIST_DATA))).toBe(true)
+
+    const changedDaily = structuredClone(DEFAULT_CHECKLIST_DATA)
+    changedDaily.daily[0].isCompleted = true
+    expect(shouldImportInitialRemoteData(changedDaily)).toBe(false)
+
+    const changedWeekly = structuredClone(DEFAULT_CHECKLIST_DATA)
+    changedWeekly.weekly[0].isCompleted = true
+    expect(shouldImportInitialRemoteData(changedWeekly)).toBe(false)
+
+    const changedMonthly = structuredClone(DEFAULT_CHECKLIST_DATA)
+    changedMonthly.monthly[0].isCompleted = true
+    expect(shouldImportInitialRemoteData(changedMonthly)).toBe(false)
   })
 })

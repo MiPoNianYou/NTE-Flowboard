@@ -26,6 +26,7 @@ import { useCrossTabSync } from './useCrossTabSync'
 interface UseSupabaseSyncOptions {
   data: ChecklistData
   onDataImport: (data: ChecklistData) => void
+  externalDataVersion?: number
 }
 
 interface UseSupabaseSyncReturn {
@@ -47,6 +48,7 @@ const RETRY_DELAYS = [MS.ERROR_RECOVERY, MS.ERROR_RECOVERY * 3, MS.ERROR_RECOVER
 export function useSupabaseSync({
   data,
   onDataImport,
+  externalDataVersion = 0,
 }: UseSupabaseSyncOptions): UseSupabaseSyncReturn {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
     const config = loadSupabaseConfig()
@@ -61,12 +63,15 @@ export function useSupabaseSync({
   const isPullingRef = useRef(false)
   const hasLocalChangesRef = useRef(false)
   const isInitialMountRef = useRef(true)
+  const isApplyingRemoteDataRef = useRef(false)
+  const shouldSkipNextPushRef = useRef(false)
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pullSyncRef = useRef<PullSyncFn | null>(null)
   const pushSyncRef = useRef<PushSyncFn | null>(null)
   const dataRef = useRef(data)
   const configRef = useRef<SupabaseConfig | null>(null)
   const onDataImportRef = useRef(onDataImport)
+  const lastExternalDataVersionRef = useRef(externalDataVersion)
 
   useEffect(() => {
     dataRef.current = data
@@ -75,6 +80,13 @@ export function useSupabaseSync({
   useEffect(() => {
     onDataImportRef.current = onDataImport
   }, [onDataImport])
+
+  useEffect(() => {
+    if (externalDataVersion === lastExternalDataVersionRef.current) return
+    lastExternalDataVersionRef.current = externalDataVersion
+    hasLocalChangesRef.current = false
+    isApplyingRemoteDataRef.current = true
+  }, [externalDataVersion])
 
   const { scheduleRetry, resetAttempts } = useRetryScheduler({
     delays: RETRY_DELAYS,
@@ -119,6 +131,10 @@ export function useSupabaseSync({
           try {
             const remoteData = result.data
             if (remoteData.daily && remoteData.weekly && remoteData.monthly) {
+              if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
+              pushTimerRef.current = null
+              hasLocalChangesRef.current = false
+              isApplyingRemoteDataRef.current = true
               onDataImportRef.current({ ...remoteData })
               isImported = true
             }
@@ -210,7 +226,7 @@ export function useSupabaseSync({
     const unsubscribe = subscribeToChanges(config, () => {
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
-        pullSync()
+        pullSync(true)
       }, MS.REALTIME_DEBOUNCE)
     })
 
@@ -250,12 +266,21 @@ export function useSupabaseSync({
       isInitialMountRef.current = false
       return
     }
+    if (isApplyingRemoteDataRef.current) {
+      isApplyingRemoteDataRef.current = false
+      shouldSkipNextPushRef.current = true
+      return
+    }
     hasLocalChangesRef.current = true
   }, [data])
 
   useEffect(() => {
     if (syncStatus !== 'connected') return
     if (!configRef.current) return
+    if (shouldSkipNextPushRef.current) {
+      shouldSkipNextPushRef.current = false
+      return
+    }
 
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     pushTimerRef.current = setTimeout(() => {
@@ -296,7 +321,10 @@ export function useSupabaseSync({
         setIsConfigured(true)
 
         setSyncStatus('syncing')
-        const isImported = await pullSync(true, true)
+        const isImported = await pullSync(
+          true,
+          !syncPolicy.shouldImportInitialRemoteData(dataRef.current),
+        )
         if (!isImported) {
           await pushSync(dataRef.current)
         }
@@ -313,7 +341,10 @@ export function useSupabaseSync({
     setSyncStatus('syncing')
     setSyncError(null)
 
-    const isImported = await pullSync(true, true)
+    const isImported = await pullSync(
+      true,
+      !syncPolicy.shouldImportInitialRemoteData(dataRef.current),
+    )
     if (!isImported) {
       await pushSync(dataRef.current)
     }

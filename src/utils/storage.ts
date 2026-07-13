@@ -118,8 +118,18 @@ export function loadData(): ChecklistData {
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
+export function isChecklistStorageKey(key: string | null): boolean {
+  return key === STORAGE_KEY
+}
+
+export function cancelPendingSave(): void {
+  if (!saveTimeout) return
+  clearTimeout(saveTimeout)
+  saveTimeout = null
+}
+
 export function saveData(data: ChecklistData): void {
-  if (saveTimeout) clearTimeout(saveTimeout)
+  cancelPendingSave()
   saveTimeout = setTimeout(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
@@ -131,10 +141,7 @@ export function saveData(data: ChecklistData): void {
 }
 
 export function saveDataImmediate(data: ChecklistData): void {
-  if (saveTimeout) {
-    clearTimeout(saveTimeout)
-    saveTimeout = null
-  }
+  cancelPendingSave()
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   } catch (error) {

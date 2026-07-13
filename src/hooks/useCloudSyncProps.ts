@@ -6,13 +6,15 @@ import type { ChecklistData } from '../types'
 interface UseCloudSyncPropsOptions {
   data: ChecklistData
   onDataImport: (data: ChecklistData) => void
+  externalDataVersion: number
 }
 
 export function useCloudSyncProps({
   data,
   onDataImport,
+  externalDataVersion,
 }: UseCloudSyncPropsOptions): CloudSyncProps {
-  const sync = useSupabaseSync({ data, onDataImport })
+  const sync = useSupabaseSync({ data, onDataImport, externalDataVersion })
 
   return useMemo(
     () => ({

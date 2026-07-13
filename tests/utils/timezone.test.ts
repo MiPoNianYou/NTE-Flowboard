@@ -1,9 +1,20 @@
-import { describe, it, expect } from 'vitest'
-import { isUSDST, isEUDST, getServerUTCOffset } from '../../src/utils/timezone'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import {
+  isUSDST,
+  isEUDST,
+  getServerUTCOffset,
+  shouldResetDaily,
+  shouldResetWeekly,
+  shouldResetMonthly,
+} from '../../src/utils/timezone'
 
 function utc(iso: string) {
   return new Date(iso)
 }
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('isUSDST', () => {
   it('returns true during US summer (July)', () => {
@@ -67,5 +78,66 @@ describe('getServerUTCOffset', () => {
   it('europe returns +2 during DST and +1 otherwise', () => {
     expect(getServerUTCOffset('europe', utc('2026-07-01T12:00:00Z'))).toBe(2)
     expect(getServerUTCOffset('europe', utc('2026-01-15T12:00:00Z'))).toBe(1)
+  })
+})
+
+describe('reset boundaries', () => {
+  it('resets daily at 05:00 in Asia', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(utc('2026-07-13T20:59:00Z'))
+    expect(shouldResetDaily('2026-07-12T21:00:00Z', 'asia')).toBe(false)
+
+    vi.setSystemTime(utc('2026-07-13T21:00:00Z'))
+    expect(shouldResetDaily('2026-07-13T20:59:00Z', 'asia')).toBe(true)
+  })
+
+  it('resets weekly at Monday 05:00 in Asia', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(utc('2026-07-12T20:59:00Z'))
+    expect(shouldResetWeekly('2026-07-05T21:00:00Z', 'asia')).toBe(false)
+
+    vi.setSystemTime(utc('2026-07-12T21:00:00Z'))
+    expect(shouldResetWeekly('2026-07-12T20:59:00Z', 'asia')).toBe(true)
+  })
+
+  it('resets monthly on day one at 05:00 in Asia', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(utc('2026-07-31T20:59:00Z'))
+    expect(shouldResetMonthly('2026-06-30T21:00:00Z', 'asia')).toBe(false)
+
+    vi.setSystemTime(utc('2026-07-31T21:00:00Z'))
+    expect(shouldResetMonthly('2026-07-31T20:59:00Z', 'asia')).toBe(true)
+  })
+
+  it('uses the American DST offset at its reset boundary', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(utc('2026-03-08T08:59:00Z'))
+    expect(shouldResetDaily('2026-03-07T10:00:00Z', 'america')).toBe(false)
+
+    vi.setSystemTime(utc('2026-03-08T09:00:00Z'))
+    expect(shouldResetDaily('2026-03-08T08:59:00Z', 'america')).toBe(true)
+  })
+
+  it('uses the European DST offset at its reset boundary', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(utc('2026-03-29T02:59:00Z'))
+    expect(shouldResetDaily('2026-03-28T04:00:00Z', 'europe')).toBe(false)
+
+    vi.setSystemTime(utc('2026-03-29T03:00:00Z'))
+    expect(shouldResetDaily('2026-03-29T02:59:00Z', 'europe')).toBe(true)
+  })
+
+  it('does not reset weekly before the American fall-back boundary has passed', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(utc('2026-11-01T09:30:00Z'))
+
+    expect(shouldResetWeekly('2026-10-26T09:30:00Z', 'america')).toBe(false)
+  })
+
+  it('resets monthly when its American pre-DST boundary has passed', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(utc('2026-03-15T12:00:00Z'))
+
+    expect(shouldResetMonthly('2026-03-01T09:30:00Z', 'america')).toBe(true)
   })
 })

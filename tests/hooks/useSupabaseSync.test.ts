@@ -1,8 +1,10 @@
 import { renderHook, act } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useSupabaseSync } from '../../src/hooks/useSupabaseSync'
 import type { ChecklistData } from '../../src/types'
 import { MS } from '../../src/utils/constants'
+import { DEFAULT_CHECKLIST_DATA } from '../../src/utils/defaultData'
 
 vi.mock('../../src/utils/supabase', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/utils/supabase')>()
@@ -74,9 +76,7 @@ describe('useSupabaseSync', () => {
   })
 
   it('initial state: disconnected when no config', () => {
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
     expect(result.current.isConfigured).toBe(false)
     expect(result.current.syncStatus).toBe('disconnected')
     expect(result.current.lastSyncTime).toBeNull()
@@ -85,9 +85,7 @@ describe('useSupabaseSync', () => {
 
   it('initial state: connecting when config exists', () => {
     mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
     expect(result.current.syncStatus).toBe('connecting')
   })
 
@@ -96,9 +94,7 @@ describe('useSupabaseSync', () => {
     mocked.validateConfig.mockResolvedValue({ ok: true })
     mocked.pullData.mockResolvedValue(null)
 
-    renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -112,9 +108,7 @@ describe('useSupabaseSync', () => {
     mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
     mocked.validateConfig.mockResolvedValue({ ok: false, reason: 'network' as const })
 
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -129,9 +123,7 @@ describe('useSupabaseSync', () => {
     mocked.pullData.mockResolvedValue(null)
     mocked.pushData.mockResolvedValue(new Date().toISOString())
 
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await result.current.setupSupabase('proj1', 'key1')
@@ -142,12 +134,64 @@ describe('useSupabaseSync', () => {
     expect(mocked.saveSupabaseConfig).toHaveBeenCalledWith({ projectId: 'proj1', anonKey: 'key1' })
   })
 
+  it('setupSupabase imports complete remote data when local tasks are defaults', async () => {
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    const remoteData: ChecklistData = {
+      ...mockData,
+      daily: [
+        {
+          id: 'remote',
+          text: '远程任务',
+          isCompleted: true,
+          isHidden: true,
+          order: 9,
+          tags: ['远程'],
+        },
+      ],
+      settings: { serverRegion: 'europe', isAutoMoveEnabled: false, shouldConfirmDelete: false },
+      uiPreferences: { cloudPatchHidden: true },
+      lastDailyReset: '2026-07-01T00:00:00.000Z',
+    }
+    mocked.pullData.mockResolvedValue({ data: remoteData, updatedAt: '2026-07-01T01:00:00.000Z' })
+    mocked.pushData.mockResolvedValue('2026-07-01T01:00:00.000Z')
+    const onImport = vi.fn()
+
+    const { result } = renderHook(() =>
+      useSupabaseSync({ data: structuredClone(DEFAULT_CHECKLIST_DATA), onDataImport: onImport }),
+    )
+
+    await act(async () => {
+      await result.current.setupSupabase('proj1', 'key1')
+    })
+
+    expect(onImport).toHaveBeenCalledWith(remoteData)
+    expect(mocked.pushData).not.toHaveBeenCalled()
+  })
+
+  it('setupSupabase pushes complete local data when a local task changed', async () => {
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValue({ data: mockData, updatedAt: '2026-07-01T01:00:00.000Z' })
+    mocked.pushData.mockResolvedValue('2026-07-01T02:00:00.000Z')
+    const localData = structuredClone(DEFAULT_CHECKLIST_DATA)
+    localData.daily[0].isCompleted = true
+    const onImport = vi.fn()
+
+    const { result } = renderHook(() =>
+      useSupabaseSync({ data: localData, onDataImport: onImport }),
+    )
+
+    await act(async () => {
+      await result.current.setupSupabase('proj1', 'key1')
+    })
+
+    expect(onImport).not.toHaveBeenCalled()
+    expect(mocked.pushData).toHaveBeenCalledWith({ projectId: 'proj1', anonKey: 'key1' }, localData)
+  })
+
   it('setupSupabase: invalid config sets error', async () => {
     mocked.validateConfig.mockResolvedValue({ ok: false, reason: 'network' as const })
 
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await result.current.setupSupabase('bad', 'key')
@@ -164,9 +208,7 @@ describe('useSupabaseSync', () => {
     mocked.pullData.mockResolvedValue(null)
     mocked.pushData.mockResolvedValue(new Date().toISOString())
 
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -190,7 +232,9 @@ describe('useSupabaseSync', () => {
 
     const remoteData: ChecklistData = {
       ...mockData,
-      daily: [{ id: 'sb2', text: '远程任务', isCompleted: true, isHidden: false, order: 1, tags: [] }],
+      daily: [
+        { id: 'sb2', text: '远程任务', isCompleted: true, isHidden: false, order: 1, tags: [] },
+      ],
     }
     mocked.pullData.mockResolvedValue({
       data: remoteData,
@@ -200,9 +244,7 @@ describe('useSupabaseSync', () => {
 
     const onImport = vi.fn()
 
-    renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: onImport }),
-    )
+    renderHook(() => useSupabaseSync({ data: mockData, onDataImport: onImport }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -218,7 +260,9 @@ describe('useSupabaseSync', () => {
 
     const remoteData: ChecklistData = {
       ...mockData,
-      daily: [{ id: 'sb3', text: '远程任务', isCompleted: true, isHidden: false, order: 1, tags: [] }],
+      daily: [
+        { id: 'sb3', text: '远程任务', isCompleted: true, isHidden: false, order: 1, tags: [] },
+      ],
     }
     mocked.pullData.mockResolvedValue({
       data: remoteData,
@@ -228,9 +272,7 @@ describe('useSupabaseSync', () => {
 
     const onImport = vi.fn()
 
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: onImport }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: onImport }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -246,6 +288,73 @@ describe('useSupabaseSync', () => {
     expect(mocked.pushData).toHaveBeenCalled()
   })
 
+  it('triggerSync imports complete remote data when local tasks are defaults', async () => {
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    const remoteData: ChecklistData = {
+      ...mockData,
+      daily: [
+        {
+          id: 'remote-trigger',
+          text: '手动远程任务',
+          isCompleted: true,
+          isHidden: false,
+          order: 1,
+          tags: [],
+        },
+      ],
+      settings: { serverRegion: 'america', isAutoMoveEnabled: false, shouldConfirmDelete: false },
+      uiPreferences: { cloudPatchHidden: true },
+    }
+    mocked.pullData.mockResolvedValue({ data: remoteData, updatedAt: '2026-07-01T01:00:00.000Z' })
+    mocked.pushData.mockResolvedValue('2026-07-01T01:00:00.000Z')
+    const onImport = vi.fn()
+
+    const { result } = renderHook(() =>
+      useSupabaseSync({ data: structuredClone(DEFAULT_CHECKLIST_DATA), onDataImport: onImport }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    onImport.mockClear()
+    mocked.pushData.mockClear()
+
+    await act(async () => {
+      await result.current.triggerSync()
+    })
+
+    expect(onImport).toHaveBeenCalledWith(remoteData)
+    expect(mocked.pushData).not.toHaveBeenCalled()
+  })
+
+  it('triggerSync pushes complete local data when a local task changed', async () => {
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValue({ data: mockData, updatedAt: '2026-07-01T01:00:00.000Z' })
+    mocked.pushData.mockResolvedValue('2026-07-01T02:00:00.000Z')
+    const localData = structuredClone(DEFAULT_CHECKLIST_DATA)
+    localData.daily[0].isCompleted = true
+    const onImport = vi.fn()
+
+    const { result } = renderHook(() =>
+      useSupabaseSync({ data: localData, onDataImport: onImport }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    onImport.mockClear()
+    mocked.pushData.mockClear()
+
+    await act(async () => {
+      await result.current.triggerSync()
+    })
+
+    expect(onImport).not.toHaveBeenCalled()
+    expect(mocked.pushData).toHaveBeenCalledWith({ projectId: 'p1', anonKey: 'k1' }, localData)
+  })
+
   it('pullSync does not import when remote is older', async () => {
     mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
     mocked.validateConfig.mockResolvedValue({ ok: true })
@@ -254,7 +363,9 @@ describe('useSupabaseSync', () => {
 
     const remoteData: ChecklistData = {
       ...mockData,
-      daily: [{ id: 'sb4', text: '远程任务', isCompleted: true, isHidden: false, order: 1, tags: [] }],
+      daily: [
+        { id: 'sb4', text: '远程任务', isCompleted: true, isHidden: false, order: 1, tags: [] },
+      ],
     }
     mocked.pullData.mockResolvedValue({
       data: remoteData,
@@ -264,9 +375,7 @@ describe('useSupabaseSync', () => {
 
     const onImport = vi.fn()
 
-    renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: onImport }),
-    )
+    renderHook(() => useSupabaseSync({ data: mockData, onDataImport: onImport }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -275,14 +384,166 @@ describe('useSupabaseSync', () => {
     expect(onImport).not.toHaveBeenCalled()
   })
 
+  it('Realtime imports a newer remote revision over pending local changes without re-pushing it', async () => {
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.loadLastSeenTime.mockReturnValue('2026-07-01T00:00:00.000Z')
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValueOnce(null)
+    const remoteData: ChecklistData = {
+      ...mockData,
+      daily: [
+        {
+          id: 'remote-realtime',
+          text: '远程更新',
+          isCompleted: true,
+          isHidden: false,
+          order: 1,
+          tags: [],
+        },
+      ],
+      settings: { serverRegion: 'europe', isAutoMoveEnabled: false, shouldConfirmDelete: false },
+      uiPreferences: { cloudPatchHidden: true },
+      lastDailyReset: '2026-07-01T01:00:00.000Z',
+    }
+    mocked.pullData.mockResolvedValue({ data: remoteData, updatedAt: '2026-07-01T01:00:00.000Z' })
+    mocked.pushData.mockResolvedValue('2026-07-01T02:00:00.000Z')
+    let onRealtimeChange: (() => void) | undefined
+    mocked.subscribeToChanges.mockImplementation((_config, onChange) => {
+      onRealtimeChange = onChange
+      return vi.fn()
+    })
+
+    const { result } = renderHook(() => {
+      const [data, setData] = useState(mockData)
+      return { data, sync: useSupabaseSync({ data, onDataImport: setData }), setData }
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    act(() => {
+      result.current.setData({
+        ...mockData,
+        daily: [{ ...mockData.daily[0], text: '本地未上传修改' }],
+      })
+    })
+    mocked.pushData.mockClear()
+
+    act(() => {
+      onRealtimeChange?.()
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MS.REALTIME_DEBOUNCE)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE + 1)
+    })
+
+    expect(mocked.pullData).toHaveBeenCalledTimes(2)
+    expect(mocked.pushData).not.toHaveBeenCalled()
+    expect(result.current.data).toEqual(remoteData)
+  })
+
+  it('manual sync imports a newer remote revision without re-pushing it', async () => {
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.loadLastSeenTime.mockReturnValue('2026-07-01T00:00:00.000Z')
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValueOnce(null)
+    const remoteData: ChecklistData = {
+      ...mockData,
+      daily: [
+        {
+          id: 'remote-manual',
+          text: '手动远程更新',
+          isCompleted: true,
+          isHidden: false,
+          order: 1,
+          tags: [],
+        },
+      ],
+      settings: { serverRegion: 'america', isAutoMoveEnabled: false, shouldConfirmDelete: false },
+      uiPreferences: { cloudPatchHidden: true },
+      lastDailyReset: '2026-07-01T01:00:00.000Z',
+    }
+    mocked.pullData.mockResolvedValue({ data: remoteData, updatedAt: '2026-07-01T01:00:00.000Z' })
+    mocked.pushData.mockResolvedValue('2026-07-01T02:00:00.000Z')
+
+    const { result } = renderHook(() => {
+      const [data, setData] = useState(mockData)
+      return { data, sync: useSupabaseSync({ data, onDataImport: setData }), setData }
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    act(() => {
+      result.current.setData({
+        ...mockData,
+        daily: [{ ...mockData.daily[0], text: '本地未上传修改' }],
+      })
+    })
+    mocked.pushData.mockClear()
+
+    await act(async () => {
+      await result.current.sync.triggerSync()
+      await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE + 1)
+    })
+
+    expect(mocked.pushData).not.toHaveBeenCalled()
+    expect(result.current.data).toEqual(remoteData)
+  })
+
+  it('does not push data imported from another local browser tab', async () => {
+    mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
+    mocked.validateConfig.mockResolvedValue({ ok: true })
+    mocked.pullData.mockResolvedValue(null)
+    mocked.pushData.mockResolvedValue('2026-07-01T02:00:00.000Z')
+    const externalData: ChecklistData = {
+      ...mockData,
+      daily: [
+        {
+          id: 'other-tab',
+          text: '其他标签任务',
+          isCompleted: true,
+          isHidden: false,
+          order: 1,
+          tags: [],
+        },
+      ],
+    }
+
+    const { result, rerender } = renderHook(
+      ({ data, externalDataVersion }) =>
+        useSupabaseSync({ data, onDataImport: vi.fn(), externalDataVersion }),
+      { initialProps: { data: mockData, externalDataVersion: 0 } },
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    mocked.pushData.mockClear()
+
+    rerender({ data: externalData, externalDataVersion: 1 })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE + 1)
+    })
+
+    expect(result.current.syncStatus).toBe('connected')
+    expect(mocked.pushData).not.toHaveBeenCalled()
+  })
+
   it('pullData error sets syncError', async () => {
     mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
     mocked.validateConfig.mockResolvedValue({ ok: true })
-    mocked.pullData.mockRejectedValue(new (supabase.SyncError as unknown as new (msg: string, code: string) => Error)('拉取失败', 'PULL_ERROR'))
-
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
+    mocked.pullData.mockRejectedValue(
+      new (supabase.SyncError as unknown as new (msg: string, code: string) => Error)(
+        '拉取失败',
+        'PULL_ERROR',
+      ),
     )
+
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -295,12 +556,15 @@ describe('useSupabaseSync', () => {
   it('auto-recovers from error after ERROR_RECOVERY timeout', async () => {
     mocked.loadSupabaseConfig.mockReturnValue({ projectId: 'p1', anonKey: 'k1' })
     mocked.validateConfig.mockResolvedValue({ ok: true })
-    mocked.pullData.mockRejectedValueOnce(new (supabase.SyncError as unknown as new (msg: string, code: string) => Error)('网络异常', 'PULL_ERROR'))
+    mocked.pullData.mockRejectedValueOnce(
+      new (supabase.SyncError as unknown as new (msg: string, code: string) => Error)(
+        '网络异常',
+        'PULL_ERROR',
+      ),
+    )
     mocked.pullData.mockResolvedValue(null)
 
-    const { result } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { result } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -326,9 +590,7 @@ describe('useSupabaseSync', () => {
       ),
     )
 
-    renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -400,9 +662,7 @@ describe('useSupabaseSync', () => {
     mocked.validateConfig.mockResolvedValue({ ok: true })
     mocked.pullData.mockResolvedValue(null)
 
-    renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -425,9 +685,7 @@ describe('useSupabaseSync', () => {
     mocked.validateConfig.mockResolvedValue({ ok: true })
     mocked.pullData.mockResolvedValue(null)
 
-    const { unmount } = renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: vi.fn() }),
-    )
+    const { unmount } = renderHook(() => useSupabaseSync({ data: mockData, onDataImport: vi.fn() }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -461,9 +719,7 @@ describe('useSupabaseSync', () => {
 
     const onImport = vi.fn()
 
-    renderHook(() =>
-      useSupabaseSync({ data: mockData, onDataImport: onImport }),
-    )
+    renderHook(() => useSupabaseSync({ data: mockData, onDataImport: onImport }))
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)

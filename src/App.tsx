@@ -30,6 +30,7 @@ function AppContent() {
 
   const {
     data,
+    externalDataVersion,
     settings,
     updateSettings,
     uiPreferences,
@@ -53,6 +54,7 @@ function AppContent() {
   const cloudSyncProps = useCloudSyncProps({
     data,
     onDataImport: importFullData,
+    externalDataVersion,
   })
 
   const { setActiveTab, activeTab, direction } = useTabManagement()
