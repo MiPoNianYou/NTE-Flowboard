@@ -109,6 +109,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
               onChange={setTags}
               onCompositionChange={setIsComposing}
               limit={UI.TAG_LIMIT}
+              compactFocus
             />
           </div>
           <div className="flex gap-2 p-3">

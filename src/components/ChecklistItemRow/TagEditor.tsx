@@ -12,7 +12,7 @@ import { X } from 'lucide-react'
 import { TAG_PILL_BASE_CLASS } from '../TagPill'
 import { FADE_IN, FADE_OUT } from '../../utils/motion'
 import { cn } from '../../utils/cn'
-import { getTagColors, previewTagColors } from '../../utils/tagColors'
+import { getTagColors } from '../../utils/tagColors'
 
 type TagMode = { kind: 'idle' } | { kind: 'adding-new'; draft: string; width: number }
 
@@ -53,12 +53,6 @@ export function TagEditor({
     const isBusy = mode.kind !== 'idle'
     onEditStateChange?.(isBusy)
   }, [mode, onEditStateChange])
-
-  const activeDraft = mode.kind === 'idle' ? '' : mode.draft
-  const activeTagColors = useMemo(() => {
-    const previewTag = activeDraft.trim() || '标签'
-    return previewTagColors(previewTag)
-  }, [activeDraft])
 
   const activeDisplayText = useMemo(() => {
     if (mode.kind === 'adding-new') {
@@ -147,10 +141,6 @@ export function TagEditor({
           TAG_PILL_BASE_CLASS,
           'absolute -left-[9999px] top-0 pointer-events-none whitespace-nowrap',
         )}
-        style={{
-          color: activeTagColors.text,
-          backgroundColor: activeTagColors.backgroundColor,
-        }}
         aria-hidden="true"
       >
         {activeDisplayText}
@@ -193,12 +183,11 @@ export function TagEditor({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: FADE_OUT }}
               transition={FADE_IN}
-              className={cn(TAG_PILL_BASE_CLASS, 'overflow-hidden')}
-              style={{
-                width: mode.width,
-                color: activeTagColors.text,
-                backgroundColor: activeTagColors.backgroundColor,
-              }}
+              className={cn(
+                TAG_PILL_BASE_CLASS,
+                'overflow-hidden border-border bg-transparent focus-within:border-primary',
+              )}
+              style={{ width: mode.width }}
             >
               <input
                 ref={inputRef}

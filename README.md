@@ -88,10 +88,9 @@ src/
   components/       界面与交互组件
   context/          全局设置状态
   hooks/            清单、同步、交互逻辑
+  tests/            对应业务行为与数据契约的测试
   utils/            存储、迁移、时间与服务接口
   system.css        Liquid Glass 设计令牌
-
-tests/              对应业务行为与数据契约的测试
 ```
 
 ## 技术

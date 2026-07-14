@@ -5,15 +5,23 @@ import { TagPill } from './TagPill'
 import { Button } from './base/Button'
 import { Input } from './base/Input'
 import { useComposition } from '../hooks/useComposition'
+import { cn } from '../utils/cn'
 
 interface TagInputProps {
   tags: string[]
   onChange: (tags: string[]) => void
   onCompositionChange?: (isComposing: boolean) => void
   limit?: number
+  compactFocus?: boolean
 }
 
-export function TagInput({ tags, onChange, onCompositionChange, limit }: TagInputProps) {
+export function TagInput({
+  tags,
+  onChange,
+  onCompositionChange,
+  limit,
+  compactFocus,
+}: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [isInputVisible, setIsInputVisible] = useState(false)
   const isAtLimit = limit !== undefined && tags.length >= limit
@@ -86,6 +94,10 @@ export function TagInput({ tags, onChange, onCompositionChange, limit }: TagInpu
           placeholder="标签名"
           inputSize="sm"
           disabled={isAtLimit}
+          className={cn(
+            compactFocus &&
+              'rounded-full border-border bg-transparent focus:border-primary focus:ring-1 focus:ring-primary/30 focus:ring-offset-0',
+          )}
         />
       ) : (
         <Button
