@@ -26,6 +26,7 @@ import {
   ACTION_HOVER_INFO,
 } from '../../utils/stylePresets'
 import { TagEditor } from './TagEditor'
+import { TAG_COLLECTION_LIMIT } from '../../utils/tagCollection'
 
 interface ChecklistItemRowProps {
   item: ChecklistItem
@@ -324,7 +325,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                         onClick={() => setTagAddRequest((count) => count + 1)}
                         className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
                         aria-label="新增标签"
-                        disabled={isTagEditorBusy}
+                        disabled={isTagEditorBusy || draftTags.length >= TAG_COLLECTION_LIMIT}
                       >
                         <TagPlus size={15} />
                       </Button>

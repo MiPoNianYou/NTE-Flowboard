@@ -1,7 +1,6 @@
 import { useState, useCallback, type KeyboardEvent } from 'react'
 import { Save, X } from 'lucide-react'
 import type { ChecklistItem } from '../../types'
-import { UI } from '../../utils/constants'
 import { ACTION_HOVER_SUCCESS, ACTION_HOVER_INFO } from '../../utils/stylePresets'
 import { TagInput } from '../TagInput'
 import { Button } from '../base/Button'
@@ -49,7 +48,7 @@ export function ItemEditor({ item, onSave, onCancel }: ItemEditorProps) {
           <X size={17} className="hidden lg:block" />
         </Button>
       </div>
-      <TagInput tags={tags} onChange={setTags} limit={UI.TAG_LIMIT} />
+      <TagInput tags={tags} onChange={setTags} />
     </div>
   )
 }

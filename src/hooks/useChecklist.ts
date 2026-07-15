@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type {
-  ChecklistData,
   BehaviorSettings,
-  UiPreferences,
-  ServerRegion,
+  ChecklistData,
+  ChecklistTransition,
   TabType,
+  UiPreferences,
 } from '../types'
 import { MS } from '../utils/constants'
 import {
@@ -13,44 +13,25 @@ import {
   loadData,
   saveData,
   saveDataImmediate,
-  resetItems,
 } from '../utils/storage'
-import { shouldResetDaily, shouldResetWeekly, shouldResetMonthly } from '../utils/timezone'
+import { applyChecklistTransition } from '../utils/checklistTransitions'
 import { useVisibilityInterval } from './useVisibilityInterval'
 import { generateId } from '../utils/id'
-
-function applyReset(data: ChecklistData, serverRegion: ServerRegion): ChecklistData {
-  let shouldUpdate = false
-  const next = { ...data }
-  if (shouldResetDaily(data.lastDailyReset, serverRegion)) {
-    next.daily = resetItems(data.daily)
-    next.lastDailyReset = new Date().toISOString()
-    shouldUpdate = true
-  }
-  if (shouldResetWeekly(data.lastWeeklyReset, serverRegion)) {
-    next.weekly = resetItems(data.weekly)
-    next.lastWeeklyReset = new Date().toISOString()
-    shouldUpdate = true
-  }
-  if (shouldResetMonthly(data.lastMonthlyReset, serverRegion)) {
-    next.monthly = resetItems(data.monthly)
-    next.lastMonthlyReset = new Date().toISOString()
-    shouldUpdate = true
-  }
-  return shouldUpdate ? next : data
-}
 
 export function useChecklist() {
   const [data, setData] = useState<ChecklistData>(() => {
     const loaded = loadData()
-    return applyReset(loaded, loaded.settings.serverRegion)
+    return applyChecklistTransition(loaded, { kind: 'apply-due-resets', now: new Date() })
   })
 
   const settings: BehaviorSettings = data.settings
-
   const uiPreferences: UiPreferences = data.uiPreferences
   const [externalDataVersion, setExternalDataVersion] = useState(0)
   const isApplyingExternalDataRef = useRef(false)
+
+  const applyTransition = useCallback((transition: ChecklistTransition) => {
+    setData((previous) => applyChecklistTransition(previous, transition))
+  }, [])
 
   useEffect(() => {
     if (isApplyingExternalDataRef.current) {
@@ -71,119 +52,102 @@ export function useChecklist() {
       if (!isChecklistStorageKey(event.key)) return
       cancelPendingSave()
       isApplyingExternalDataRef.current = true
-      setData(loadData())
+      applyTransition({ kind: 'replace-data', data: loadData() })
       setExternalDataVersion((version) => version + 1)
     }
 
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
-  }, [])
+  }, [applyTransition])
 
   useVisibilityInterval(() => {
-    setData((prev) => applyReset(prev, prev.settings.serverRegion))
+    applyTransition({ kind: 'apply-due-resets', now: new Date() })
   }, MS.RESET_POLL)
 
   useEffect(() => {
-    setData((prev) => applyReset(prev, prev.settings.serverRegion))
-  }, [settings.serverRegion])
+    applyTransition({ kind: 'apply-due-resets', now: new Date() })
+  }, [applyTransition, settings.serverRegion])
 
-  const updateSettings = useCallback((partial: Partial<BehaviorSettings>) => {
-    setData((prev) => ({
-      ...prev,
-      settings: { ...prev.settings, ...partial },
-    }))
-  }, [])
+  const updateSettings = useCallback(
+    (partial: Partial<BehaviorSettings>) => {
+      applyTransition({ kind: 'update-settings', partial })
+    },
+    [applyTransition],
+  )
 
-  const updateUiPreferences = useCallback((partial: Partial<UiPreferences>) => {
-    setData((prev) => ({
-      ...prev,
-      uiPreferences: { ...prev.uiPreferences, ...partial },
-    }))
-  }, [])
+  const updateUiPreferences = useCallback(
+    (partial: Partial<UiPreferences>) => {
+      applyTransition({ kind: 'update-ui-preferences', partial })
+    },
+    [applyTransition],
+  )
 
-  const toggleItem = useCallback((tab: TabType, id: string) => {
-    setData((prev) => ({
-      ...prev,
-      [tab]: prev[tab].map((item) =>
-        item.id === id ? { ...item, isCompleted: !item.isCompleted } : item,
-      ),
-    }))
-  }, [])
+  const toggleItem = useCallback(
+    (tab: TabType, id: string) => {
+      applyTransition({ kind: 'toggle-item', cycle: tab, id })
+    },
+    [applyTransition],
+  )
 
-  const addItem = useCallback((tab: TabType, text: string, tags: string[]) => {
-    setData((prev) => {
-      const items = prev[tab]
-      const maxOrder = items.reduce(
-        (maximum, item) => (item.order > maximum ? item.order : maximum),
-        0,
-      )
-      const nextOrder = maxOrder + 1
-      return {
-        ...prev,
-        [tab]: [
-          ...items,
-          { id: generateId(), text, isCompleted: false, isHidden: false, order: nextOrder, tags },
-        ],
-      }
-    })
-  }, [])
+  const addItem = useCallback(
+    (tab: TabType, text: string, tags: string[]) => {
+      applyTransition({
+        kind: 'add-item',
+        cycle: tab,
+        item: { id: generateId(), text, isCompleted: false, isHidden: false, order: 0, tags },
+      })
+    },
+    [applyTransition],
+  )
 
-  const editItem = useCallback((tab: TabType, id: string, text: string, tags: string[]) => {
-    setData((prev) => ({
-      ...prev,
-      [tab]: prev[tab].map((item) => (item.id === id ? { ...item, text, tags } : item)),
-    }))
-  }, [])
+  const editItem = useCallback(
+    (tab: TabType, id: string, text: string, tags: string[]) => {
+      applyTransition({ kind: 'edit-item', cycle: tab, id, text, tags })
+    },
+    [applyTransition],
+  )
 
-  const removeItem = useCallback((tab: TabType, id: string) => {
-    setData((prev) => ({
-      ...prev,
-      [tab]: prev[tab].filter((item) => item.id !== id),
-    }))
-  }, [])
+  const removeItem = useCallback(
+    (tab: TabType, id: string) => {
+      applyTransition({ kind: 'remove-item', cycle: tab, id })
+    },
+    [applyTransition],
+  )
 
-  const hideItem = useCallback((tab: TabType, id: string) => {
-    setData((prev) => ({
-      ...prev,
-      [tab]: prev[tab].map((item) => (item.id === id ? { ...item, isHidden: true } : item)),
-    }))
-  }, [])
+  const hideItem = useCallback(
+    (tab: TabType, id: string) => {
+      applyTransition({ kind: 'set-item-hidden', cycle: tab, id, isHidden: true })
+    },
+    [applyTransition],
+  )
 
-  const showItem = useCallback((tab: TabType, id: string) => {
-    setData((prev) => ({
-      ...prev,
-      [tab]: prev[tab].map((item) => (item.id === id ? { ...item, isHidden: false } : item)),
-    }))
-  }, [])
+  const showItem = useCallback(
+    (tab: TabType, id: string) => {
+      applyTransition({ kind: 'set-item-hidden', cycle: tab, id, isHidden: false })
+    },
+    [applyTransition],
+  )
 
-  const reorderItem = useCallback((tab: TabType, activeId: string, overId: string) => {
-    setData((prev) => {
-      const items = [...prev[tab]].sort((leftItem, rightItem) => leftItem.order - rightItem.order)
-      const oldIndex = items.findIndex((item) => item.id === activeId)
-      const newIndex = items.findIndex((item) => item.id === overId)
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return prev
-      const [moved] = items.splice(oldIndex, 1)
-      items.splice(newIndex, 0, moved)
-      const reordered = items.map((item, index) => ({ ...item, order: index + 1 }))
-      return { ...prev, [tab]: reordered }
-    })
-  }, [])
+  const reorderItem = useCallback(
+    (tab: TabType, activeId: string, overId: string) => {
+      applyTransition({ kind: 'reorder-item', cycle: tab, activeId, overId })
+    },
+    [applyTransition],
+  )
 
-  const manualReset = useCallback((tab: TabType) => {
-    setData((prev) => ({
-      ...prev,
-      [tab]: resetItems(prev[tab]),
-      ...(tab === 'daily'
-        ? { lastDailyReset: new Date().toISOString() }
-        : tab === 'weekly'
-          ? { lastWeeklyReset: new Date().toISOString() }
-          : { lastMonthlyReset: new Date().toISOString() }),
-    }))
-  }, [])
+  const manualReset = useCallback(
+    (tab: TabType) => {
+      applyTransition({ kind: 'manual-reset', cycle: tab, now: new Date() })
+    },
+    [applyTransition],
+  )
 
-  const importFullData = useCallback((imported: ChecklistData) => {
-    setData(imported)
-  }, [])
+  const importFullData = useCallback(
+    (imported: ChecklistData) => {
+      applyTransition({ kind: 'replace-data', data: imported })
+    },
+    [applyTransition],
+  )
 
   return {
     data,

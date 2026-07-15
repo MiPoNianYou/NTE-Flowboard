@@ -4,7 +4,6 @@ import { Plus } from 'lucide-react'
 import type { TabType } from '../types'
 import { Button } from './base/Button'
 import { TagInput } from './TagInput'
-import { UI } from '../utils/constants'
 import { APPLE_EASE } from '../utils/motion'
 import { useComposition } from '../hooks/useComposition'
 import { useMeasuredHeight } from '../hooks/useMeasuredHeight'
@@ -108,7 +107,6 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
               tags={tags}
               onChange={setTags}
               onCompositionChange={setIsComposing}
-              limit={UI.TAG_LIMIT}
               compactFocus
             />
           </div>

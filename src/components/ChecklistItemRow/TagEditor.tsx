@@ -13,6 +13,11 @@ import { TAG_PILL_BASE_CLASS } from '../TagPill'
 import { FADE_IN, FADE_OUT } from '../../utils/motion'
 import { cn } from '../../utils/cn'
 import { getTagColors } from '../../utils/tagColors'
+import {
+  addTagToCollection,
+  removeTagFromCollection,
+  TAG_COLLECTION_LIMIT,
+} from '../../utils/tagCollection'
 
 type TagMode = { kind: 'idle' } | { kind: 'adding-new'; draft: string; width: number }
 
@@ -81,7 +86,7 @@ export function TagEditor({
 
   const removeTag = useCallback(
     (tagToRemove: string) => {
-      onChange(tags.filter((tag) => tag !== tagToRemove))
+      onChange(removeTagFromCollection(tags, tagToRemove))
     },
     [onChange, tags],
   )
@@ -94,19 +99,20 @@ export function TagEditor({
 
   const commitNew = useCallback(() => {
     if (mode.kind !== 'adding-new') return
-    const trimmed = mode.draft.trim()
-    if (!trimmed) {
+
+    const result = addTagToCollection(tags, mode.draft)
+    if (result.kind === 'added') {
+      onChange(result.tags)
       cancel()
       return
     }
-    const duplicate = tags.includes(trimmed)
-    if (duplicate) {
-      setError('标签已存在')
-      inputRef.current?.focus()
+    if (result.kind === 'empty') {
+      cancel()
       return
     }
-    onChange([...tags, trimmed])
-    cancel()
+
+    setError(result.kind === 'duplicate' ? '标签已存在' : `最多添加${TAG_COLLECTION_LIMIT}个标签`)
+    inputRef.current?.focus()
   }, [cancel, mode, onChange, tags])
 
   const handleInputBlur = useCallback(

@@ -57,13 +57,13 @@ describe('TagInput', () => {
     expect(onChange).toHaveBeenCalledWith(['大亨'])
   })
 
-  it('should show count when limit is provided', () => {
-    render(<TagInput tags={['a']} onChange={vi.fn()} limit={3} />)
-    expect(screen.getByText('1/3')).toBeInTheDocument()
+  it('should show the shared collection limit', () => {
+    render(<TagInput tags={['a']} onChange={vi.fn()} />)
+    expect(screen.getByText('1/5')).toBeInTheDocument()
   })
 
-  it('should disable button when at limit', () => {
-    render(<TagInput tags={['a', 'b']} onChange={vi.fn()} limit={2} />)
+  it('should disable button when the shared collection limit is reached', () => {
+    render(<TagInput tags={['a', 'b', 'c', 'd', 'e']} onChange={vi.fn()} />)
     const button = screen.getByText('标签').closest('button')!
     expect(button).toBeDisabled()
   })

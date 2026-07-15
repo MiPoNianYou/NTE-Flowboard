@@ -6,41 +6,38 @@ import { Button } from './base/Button'
 import { Input } from './base/Input'
 import { useComposition } from '../hooks/useComposition'
 import { cn } from '../utils/cn'
+import {
+  addTagToCollection,
+  removeTagFromCollection,
+  TAG_COLLECTION_LIMIT,
+} from '../utils/tagCollection'
 
 interface TagInputProps {
   tags: string[]
   onChange: (tags: string[]) => void
   onCompositionChange?: (isComposing: boolean) => void
-  limit?: number
   compactFocus?: boolean
 }
 
-export function TagInput({
-  tags,
-  onChange,
-  onCompositionChange,
-  limit,
-  compactFocus,
-}: TagInputProps) {
+export function TagInput({ tags, onChange, onCompositionChange, compactFocus }: TagInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [isInputVisible, setIsInputVisible] = useState(false)
-  const isAtLimit = limit !== undefined && tags.length >= limit
+  const isAtLimit = tags.length >= TAG_COLLECTION_LIMIT
   const { isComposingRef, onCompositionStart, onCompositionEnd } = useComposition()
   const tagsRef = useRef(tags)
   tagsRef.current = tags
 
   const addTag = (value: string) => {
-    const trimmed = value.trim()
-    if (trimmed && !tagsRef.current.includes(trimmed) && !isAtLimit) {
-      const next = [...tagsRef.current, trimmed]
-      tagsRef.current = next
-      onChange(next)
+    const result = addTagToCollection(tagsRef.current, value)
+    if (result.kind === 'added') {
+      tagsRef.current = result.tags
+      onChange(result.tags)
     }
     setInputValue('')
   }
 
   const removeTag = (tagToRemove: string) => {
-    onChange(tags.filter((tag) => tag !== tagToRemove))
+    onChange(removeTagFromCollection(tags, tagToRemove))
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -108,11 +105,9 @@ export function TagInput({
           className="self-start px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs justify-center"
         >
           <Plus className="size-[10px] lg:size-[12px]" /> 标签
-          {limit !== undefined && (
-            <span className="text-text-muted ml-0.5">
-              {tags.length}/{limit}
-            </span>
-          )}
+          <span className="text-text-muted ml-0.5">
+            {tags.length}/{TAG_COLLECTION_LIMIT}
+          </span>
         </Button>
       )}
     </div>

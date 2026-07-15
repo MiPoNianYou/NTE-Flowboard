@@ -19,6 +19,11 @@ import {
 } from '../utils/supabase'
 import { toOrderedData } from '../utils/serialization'
 import * as syncPolicy from '../utils/syncPolicy'
+import {
+  coordinateSync,
+  type SyncEvent,
+  type SyncCoordinationState,
+} from '../utils/syncCoordinator'
 import { useVisibilityInterval } from './useVisibilityInterval'
 import { useRetryScheduler } from './useRetryScheduler'
 import { useCrossTabSync } from './useCrossTabSync'
@@ -60,11 +65,6 @@ export function useSupabaseSync({
     return !!loadSupabaseConfig()
   })
 
-  const isPullingRef = useRef(false)
-  const hasLocalChangesRef = useRef(false)
-  const isInitialMountRef = useRef(true)
-  const isApplyingRemoteDataRef = useRef(false)
-  const shouldSkipNextPushRef = useRef(false)
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pullSyncRef = useRef<PullSyncFn | null>(null)
   const pushSyncRef = useRef<PushSyncFn | null>(null)
@@ -72,7 +72,21 @@ export function useSupabaseSync({
   const configRef = useRef<SupabaseConfig | null>(null)
   const onDataImportRef = useRef(onDataImport)
   const lastExternalDataVersionRef = useRef(externalDataVersion)
+  const coordinationRef = useRef<SyncCoordinationState>({
+    syncStatus: loadSupabaseConfig() ? 'connecting' : 'disconnected',
+    isPulling: false,
+    hasLocalChanges: false,
+    shouldSkipNextPush: false,
+    lastSeenTime: loadLastSeenTime(),
+    isDataInitialized: false,
+  })
 
+  const coordinate = useCallback((event: SyncEvent) => {
+    const decision = coordinateSync(coordinationRef.current, event)
+    coordinationRef.current = decision.state
+    setSyncStatus(decision.state.syncStatus)
+    return decision
+  }, [])
   useEffect(() => {
     dataRef.current = data
   }, [data])
@@ -84,9 +98,8 @@ export function useSupabaseSync({
   useEffect(() => {
     if (externalDataVersion === lastExternalDataVersionRef.current) return
     lastExternalDataVersionRef.current = externalDataVersion
-    hasLocalChangesRef.current = false
-    isApplyingRemoteDataRef.current = true
-  }, [externalDataVersion])
+    coordinate({ kind: 'external-data-applied' })
+  }, [coordinate, externalDataVersion])
 
   const { scheduleRetry, resetAttempts } = useRetryScheduler({
     delays: RETRY_DELAYS,
@@ -100,47 +113,35 @@ export function useSupabaseSync({
   const pullSync = useCallback(
     async (shouldForce = false, shouldSkipFirstImport = false): Promise<boolean> => {
       const config = configRef.current
-      if (
-        !config ||
-        !syncPolicy.shouldPull({
-          isPulling: isPullingRef.current,
-          hasLocalChanges: hasLocalChangesRef.current,
-          shouldForce,
-        })
-      )
-        return false
+      const coordination = coordinate({ kind: 'request-pull', force: shouldForce })
+      if (!config || coordination.command !== 'pull') return false
 
-      isPullingRef.current = true
       try {
         const result = await pullData(config)
         if (!result) {
-          resetAttempts()
+          const decision = coordinate({ kind: 'pull-empty' })
+          if (decision.shouldResetRetries) resetAttempts()
           setSyncStatus('connected')
           setSyncError(null)
           return false
         }
 
-        let isImported = false
-        const lastSeen = loadLastSeenTime()
-        const shouldImportResult = syncPolicy.shouldImport({
-          remoteUpdatedAt: result.updatedAt,
-          lastSeenTime: lastSeen,
+        coordinationRef.current = {
+          ...coordinationRef.current,
+          lastSeenTime: loadLastSeenTime(),
+        }
+        const decision = coordinate({
+          kind: 'pull-succeeded',
+          data: result.data,
+          updatedAt: result.updatedAt,
           skipFirstImport: shouldSkipFirstImport,
+          pushAfterPull: false,
         })
-        if (shouldImportResult) {
-          try {
-            const remoteData = result.data
-            if (remoteData.daily && remoteData.weekly && remoteData.monthly) {
-              if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
-              pushTimerRef.current = null
-              hasLocalChangesRef.current = false
-              isApplyingRemoteDataRef.current = true
-              onDataImportRef.current({ ...remoteData })
-              isImported = true
-            }
-          } catch {
-            setSyncError('远程数据格式异常')
-          }
+        const isImported = decision.command === 'import-remote'
+        if (isImported) {
+          if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
+          pushTimerRef.current = null
+          onDataImportRef.current({ ...result.data })
         }
 
         saveLastSeenTime(result.updatedAt)
@@ -152,14 +153,14 @@ export function useSupabaseSync({
         return isImported
       } catch (error) {
         setSyncError(classifySyncError(error))
-        setSyncStatus('error')
-        scheduleRetry('pull')
+        const decision = coordinate({ kind: 'pull-failed' })
+        if (decision.shouldRetry) scheduleRetry(decision.shouldRetry)
         return false
       } finally {
-        isPullingRef.current = false
+        // Pull completion is represented by the coordination state.
       }
     },
-    [resetAttempts, scheduleRetry],
+    [coordinate, resetAttempts, scheduleRetry],
   )
   pullSyncRef.current = pullSync
 
@@ -173,7 +174,9 @@ export function useSupabaseSync({
   const pushSync = useCallback(
     async (dataToPush: ChecklistData) => {
       const config = configRef.current
-      if (!config || isPullingRef.current) return
+      if (!config) return
+      const coordination = coordinate({ kind: 'request-push' })
+      if (coordination.command !== 'push') return
 
       const orderedData = toOrderedData(dataToPush)
 
@@ -185,15 +188,15 @@ export function useSupabaseSync({
         resetAttempts()
         setSyncStatus('connected')
         setSyncError(null)
-        hasLocalChangesRef.current = false
+        coordinate({ kind: 'push-succeeded', updatedAt })
         broadcast(updatedAt)
       } catch (error) {
         setSyncError(classifySyncError(error))
-        setSyncStatus('error')
-        scheduleRetry('push')
+        const decision = coordinate({ kind: 'push-failed' })
+        if (decision.shouldRetry) scheduleRetry(decision.shouldRetry)
       }
     },
-    [broadcast, resetAttempts, scheduleRetry],
+    [broadcast, coordinate, resetAttempts, scheduleRetry],
   )
   pushSyncRef.current = pushSync
 
@@ -247,7 +250,7 @@ export function useSupabaseSync({
   useEffect(() => {
     const handleOnline = () => {
       if (!configRef.current) return
-      if (hasLocalChangesRef.current) {
+      if (coordinationRef.current.hasLocalChanges) {
         void pushSync(dataRef.current)
         return
       }
@@ -262,35 +265,18 @@ export function useSupabaseSync({
   }, [pullSync, pushSync])
 
   useEffect(() => {
-    if (isInitialMountRef.current) {
-      isInitialMountRef.current = false
-      return
-    }
-    if (isApplyingRemoteDataRef.current) {
-      isApplyingRemoteDataRef.current = false
-      shouldSkipNextPushRef.current = true
-      return
-    }
-    hasLocalChangesRef.current = true
-  }, [data])
-
-  useEffect(() => {
-    if (syncStatus !== 'connected') return
-    if (!configRef.current) return
-    if (shouldSkipNextPushRef.current) {
-      shouldSkipNextPushRef.current = false
-      return
-    }
+    const coordination = coordinate({ kind: 'local-data-changed' })
+    if (coordination.command !== 'schedule-push' || !configRef.current) return
 
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     pushTimerRef.current = setTimeout(() => {
-      pushSync(dataRef.current)
+      void pushSync(dataRef.current)
     }, MS.PUSH_DEBOUNCE)
 
     return () => {
       if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     }
-  }, [data, syncStatus, pushSync])
+  }, [coordinate, data, pushSync])
 
   const setupSupabase = useCallback(
     async (projectId: string, anonKey: string) => {

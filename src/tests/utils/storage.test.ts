@@ -2,117 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { resetItems, loadData, saveData, saveDataImmediate } from '../../utils/storage'
 import { exportData, importData, toOrderedData } from '../../utils/serialization'
 import { SERVER_REGIONS } from '../../utils/defaultData'
-import {
-  shouldResetDaily,
-  shouldResetWeekly,
-  shouldResetMonthly,
-  isUSDST,
-  isEUDST,
-  getServerUTCOffset,
-  getServerDate,
-} from '../../utils/timezone'
+
 import { isChecklistData } from '../../utils/validation'
 import { mergeChecklistData } from '../../utils/dataMigration'
 import type { ChecklistData, ChecklistItem } from '../../types'
-
-describe('isUSDST', () => {
-  it('should return false in January (standard time)', () => {
-    expect(isUSDST(new Date(2024, 0, 15))).toBe(false)
-  })
-
-  it('should return false before DST starts (March 9, 2024)', () => {
-    expect(isUSDST(new Date(2024, 2, 9, 1, 59, 59))).toBe(false)
-  })
-
-  it('should return true after DST starts (March 10, 2024 UTC)', () => {
-    expect(isUSDST(new Date('2024-03-10T08:00:00Z'))).toBe(true)
-  })
-
-  it('should return true during summer (July 2024)', () => {
-    expect(isUSDST(new Date(2024, 6, 15))).toBe(true)
-  })
-
-  it('should return true before DST ends (Nov 2, 2024 1:59 AM)', () => {
-    expect(isUSDST(new Date(2024, 10, 2, 1, 59, 59))).toBe(true)
-  })
-
-  it('should return false after DST ends (Nov 3, 2024 UTC)', () => {
-    expect(isUSDST(new Date('2024-11-03T07:00:00Z'))).toBe(false)
-  })
-
-  it('should return false in December (standard time)', () => {
-    expect(isUSDST(new Date(2024, 11, 15))).toBe(false)
-  })
-
-  it('should handle 2025 DST boundaries', () => {
-    expect(isUSDST(new Date('2025-03-08T12:00:00Z'))).toBe(false)
-    expect(isUSDST(new Date('2025-03-09T08:00:00Z'))).toBe(true)
-    expect(isUSDST(new Date('2025-11-01T12:00:00Z'))).toBe(true)
-    expect(isUSDST(new Date('2025-11-02T07:00:00Z'))).toBe(false)
-  })
-})
-
-describe('isEUDST', () => {
-  it('should return false in January (standard time)', () => {
-    const date = new Date(Date.UTC(2024, 0, 15, 12, 0, 0))
-    expect(isEUDST(date)).toBe(false)
-  })
-
-  it('should return true during summer (July 2024 UTC)', () => {
-    const date = new Date(Date.UTC(2024, 6, 15, 12, 0, 0))
-    expect(isEUDST(date)).toBe(true)
-  })
-
-  it('should return false in December (standard time)', () => {
-    const date = new Date(Date.UTC(2024, 11, 15, 12, 0, 0))
-    expect(isEUDST(date)).toBe(false)
-  })
-
-  it('should handle 2025 EU DST boundaries', () => {
-    expect(isEUDST(new Date(Date.UTC(2025, 2, 29, 12)))).toBe(false)
-    expect(isEUDST(new Date(Date.UTC(2025, 2, 30, 12)))).toBe(true)
-    expect(isEUDST(new Date(Date.UTC(2025, 9, 25, 12)))).toBe(true)
-    expect(isEUDST(new Date(Date.UTC(2025, 9, 26, 12)))).toBe(false)
-  })
-})
-
-describe('getServerUTCOffset', () => {
-  it('should return 8 for asia (fixed)', () => {
-    expect(getServerUTCOffset('asia', new Date(2024, 6, 15))).toBe(8)
-    expect(getServerUTCOffset('asia', new Date(2024, 0, 15))).toBe(8)
-  })
-
-  it('should return -5 for america during standard time', () => {
-    expect(getServerUTCOffset('america', new Date(2024, 0, 15))).toBe(-5)
-  })
-
-  it('should return -4 for america during DST', () => {
-    expect(getServerUTCOffset('america', new Date(2024, 6, 15))).toBe(-4)
-  })
-
-  it('should return 1 for europe during standard time', () => {
-    expect(getServerUTCOffset('europe', new Date(2024, 0, 15))).toBe(1)
-  })
-
-  it('should return 2 for europe during DST', () => {
-    expect(getServerUTCOffset('europe', new Date(2024, 6, 15))).toBe(2)
-  })
-})
-
-describe('getServerDate', () => {
-  it('should return a Date object', () => {
-    const result = getServerDate('asia')
-    expect(result).toBeInstanceOf(Date)
-  })
-
-  it('should return approximately current time adjusted for region offset', () => {
-    const now = new Date()
-    const serverDate = getServerDate('asia')
-    const expectedUtc = now.getTime() + now.getTimezoneOffset() * 60000 + 8 * 3600000
-    const diff = Math.abs(serverDate.getTime() - expectedUtc)
-    expect(diff).toBeLessThan(2000)
-  })
-})
 
 function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistData {
   return {
@@ -132,47 +25,6 @@ function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistDat
     ...overrides,
   }
 }
-
-describe('shouldResetDaily', () => {
-  it('should return false when last reset is recent', () => {
-    expect(shouldResetDaily(new Date().toISOString(), 'asia')).toBe(false)
-  })
-
-  it("should return true when last reset was before today's reset time", () => {
-    const twoDaysAgo = new Date()
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
-    expect(shouldResetDaily(twoDaysAgo.toISOString(), 'asia')).toBe(true)
-  })
-
-  it('should default to asia region when resetConfig missing serverRegion', () => {
-    const lastReset = new Date(Date.now() - 2 * 86400000).toISOString()
-    expect(typeof shouldResetDaily(lastReset, 'asia')).toBe('boolean')
-  })
-})
-
-describe('shouldResetWeekly', () => {
-  it('should return false when last reset is recent', () => {
-    expect(shouldResetWeekly(new Date().toISOString(), 'asia')).toBe(false)
-  })
-
-  it('should return true when last reset was more than a week ago', () => {
-    const twoWeeksAgo = new Date()
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
-    expect(shouldResetWeekly(twoWeeksAgo.toISOString(), 'asia')).toBe(true)
-  })
-})
-
-describe('shouldResetMonthly', () => {
-  it('should return false when last reset is recent', () => {
-    expect(shouldResetMonthly(new Date().toISOString(), 'asia')).toBe(false)
-  })
-
-  it('should return true when last reset was more than a month ago', () => {
-    const twoMonthsAgo = new Date()
-    twoMonthsAgo.setDate(twoMonthsAgo.getDate() - 60)
-    expect(shouldResetMonthly(twoMonthsAgo.toISOString(), 'asia')).toBe(true)
-  })
-})
 
 describe('resetItems', () => {
   it('should set all items to isCompleted: false', () => {

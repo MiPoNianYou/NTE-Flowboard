@@ -14,7 +14,6 @@ export const MS = {
 
 export const UI = {
   DRAG_DISTANCE: 8,
-  TAG_LIMIT: 5,
 } as const
 
 import type { TabType } from '../types'
