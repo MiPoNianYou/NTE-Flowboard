@@ -15,7 +15,6 @@ vi.mock('@dnd-kit/sortable', () => ({
 
 vi.mock('../../../utils/tagColors', () => ({
   getTagColors: vi.fn(() => ({ text: '#EF4444', backgroundColor: '#ef444424' })),
-  previewTagColors: vi.fn(() => ({ text: '#EF4444', backgroundColor: '#ef444424' })),
 }))
 
 let pendingDeleteState = { handleDelete: vi.fn(), isPending: vi.fn(() => false) }

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">NTE Flowboard</title>
+  <desc id="desc">为《NTE》每日、每周和每月重置事项准备的本地优先清单看板。</desc>
+  <defs>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#191925"/>
+      <stop offset="1" stop-color="#101018"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#9f8cff"/>
+      <stop offset="1" stop-color="#55c9d9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="380" rx="28" fill="#0d0d12"/>
+  <circle cx="1040" cy="-24" r="240" fill="#1868e0" opacity=".11"/>
+  <circle cx="710" cy="405" r="190" fill="#e01868" opacity=".08"/>
+  <path d="M0 310C180 250 280 354 468 302S780 214 1200 292V380H0Z" fill="#ffffff" opacity=".025"/>
+
+  <g id="title-block" transform="translate(64 62)">
+    <text x="0" y="0" fill="#a79af8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700" letter-spacing="1.2">NTE · RESET CHECKLIST</text>
+    <text x="0" y="70" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="56" font-weight="700">NTE Flowboard</text>
+    <text x="0" y="111" fill="#ffffffb3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="23">让每日、每周、每月事项在重置前保持清晰。</text>
+    <text x="0" y="143" fill="#ffffff73" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="17">本地优先 · 离线可用 · 可选跨设备同步</text>
+
+    <g transform="translate(0 187)">
+      <rect width="126" height="42" rx="21" fill="#9080f01f" stroke="#9080f066"/>
+      <text x="63" y="27" text-anchor="middle" fill="#c5bcff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="16" font-weight="600">每日 05:00</text>
+      <rect x="138" width="142" height="42" rx="21" fill="#ffffff0d" stroke="#ffffff26"/>
+      <text x="209" y="27" text-anchor="middle" fill="#ffffffb3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="16" font-weight="600">每周一 05:00</text>
+      <rect x="292" width="134" height="42" rx="21" fill="#ffffff0d" stroke="#ffffff26"/>
+      <text x="359" y="27" text-anchor="middle" fill="#ffffffb3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="16" font-weight="600">每月 1 日</text>
+    </g>
+  </g>
+
+  <g id="project-proof" transform="translate(726 43)">
+    <rect width="414" height="294" rx="22" fill="url(#surface)" stroke="#ffffff2b"/>
+    <rect x="20" y="18" width="374" height="38" rx="12" fill="#ffffff0d"/>
+    <circle cx="43" cy="37" r="6" fill="#e85252"/>
+    <circle cx="63" cy="37" r="6" fill="#e0a030"/>
+    <circle cx="83" cy="37" r="6" fill="#14ad81"/>
+    <text x="112" y="42" fill="#ffffffa6" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="15" font-weight="600">每日事项</text>
+    <text x="356" y="42" fill="#a79af8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">AP</text>
+
+    <g transform="translate(20 75)">
+      <rect width="374" height="47" rx="12" fill="#ffffff0a"/>
+      <circle cx="24" cy="23.5" r="11" fill="#14ad8129" stroke="#14ad81"/>
+      <path d="M19 24l4 4 7-9" fill="none" stroke="#63d3b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="49" y="29" fill="#ffffffa6" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="16">纳库佩达之池</text>
+      <rect x="293" y="12" width="59" height="23" rx="11.5" fill="#15a0b824"/>
+      <text x="322.5" y="28" text-anchor="middle" fill="#65c8d6" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="13">地图</text>
+    </g>
+    <g transform="translate(20 131)">
+      <rect width="374" height="47" rx="12" fill="#ffffff0a"/>
+      <circle cx="24" cy="23.5" r="11" fill="none" stroke="#ffffff4d"/>
+      <text x="49" y="29" fill="#fffffff2" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="16">领一咖舍收益</text>
+      <rect x="293" y="12" width="59" height="23" rx="11.5" fill="#e0a03024"/>
+      <text x="322.5" y="28" text-anchor="middle" fill="#e9bb66" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="13">大亨</text>
+    </g>
+    <g transform="translate(20 187)">
+      <rect width="374" height="47" rx="12" fill="#ffffff0a"/>
+      <circle cx="24" cy="23.5" r="11" fill="none" stroke="#ffffff4d"/>
+      <text x="49" y="29" fill="#fffffff2" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="16">消耗本性像素</text>
+      <rect x="293" y="12" width="59" height="23" rx="11.5" fill="#9080f01f"/>
+      <text x="322.5" y="28" text-anchor="middle" fill="#c5bcff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="13">材料</text>
+    </g>
+    <g transform="translate(20 253)">
+      <rect width="374" height="8" rx="4" fill="#ffffff14"/>
+      <rect width="140" height="8" rx="4" fill="url(#accent)"/>
+      <text x="374" y="8" text-anchor="end" fill="#ffffff73" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">3 / 8</text>
+    </g>
+  </g>
+</svg>

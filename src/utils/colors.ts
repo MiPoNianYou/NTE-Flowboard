@@ -3,8 +3,6 @@ import a11yPlugin from 'colord/plugins/a11y'
 
 extend([a11yPlugin])
 
-export { colord }
-
 export const PALETTE = {
   primary: colord('#9080F0').toHex(),
   success: colord('#14AD81').toHex(),
@@ -50,10 +48,6 @@ const AMBIENT_PALETTE = [PALETTE.primary, TAG_HEX[7], TAG_HEX[9]]
 
 const WHITE = colord('#FFFFFF').toHex()
 const CHARCOAL = colord('#0A0A0A').toHex()
-
-export function softColor(hex: string, alpha: number): string {
-  return colord(hex).alpha(alpha).toHex()
-}
 
 export function injectColorTokens() {
   const root = document.documentElement

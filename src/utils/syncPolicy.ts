@@ -34,7 +34,3 @@ export function shouldImportInitialRemoteData(data: ChecklistData): boolean {
     JSON.stringify(data.monthly) === JSON.stringify(DEFAULT_CHECKLIST_DATA.monthly)
   )
 }
-
-export function resolveConflict(hasLocalChanges: boolean): 'local' | 'remote' {
-  return hasLocalChanges ? 'local' : 'remote'
-}

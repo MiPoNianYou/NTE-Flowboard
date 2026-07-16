@@ -6,10 +6,6 @@ import { SPRING } from '../utils/motion'
 import { Button } from './base/Button'
 import { toastBus, type ToastPayload } from '../utils/toastBus'
 
-export function showStorageToast(message: string, type: 'error' | 'warning' = 'error'): void {
-  toastBus.emit(message, type)
-}
-
 export function StorageToast() {
   const [toasts, setToasts] = useState<ToastPayload[]>([])
 

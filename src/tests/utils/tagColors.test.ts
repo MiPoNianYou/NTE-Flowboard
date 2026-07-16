@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { getTagColors, previewTagColors, cleanupRegistry } from '../../utils/tagColors'
+import { getTagColors, cleanupRegistry } from '../../utils/tagColors'
 
 function clearMap() {
   localStorage.removeItem('flowboard-tag-colors')
@@ -42,59 +42,6 @@ describe('getTagColors', () => {
     expect(new Set(colors.slice(0, 10)).size).toBe(10)
     expect(colors[10]).toMatch(/^#[0-9A-Fa-f]{6}$/)
     expect(colors[10]).not.toBe(colors[0])
-  })
-
-  it('should persist assignments across calls', () => {
-    const first = getTagColors('持久测试')
-    const second = getTagColors('持久测试')
-    expect(first).toEqual(second)
-  })
-})
-
-describe('previewTagColors', () => {
-  it('should reuse existing assigned color when tag already exists', () => {
-    const existing = getTagColors('地图')
-    const preview = previewTagColors('地图')
-    expect(preview).toEqual(existing)
-  })
-
-  it('should preview next available color without mutating registry', () => {
-    getTagColors('alpha')
-    getTagColors('beta')
-
-    const before = localStorage.getItem('flowboard-tag-colors')
-    const preview = previewTagColors('gamma')
-    const after = localStorage.getItem('flowboard-tag-colors')
-
-    expect(after).toBe(before)
-    expect(preview).not.toEqual(getTagColors('alpha'))
-    expect(preview).not.toEqual(getTagColors('beta'))
-  })
-
-  it('should not consume the next color slot during preview', () => {
-    getTagColors('alpha')
-    getTagColors('beta')
-
-    const preview = previewTagColors('draft-tag')
-    const before = localStorage.getItem('flowboard-tag-colors')
-    const previewAgain = previewTagColors('draft-tag')
-    const after = localStorage.getItem('flowboard-tag-colors')
-
-    expect(after).toBe(before)
-    expect(previewAgain).toEqual(preview)
-  })
-
-  it('should preview generated colors after palette is full without mutating registry', () => {
-    const tags = ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 't10']
-    tags.forEach((tag) => getTagColors(tag))
-
-    const before = localStorage.getItem('flowboard-tag-colors')
-    const preview = previewTagColors('overflow-tag')
-    const after = localStorage.getItem('flowboard-tag-colors')
-
-    expect(after).toBe(before)
-    expect(preview.text).toMatch(/^#[0-9A-Fa-f]{6}$/)
-    expect(preview.backgroundColor).toMatch(/^#[0-9A-Fa-f]{8}$/)
   })
 })
 

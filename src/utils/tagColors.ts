@@ -238,15 +238,6 @@ export function getTagColors(tag: string): { text: string; backgroundColor: stri
   return getAssignmentColors(map.get(tag)!)
 }
 
-export function previewTagColors(tag: string): { text: string; backgroundColor: string } {
-  const map = loadMap()
-  const trimmed = tag.trim()
-  if (trimmed && map.has(trimmed)) {
-    return getAssignmentColors(map.get(trimmed)!)
-  }
-  return getAssignmentColors(allocateAssignment(tag, map))
-}
-
 export function cleanupRegistry(activeTags: string[]) {
   const map = loadMap()
   const used = new Set(activeTags)

@@ -45,8 +45,16 @@ vi.mock('../../components/EmptyState', () => ({
 }))
 
 vi.mock('../../components/ChecklistItemRow', () => ({
-  ChecklistItemRow: ({ item }: { item: ChecklistItem }) => (
-    <div data-testid="item">{item.text}</div>
+  ChecklistItemRow: ({
+    item,
+    shouldConfirmDelete,
+  }: {
+    item: ChecklistItem
+    shouldConfirmDelete: boolean
+  }) => (
+    <div data-confirm-delete={String(shouldConfirmDelete)} data-testid="item">
+      {item.text}
+    </div>
   ),
 }))
 
@@ -75,71 +83,11 @@ describe('ChecklistPanel', () => {
     expect(screen.getByText('任务2')).toBeInTheDocument()
   })
 
-  it('should only render visible items', () => {
-    const items: ChecklistItem[] = [
-      { id: 'cv1', text: '可见任务', isCompleted: false, isHidden: false, order: 1, tags: [] },
-      { id: 'cv2', text: '另一个可用', isCompleted: false, isHidden: false, order: 2, tags: [] },
-    ]
-    render(
-      <ChecklistPanel
-        visibleItems={items}
-        activeTab="daily"
-        direction="down"
-        isAutoMoveEnabled={false}
-        onToggle={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onHide={vi.fn()}
-        onReorder={vi.fn()}
-        shouldConfirmDelete={false}
-      />,
-    )
-    expect(screen.getByText('可见任务')).toBeInTheDocument()
-    expect(screen.getByText('另一个可用')).toBeInTheDocument()
-    expect(screen.queryByText('不存在的任务')).not.toBeInTheDocument()
-  })
-
   it('should render empty state when no items', () => {
     render(
       <ChecklistPanel
         visibleItems={[]}
         activeTab="daily"
-        direction="down"
-        isAutoMoveEnabled={false}
-        onToggle={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onHide={vi.fn()}
-        onReorder={vi.fn()}
-        shouldConfirmDelete={false}
-      />,
-    )
-    expect(screen.getByText('暂无任务')).toBeInTheDocument()
-  })
-
-  it('should show empty state with random subtitle for daily', () => {
-    render(
-      <ChecklistPanel
-        visibleItems={[]}
-        activeTab="daily"
-        direction="down"
-        isAutoMoveEnabled={false}
-        onToggle={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onHide={vi.fn()}
-        onReorder={vi.fn()}
-        shouldConfirmDelete={false}
-      />,
-    )
-    expect(screen.getByText('暂无任务')).toBeInTheDocument()
-  })
-
-  it('should show empty state with random subtitle for weekly', () => {
-    render(
-      <ChecklistPanel
-        visibleItems={[]}
-        activeTab="weekly"
         direction="down"
         isAutoMoveEnabled={false}
         onToggle={vi.fn()}
@@ -168,7 +116,8 @@ describe('ChecklistPanel', () => {
         shouldConfirmDelete={true}
       />,
     )
-    expect(screen.getByText('任务1')).toBeInTheDocument()
+    expect(screen.getAllByTestId('item')).toHaveLength(mockItems.length)
+    expect(screen.getAllByTestId('item')[0]).toHaveAttribute('data-confirm-delete', 'true')
   })
 
   it('should move completed items to bottom when isAutoMoveEnabled is true', () => {

@@ -88,12 +88,17 @@ describe('SettingsPanel', () => {
 
   it('should call exportData when export button clicked', () => {
     const exportSpy = vi.spyOn(serialization, 'exportData').mockReturnValue('')
+    const anchorClickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined)
     render(<SettingsPanel data={mockData} onManualReset={vi.fn()} onImport={vi.fn()} />)
     fireEvent.click(screen.getByLabelText('打开设置'))
     fireEvent.click(screen.getAllByText('数据管理')[0])
     fireEvent.click(screen.getAllByText('导出数据')[0].closest('button')!)
     expect(exportSpy).toHaveBeenCalledOnce()
+    expect(anchorClickSpy).toHaveBeenCalledOnce()
     exportSpy.mockRestore()
+    anchorClickSpy.mockRestore()
   })
 
   it('should show import error message', () => {

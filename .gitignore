@@ -34,6 +34,8 @@ Thumbs.db
 desktop.ini
 
 # Agent config
+.agents/
+.codex/
 AGENTS.md
 CONTEXT.md
 docs/

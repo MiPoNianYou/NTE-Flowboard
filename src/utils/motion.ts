@@ -41,18 +41,6 @@ export const ITEM_EXIT = {
   scale: { duration: 0.3, ease: APPLE_EASE },
 }
 
-export const INLINE_MESSAGE_ENTRY = {
-  opacity: { duration: 0.3, ease: APPLE_EASE },
-  height: { duration: 0.3, ease: APPLE_EASE },
-  y: { duration: 0.3, ease: APPLE_EASE },
-}
-
-export const INLINE_MESSAGE_EXIT = {
-  opacity: { duration: 0.22, ease: APPLE_EASE },
-  height: { duration: 0.22, ease: APPLE_EASE },
-  y: { duration: 0.22, ease: APPLE_EASE },
-}
-
 export const PAGE = { duration: 0.3, ease: APPLE_EASE }
 
 export const STAGGER = 0.1

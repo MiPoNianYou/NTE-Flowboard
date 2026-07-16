@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  resolveConflict,
-  shouldImport,
-  shouldImportInitialRemoteData,
-  shouldPull,
-} from '../../utils/syncPolicy'
+import { shouldImport, shouldImportInitialRemoteData, shouldPull } from '../../utils/syncPolicy'
 import { DEFAULT_CHECKLIST_DATA } from '../../utils/defaultData'
 
 describe('shouldPull', () => {
@@ -58,13 +53,6 @@ describe('shouldImport', () => {
         skipFirstImport: true,
       }),
     ).toBe(true)
-  })
-})
-
-describe('resolveConflict', () => {
-  it('keeps unsynced local data and otherwise accepts remote data', () => {
-    expect(resolveConflict(true)).toBe('local')
-    expect(resolveConflict(false)).toBe('remote')
   })
 })
 

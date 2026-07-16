@@ -1,18 +1,19 @@
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { StorageToast, showStorageToast } from '../../components/StorageToast'
+import { StorageToast } from '../../components/StorageToast'
 import { MS } from '../../utils/constants'
+import { toastBus } from '../../utils/toastBus'
 
 describe('StorageToast', () => {
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it('should show toast when showStorageToast is called', () => {
+  it('should show toast when the toast bus emits an event', () => {
     vi.useFakeTimers()
     render(<StorageToast />)
     act(() => {
-      showStorageToast('保存失败')
+      toastBus.emit('保存失败', 'error')
     })
     expect(screen.getByText('保存失败')).toBeInTheDocument()
   })
@@ -21,7 +22,7 @@ describe('StorageToast', () => {
     vi.useFakeTimers()
     render(<StorageToast />)
     act(() => {
-      showStorageToast('错误信息')
+      toastBus.emit('错误信息', 'error')
     })
     expect(screen.getByText('错误信息')).toBeInTheDocument()
 
@@ -36,7 +37,7 @@ describe('StorageToast', () => {
     vi.useFakeTimers()
     render(<StorageToast />)
     act(() => {
-      showStorageToast('手动关闭')
+      toastBus.emit('手动关闭', 'error')
     })
     const closeButton = screen.getByRole('button')
     act(() => {
@@ -49,8 +50,8 @@ describe('StorageToast', () => {
     vi.useFakeTimers()
     render(<StorageToast />)
     act(() => {
-      showStorageToast('第一个')
-      showStorageToast('第二个')
+      toastBus.emit('第一个', 'error')
+      toastBus.emit('第二个', 'error')
     })
     expect(screen.getByText('第一个')).toBeInTheDocument()
     expect(screen.getByText('第二个')).toBeInTheDocument()

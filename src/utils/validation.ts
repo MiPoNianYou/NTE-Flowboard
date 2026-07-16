@@ -1,4 +1,4 @@
-import type { ChecklistData, ChecklistItem, ServerRegion } from '../types'
+import type { ChecklistData, ChecklistItem } from '../types'
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -21,10 +21,6 @@ function isChecklistItemArray(value: unknown): value is ChecklistItem[] {
       )
     })
   )
-}
-
-export function isServerRegion(value: unknown): value is ServerRegion {
-  return value === 'asia' || value === 'america' || value === 'europe'
 }
 
 export function isChecklistData(value: unknown): value is ChecklistData {

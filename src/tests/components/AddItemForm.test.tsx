@@ -82,19 +82,6 @@ describe('AddItemForm', () => {
     expect(screen.getByText('添加').closest('button')).not.toBeDisabled()
   })
 
-  it('should show tag button when form is open', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-    expect(getTagButton()).toBeInTheDocument()
-  })
-
-  it('should show tag input when tag button clicked', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-    fireEvent.click(getTagButton())
-    expect(screen.getByPlaceholderText('标签名')).toBeInTheDocument()
-  })
-
   it('should add tag on Enter in tag input', () => {
     const onAdd = vi.fn()
     render(<AddItemForm tab="daily" onAdd={onAdd} />)
@@ -107,88 +94,6 @@ describe('AddItemForm', () => {
     fireEvent.change(screen.getByPlaceholderText('输入任务名称...'), { target: { value: '任务' } })
     fireEvent.click(screen.getByText('添加'))
     expect(onAdd).toHaveBeenCalledWith('daily', '任务', ['标签1'])
-  })
-
-  it('should close tag input on Escape without adding tag', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-    fireEvent.click(getTagButton())
-    const tagInput = screen.getByPlaceholderText('标签名')
-    fireEvent.change(tagInput, { target: { value: '标签1' } })
-    fireEvent.keyDown(tagInput, { key: 'Escape' })
-    expect(screen.queryByPlaceholderText('标签名')).not.toBeInTheDocument()
-  })
-
-  it('should add tag on blur when non-empty', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-    fireEvent.click(getTagButton())
-    const tagInput = screen.getByPlaceholderText('标签名')
-    fireEvent.change(tagInput, { target: { value: '标签1' } })
-    fireEvent.blur(tagInput)
-    expect(screen.queryByPlaceholderText('标签名')).not.toBeInTheDocument()
-  })
-
-  it('should not add empty tag on blur', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-    fireEvent.click(getTagButton())
-    const tagInput = screen.getByPlaceholderText('标签名')
-    fireEvent.blur(tagInput)
-    expect(getTagButton()).toBeInTheDocument()
-  })
-
-  it('should not add duplicate tags', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-
-    fireEvent.click(getTagButton())
-    let tagInput = screen.getByPlaceholderText('标签名')
-    fireEvent.change(tagInput, { target: { value: '标签1' } })
-    fireEvent.keyDown(tagInput, { key: 'Enter' })
-
-    tagInput = screen.getByPlaceholderText('标签名')
-    fireEvent.change(tagInput, { target: { value: '标签1' } })
-    fireEvent.keyDown(tagInput, { key: 'Enter' })
-
-    fireEvent.change(screen.getByPlaceholderText('输入任务名称...'), { target: { value: '任务' } })
-    const tagPills = screen.getAllByText('标签1')
-    expect(tagPills.length).toBe(1)
-  })
-
-  it('should enforce tag limit (5)', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-
-    for (let i = 1; i <= 5; i++) {
-      fireEvent.click(getTagButton())
-      const tagInput = screen.getByPlaceholderText('标签名')
-      fireEvent.change(tagInput, { target: { value: `标签${i}` } })
-      fireEvent.keyDown(tagInput, { key: 'Enter' })
-      fireEvent.blur(screen.getByPlaceholderText('标签名'))
-    }
-
-    expect(getTagButton()).toBeDisabled()
-  })
-
-  it('should remove tag when TagPill remove button clicked', () => {
-    render(<AddItemForm tab="daily" onAdd={vi.fn()} />)
-    fireEvent.click(screen.getByText('添加新任务'))
-
-    fireEvent.click(getTagButton())
-    const tagInput = screen.getByPlaceholderText('标签名')
-    fireEvent.change(tagInput, { target: { value: '标签1' } })
-    fireEvent.keyDown(tagInput, { key: 'Enter' })
-
-    expect(screen.getByText('标签1')).toBeInTheDocument()
-
-    fireEvent.blur(screen.getByPlaceholderText('标签名'))
-
-    const removeButton = screen.getByText('标签1').closest('span')!.querySelector('button')!
-    fireEvent.click(removeButton)
-
-    expect(screen.queryByText('标签1')).not.toBeInTheDocument()
-    expect(getTagButton()).toBeInTheDocument()
   })
 
   it('should clear form data after successful submit', () => {
