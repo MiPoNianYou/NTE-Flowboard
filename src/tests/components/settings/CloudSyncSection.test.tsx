@@ -43,14 +43,14 @@ describe('CloudSyncSection', () => {
   })
 
   describe('not configured', () => {
-    it('should render project ID input', () => {
+    it('should render project URL input', () => {
       render(<CloudSyncSection {...mockNotConfiguredProps} />)
-      expect(screen.getByText('项目 ID')).toBeInTheDocument()
+      expect(screen.getByText('Project URL', { selector: 'label' })).toBeInTheDocument()
     })
 
-    it('should render anon key input', () => {
+    it('should render publishable key input', () => {
       render(<CloudSyncSection {...mockNotConfiguredProps} />)
-      expect(screen.getByText('Anon Key')).toBeInTheDocument()
+      expect(screen.getByText('Publishable Key')).toBeInTheDocument()
     })
 
     it('should render connect button', () => {
@@ -71,7 +71,7 @@ describe('CloudSyncSection', () => {
     it('should show key when toggled', () => {
       render(<CloudSyncSection {...mockNotConfiguredProps} />)
       const keyInput = screen
-        .getByText('Anon Key')
+        .getByText('Publishable Key')
         .closest('.input-group')!
         .querySelector('input') as HTMLInputElement
       expect(keyInput.type).toBe('password')

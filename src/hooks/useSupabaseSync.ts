@@ -39,7 +39,7 @@ interface UseSupabaseSyncReturn {
   syncStatus: SyncStatus
   lastSyncTime: string | null
   syncError: string | null
-  setupSupabase: (projectId: string, anonKey: string) => Promise<void>
+  setupSupabase: (projectUrl: string, anonKey: string) => Promise<void>
   triggerSync: () => Promise<void>
   teardownSupabase: () => void
   clearSyncError: () => void
@@ -279,28 +279,28 @@ export function useSupabaseSync({
   }, [coordinate, data, pushSync])
 
   const setupSupabase = useCallback(
-    async (projectId: string, anonKey: string) => {
+    async (projectUrl: string, anonKey: string) => {
       setSyncStatus('connecting')
       setSyncError(null)
       try {
-        const valid = await validateConfig(projectId, anonKey)
+        const valid = await validateConfig(projectUrl, anonKey)
         if (!valid.ok) {
           const messages: Record<string, string> = {
-            network: '连接失败，请检查项目 ID 或网络',
-            auth: '密钥无效，请检查 Anon Key',
+            network: '连接失败，请检查 Project URL 或网络',
+            auth: '密钥无效，请检查 Publishable Key',
             table_missing: '数据表不存在，请执行建表脚本',
             table_schema: '数据表结构不对，请删除后重新执行脚本',
             table_permission: '没有访问权限，请检查 RLS 策略',
-            unknown: '连接失败，请检查项目 ID 和密钥',
+            unknown: '连接失败，请检查 Project URL 和密钥',
           }
-          const base = messages[valid.reason] ?? '连接失败，请检查项目 ID 和密钥'
+          const base = messages[valid.reason] ?? '连接失败，请检查 Project URL 和密钥'
           setSyncError(base)
           setSyncStatus('disconnected')
           setIsConfigured(false)
           return
         }
 
-        const config: SupabaseConfig = { projectId, anonKey }
+        const config: SupabaseConfig = { projectId: projectUrl, anonKey }
         saveSupabaseConfig(config)
         configRef.current = config
         resetClient()

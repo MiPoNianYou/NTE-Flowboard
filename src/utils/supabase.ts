@@ -14,8 +14,14 @@ const CONFIG_KEY = 'flowboard-cloud-config'
 const LAST_SYNC_KEY = 'flowboard-cloud-last-sync'
 const LAST_SEEN_KEY = 'flowboard-cloud-last-seen'
 
-function buildSupabaseUrl(projectId: string): string {
-  return `https://${projectId}.supabase.co`
+function buildSupabaseUrl(projectUrlOrId: string): string {
+  const value = projectUrlOrId.trim()
+
+  if (/^https?:\/\//i.test(value)) {
+    return new URL(value).origin
+  }
+
+  return `https://${value}.supabase.co`
 }
 
 export function loadSupabaseConfig(): SupabaseConfig | null {
@@ -122,7 +128,7 @@ export function classifySyncError(error: unknown): string {
   if (errorMessage.includes('permission denied') || error.code === '42501')
     return '没有访问权限，请检查 RLS 策略'
   if (errorMessage.includes('invalid api key') || error.code === '28P01')
-    return '密钥无效，请检查 Anon Key'
+    return '密钥无效，请检查 Publishable Key'
   if (errorMessage.includes('failed to fetch') || !error.code) return '连接失败，请检查网络'
 
   if (error.code === 'INVALID_DATA') return '云端数据格式无效，请重新同步'
@@ -140,15 +146,15 @@ export type ValidateReason =
 
 export type ValidateResult = { ok: true } | { ok: false; reason: ValidateReason; detail?: string }
 
-export async function validateConfig(projectId: string, anonKey: string): Promise<ValidateResult> {
+export async function validateConfig(projectUrl: string, anonKey: string): Promise<ValidateResult> {
   try {
-    const url = buildSupabaseUrl(projectId)
+    const url = buildSupabaseUrl(projectUrl)
     const supabaseClient = createClient(url, anonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false,
-        storageKey: `flowboard-cloud-validate-${projectId}`,
+        storageKey: `flowboard-cloud-validate-${projectUrl}`,
       },
     })
     const { error } = await supabaseClient.rpc('pull_sync').maybeSingle()

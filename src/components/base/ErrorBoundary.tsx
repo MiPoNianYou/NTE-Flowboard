@@ -2,7 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react'
 import { AlertCircle, RotateCcw } from 'lucide-react'
 import { PAGE_GRADIENT } from '../../utils/colors'
 import { Button } from './Button'
-import NanallyError from '../../assets/nanally-error.webp'
+import ShinkuLogo from '../../assets/shinku-logo.png'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <div className="flex flex-col items-center">
               <div className="flex justify-center mb-4">
                 <div className="w-32 h-32 overflow-hidden">
-                  <img src={NanallyError} alt="Nanally" className="w-full h-full object-cover" />
+                  <img src={ShinkuLogo} alt="Shinku" className="w-full h-full object-cover" />
                 </div>
               </div>
               <h2 className="text-xl font-bold text-text-primary mb-2">出现了一些问题</h2>

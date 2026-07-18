@@ -80,13 +80,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE sync_data;`
 
 interface CloudSyncSetupProps {
   syncError: string | null
-  onSetupSupabase: (projectId: string, anonKey: string) => Promise<void>
+  onSetupSupabase: (projectUrl: string, anonKey: string) => Promise<void>
 }
 
 type ButtonPhase = 'idle' | 'loading' | 'error'
 
 export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupProps) {
-  const [projectIdInput, setProjectIdInput] = useState('')
+  const [projectUrlInput, setProjectUrlInput] = useState('')
   const [anonKeyInput, setAnonKeyInput] = useState('')
   const [isAnonKeyVisible, setIsAnonKeyVisible] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -221,7 +221,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
   }, [buttonErrorMessage])
 
   const handleSetup = async () => {
-    if (buttonPhase !== 'idle' || !projectIdInput.trim() || !anonKeyInput.trim()) return
+    if (buttonPhase !== 'idle' || !projectUrlInput.trim() || !anonKeyInput.trim()) return
     clearButtonFeedback()
     awaitingRequestResultRef.current = true
     hasClearedErrorSinceRequestRef.current = false
@@ -230,7 +230,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
     setLocalError(null)
     const start = Date.now()
     try {
-      await onSetupSupabase(projectIdInput.trim(), anonKeyInput.trim())
+      await onSetupSupabase(projectUrlInput.trim(), anonKeyInput.trim())
       setButtonPhase('idle')
     } catch {
       setLocalError('连接失败，请检查配置')
@@ -258,25 +258,25 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
       <Card variant="surface" className="px-4 py-3">
         <div className="space-y-3">
           <Input
-            label="项目 ID"
-            type="text"
-            value={projectIdInput}
+            label="Project URL"
+            type="url"
+            value={projectUrlInput}
             onChange={(event) => {
               clearButtonFeedback()
-              setProjectIdInput(event.target.value)
+              setProjectUrlInput(event.target.value)
             }}
-            placeholder="abcdefgh123456789xyz"
+            placeholder="https://xxx.supabase.co"
             autoComplete="off"
           />
           <Input
-            label="Anon Key"
+            label="Publishable Key"
             type={isAnonKeyVisible ? 'text' : 'password'}
             value={anonKeyInput}
             onChange={(event) => {
               clearButtonFeedback()
               setAnonKeyInput(event.target.value)
             }}
-            placeholder="eyJhbGciOi..."
+            placeholder="sb_publishable_..."
             autoComplete="off"
             suffix={
               <button
@@ -292,8 +292,8 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         </div>
         <Button
           onClick={handleSetup}
-          disabled={isConnecting || !projectIdInput.trim() || !anonKeyInput.trim()}
-          aria-disabled={buttonPhase !== 'idle' || !projectIdInput.trim() || !anonKeyInput.trim()}
+          disabled={isConnecting || !projectUrlInput.trim() || !anonKeyInput.trim()}
+          aria-disabled={buttonPhase !== 'idle' || !projectUrlInput.trim() || !anonKeyInput.trim()}
           tabIndex={buttonPhase === 'error' ? -1 : undefined}
           variant={buttonPhase === 'error' ? 'danger-soft' : 'primary'}
           className={cn(
@@ -480,30 +480,20 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
           </div>
         </div>
         <div>
-          <p className="font-medium text-text-primary mb-1">3.获取项目 ID</p>
+          <p className="font-medium text-text-primary mb-1">3.获取连接信息</p>
           <div className="flex items-center gap-1 text-xs text-text-secondary flex-wrap">
-            <Path>Project Settings</Path>
+            <Path>Dashboard 主界面</Path>
             <ChevronRight className="size-3 text-text-muted" />
-            <Path>General</Path>
+            <Path>Copy</Path>
             <ChevronRight className="size-3 text-text-muted" />
-            <Path>Project ID</Path>
+            <Path>Project URL</Path>
+            <span>和</span>
+            <Path>Publishable key</Path>
           </div>
         </div>
         <div>
-          <p className="font-medium text-text-primary mb-1">4.获取 Anon Key</p>
-          <div className="flex items-center gap-1 text-xs text-text-secondary flex-wrap">
-            <Path>Project Settings</Path>
-            <ChevronRight className="size-3 text-text-muted" />
-            <Path>API Keys</Path>
-            <ChevronRight className="size-3 text-text-muted" />
-            <Path>Legacy anon</Path>
-            <ChevronRight className="size-3 text-text-muted" />
-            <Path>anon public</Path>
-          </div>
-        </div>
-        <div>
-          <p className="font-medium text-text-primary mb-1">5.完成</p>
-          <p>回到网站输入 Project ID 和 Anon Key 即可连接</p>
+          <p className="font-medium text-text-primary mb-1">4.完成</p>
+          <p>回到网站输入 Project URL 和 Publishable Key 即可连接</p>
         </div>
       </Card>
     </div>

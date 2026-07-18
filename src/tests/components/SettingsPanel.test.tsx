@@ -86,6 +86,15 @@ describe('SettingsPanel', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('should scope the mobile backdrop to mobile widths', () => {
+    render(<SettingsPanel data={mockData} onManualReset={vi.fn()} onImport={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('打开设置'))
+
+    const backdrops = Array.from(document.querySelectorAll('.glass-overlay'))
+    const mobileBackdrop = backdrops.find((backdrop) => backdrop.classList.contains('md:hidden'))
+    expect(mobileBackdrop).toBeDefined()
+  })
+
   it('should call exportData when export button clicked', () => {
     const exportSpy = vi.spyOn(serialization, 'exportData').mockReturnValue('')
     const anchorClickSpy = vi

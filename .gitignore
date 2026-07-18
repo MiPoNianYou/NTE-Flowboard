@@ -36,9 +36,9 @@ desktop.ini
 # Agent config
 .agents/
 .codex/
+docs/
 AGENTS.md
 CONTEXT.md
-docs/
 
 # Design docs
 DESIGN.md

@@ -1,14 +1,20 @@
 import { useState, useRef, useEffect, useCallback, useMemo, type ChangeEvent } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion } from 'motion/react'
 import { Settings, X, ArrowLeft } from 'lucide-react'
 import type { ChecklistData, TabType } from '../types'
 import type { CloudSyncProps } from './settings/CloudSyncSection'
 import { exportData, importData } from '../utils/serialization'
 import { SettingsLayout } from './settings/SettingsLayout'
 import { NAV_ITEMS, type SubPage } from './settings/SettingsNav'
-import { SPRING, PAGE } from '../utils/motion'
+import { SPRING } from '../utils/motion'
 import { Button } from './base/Button'
 import { useTimedToggle } from '../hooks/useTimedToggle'
+
+const SETTINGS_BACKDROP_FILTER_CLOSED = 'blur(0px) saturate(1)'
+const SETTINGS_BACKDROP_FILTER_OPEN = 'blur(15px) saturate(1.2)'
+const SETTINGS_BACKDROP_COLOR_CLOSED = 'rgba(13, 13, 18, 0)'
+const SETTINGS_BACKDROP_COLOR_OPEN = 'rgba(13, 13, 18, 0.8)'
+const SETTINGS_CLOSE = { duration: 0.48, ease: [0.42, 0, 0.58, 1] as const }
 
 interface SettingsPanelProps {
   data: ChecklistData
@@ -24,16 +30,30 @@ export function SettingsPanel({
   cloudSyncProps: rawCloudSyncProps,
 }: SettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isDesktopMounted, setIsDesktopMounted] = useState(false)
+  const [isMobileMounted, setIsMobileMounted] = useState(false)
   const { isShown: isImportError, trigger: triggerImportError } = useTimedToggle()
   const { isShown: isImportSuccess, trigger: triggerImportSuccess } = useTimedToggle()
   const { isShown: isExportSuccess, trigger: triggerExportSuccess } = useTimedToggle()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleOpen = () => setIsOpen(true)
+  const handleOpen = useCallback(() => {
+    setIsDesktopMounted(true)
+    setIsMobileMounted(true)
+    setIsOpen(true)
+  }, [])
 
   const handleClose = useCallback(() => {
     setIsOpen(false)
   }, [])
+
+  const handleDesktopAnimationComplete = useCallback(() => {
+    if (!isOpen) setIsDesktopMounted(false)
+  }, [isOpen])
+
+  const handleMobileAnimationComplete = useCallback(() => {
+    if (!isOpen) setIsMobileMounted(false)
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -143,58 +163,94 @@ export function SettingsPanel({
         <Settings className="size-[20px] lg:size-[22px]" />
       </Button>
 
-      <AnimatePresence mode="wait">
-        {isOpen && (
-          <>
-            <motion.div
-              key="settings-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={PAGE}
-              className="fixed inset-0 z-[200] glass-overlay"
-              onClick={handleClose}
-            />
+      {isMobileMounted && (
+        <>
+          <motion.div
+            initial={{
+              backgroundColor: SETTINGS_BACKDROP_COLOR_CLOSED,
+              backdropFilter: SETTINGS_BACKDROP_FILTER_CLOSED,
+            }}
+            animate={{
+              backgroundColor: isOpen
+                ? SETTINGS_BACKDROP_COLOR_OPEN
+                : SETTINGS_BACKDROP_COLOR_CLOSED,
+              backdropFilter: isOpen
+                ? SETTINGS_BACKDROP_FILTER_OPEN
+                : SETTINGS_BACKDROP_FILTER_CLOSED,
+            }}
+            transition={isOpen ? SPRING : SETTINGS_CLOSE}
+            className={`md:hidden fixed inset-0 z-[200] glass-overlay ${
+              isOpen ? 'pointer-events-auto' : 'pointer-events-none'
+            }`}
+            onClick={handleClose}
+          />
 
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: isOpen ? 0 : '100%' }}
+            transition={isOpen ? SPRING : SETTINGS_CLOSE}
+            onAnimationComplete={handleMobileAnimationComplete}
+            className={`md:hidden fixed bottom-0 left-0 right-0 z-[300] glass-strong border-t border-border rounded-t-2xl flex flex-col ${
+              isOpen ? 'pointer-events-auto' : 'pointer-events-none'
+            }`}
+            style={{ height: 'clamp(380px, 50dvh, 560px)' }}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-hidden={!isOpen}
+            aria-label="设置"
+          >
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-12 h-1.5 rounded-full bg-border-strong/50" />
+            </div>
+            <SettingsLayout {...layoutProps} renderHeader={renderSettingsHeader} />
+          </motion.div>
+        </>
+      )}
+
+      {isDesktopMounted && (
+        <>
+          <motion.div
+            initial={{
+              backgroundColor: SETTINGS_BACKDROP_COLOR_CLOSED,
+              backdropFilter: SETTINGS_BACKDROP_FILTER_CLOSED,
+            }}
+            animate={{
+              backgroundColor: isOpen
+                ? SETTINGS_BACKDROP_COLOR_OPEN
+                : SETTINGS_BACKDROP_COLOR_CLOSED,
+              backdropFilter: isOpen
+                ? SETTINGS_BACKDROP_FILTER_OPEN
+                : SETTINGS_BACKDROP_FILTER_CLOSED,
+            }}
+            transition={isOpen ? SPRING : SETTINGS_CLOSE}
+            className={`hidden md:block fixed inset-0 z-[200] glass-overlay ${
+              isOpen ? 'pointer-events-auto' : 'pointer-events-none'
+            }`}
+            onClick={handleClose}
+          />
+
+          <div className="hidden md:flex fixed inset-0 z-[300] items-center justify-center p-4 pointer-events-none">
             <motion.div
-              key="settings-sheet-mobile"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={SPRING}
-              className="md:hidden fixed bottom-0 left-0 right-0 z-[300] glass-strong border-t border-border rounded-t-2xl flex flex-col"
-              style={{ height: 'clamp(380px, 50dvh, 560px)' }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={isOpen ? { scale: 1, opacity: 1 } : { scale: 0.95, opacity: 0 }}
+              transition={isOpen ? SPRING : SETTINGS_CLOSE}
+              onAnimationComplete={handleDesktopAnimationComplete}
+              className={`relative glass-strong border border-border rounded-2xl w-full max-w-[680px] flex flex-col overflow-hidden shadow-glass ${
+                isOpen ? 'pointer-events-auto' : 'pointer-events-none'
+              }`}
+              style={{ height: 'min(85dvh, 640px)' }}
               onClick={(event) => event.stopPropagation()}
               role="dialog"
               aria-modal="true"
+              aria-hidden={!isOpen}
               aria-label="设置"
             >
-              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-                <div className="w-12 h-1.5 rounded-full bg-border-strong/50" />
-              </div>
               <SettingsLayout {...layoutProps} renderHeader={renderSettingsHeader} />
             </motion.div>
-
-            <div className="hidden md:flex fixed inset-0 z-[300] items-center justify-center p-4 pointer-events-none">
-              <motion.div
-                key="settings-dialog"
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                transition={SPRING}
-                className="relative glass-strong border border-border rounded-2xl w-full max-w-[680px] flex flex-col pointer-events-auto overflow-hidden shadow-glass"
-                style={{ height: 'min(85dvh, 640px)' }}
-                onClick={(event) => event.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-label="设置"
-              >
-                <SettingsLayout {...layoutProps} renderHeader={renderSettingsHeader} />
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
+          </div>
+        </>
+      )}
     </>
   )
 }

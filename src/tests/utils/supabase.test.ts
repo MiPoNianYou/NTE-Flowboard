@@ -164,6 +164,32 @@ describe('resetClient', () => {
 })
 
 describe('validateConfig', () => {
+  it('should use a complete Project URL as the Supabase endpoint', async () => {
+    mockRpc.mockReturnValue({ maybeSingle: mockMaybeSingle })
+    mockMaybeSingle.mockReturnValue({ data: null, error: null })
+
+    await validateConfig('https://project-ref.supabase.co/', 'test-key')
+
+    expect(createClient).toHaveBeenCalledWith(
+      'https://project-ref.supabase.co',
+      'test-key',
+      expect.any(Object),
+    )
+  })
+
+  it('should keep existing Project ID configurations working', async () => {
+    mockRpc.mockReturnValue({ maybeSingle: mockMaybeSingle })
+    mockMaybeSingle.mockReturnValue({ data: null, error: null })
+
+    await validateConfig('project-ref', 'test-key')
+
+    expect(createClient).toHaveBeenCalledWith(
+      'https://project-ref.supabase.co',
+      'test-key',
+      expect.any(Object),
+    )
+  })
+
   it('should return true when RPC succeeds', async () => {
     mockRpc.mockReturnValue({ maybeSingle: mockMaybeSingle })
     mockMaybeSingle.mockReturnValue({ data: null, error: null })

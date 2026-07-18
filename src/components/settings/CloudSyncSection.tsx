@@ -8,7 +8,7 @@ export interface CloudSyncProps {
   lastSyncTime: string | null
   syncError: string | null
   isConfigured: boolean
-  onSetupSupabase: (projectId: string, anonKey: string) => Promise<void>
+  onSetupSupabase: (projectUrl: string, anonKey: string) => Promise<void>
   onTriggerSync: () => Promise<void>
   onTeardownSupabase: () => void
   onClearSyncError?: () => void

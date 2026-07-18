@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" role="img" aria-labelledby="title desc">
+  <title id="title">NTE Flowboard 的周期清单</title>
+  <desc id="desc">每日、每周和每月清单分别按时重置；进度会跟着当前清单更新，重置后开始新一轮。</desc>
+  <defs>
+    <linearGradient id="ring-background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0a0c14"/>
+      <stop offset=".5" stop-color="#0d0d12"/>
+      <stop offset="1" stop-color="#0f1118"/>
+    </linearGradient>
+    <radialGradient id="ring-primary" cx="0" cy="0" r="1" gradientTransform="translate(366 208) rotate(28) scale(406 268)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9080f0" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#9080f0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ring-blue" cx="0" cy="0" r="1" gradientTransform="translate(902 350) rotate(20) scale(376 235)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1868e0" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#1868e0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring-route" x1="480" y1="168" x2="720" y2="408" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#65c8d6"/>
+      <stop offset=".48" stop-color="#9080f0"/>
+      <stop offset="1" stop-color="#e9bb66"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="470" rx="26" fill="url(#ring-background)"/>
+  <rect width="1200" height="470" rx="26" fill="url(#ring-primary)"/>
+  <rect width="1200" height="470" rx="26" fill="url(#ring-blue)"/>
+
+  <g id="heading" transform="translate(58 55)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <text fill="#fffffff2" font-size="32" font-weight="700" letter-spacing="-.7">每日、每周、每月，分别按时重置</text>
+    <text y="31" fill="#ffffffa6" font-size="17">进度会跟着当前清单更新，重置后开始新一轮。</text>
+  </g>
+  <path d="M58 100H1142" stroke="#ffffff14"/>
+
+  <g id="continuous-dial" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="600" cy="288" r="120" stroke="#ffffff0d" stroke-width="8"/>
+    <circle cx="600" cy="288" r="120" stroke="url(#ring-route)" stroke-width="2.5"/>
+    <path d="M600 168A120 120 0 0 1 720 288" stroke="#9080f0" stroke-opacity=".72" stroke-width="5"/>
+    <path d="M720 288A120 120 0 0 1 600 408" stroke="#65c8d6" stroke-opacity=".72" stroke-width="5"/>
+    <path d="M600 408A120 120 0 0 1 480 288" stroke="#e9bb66" stroke-opacity=".72" stroke-width="5"/>
+    <path d="M480 288A120 120 0 0 1 600 168" stroke="#14ad81" stroke-opacity=".72" stroke-width="5"/>
+  </g>
+
+  <g id="dial-core" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <circle cx="600" cy="288" r="89" fill="#ffffff0b" stroke="#ffffff1a"/>
+    <circle cx="600" cy="288" r="70" fill="none" stroke="#ffffff0d"/>
+    <text x="600" y="266" text-anchor="middle" fill="#fffffff2" font-size="20" font-weight="700">本轮清单</text>
+    <text x="600" y="291" text-anchor="middle" fill="#ffffffa6" font-size="14">2 / 6 项已完成</text>
+    <g transform="translate(523 311)" font-size="12" font-weight="600">
+      <rect width="47" height="24" rx="12" fill="#9080f01f"/>
+      <text x="23.5" y="16" text-anchor="middle" fill="#c5bcff">每日</text>
+      <rect x="53" width="47" height="24" rx="12" fill="#15a0b81f"/>
+      <text x="76.5" y="16" text-anchor="middle" fill="#78cedb">每周</text>
+      <rect x="106" width="47" height="24" rx="12" fill="#e0a0301f"/>
+      <text x="129.5" y="16" text-anchor="middle" fill="#e9bb66">每月</text>
+    </g>
+  </g>
+
+  <g id="stage-current" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <circle cx="600" cy="168" r="24" fill="#9080f03d" stroke="#c5bcff" stroke-width="1.5"/>
+    <g transform="translate(589.5 157.5) scale(.875)" fill="none" stroke="#e1dcff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 2v4M16 2v4"/>
+      <rect width="18" height="18" x="3" y="4" rx="2"/>
+      <path d="M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>
+    </g>
+    <text x="600" y="131.75" text-anchor="middle" fill="#fffffff2" font-size="16" font-weight="700">本轮清单</text>
+  </g>
+
+  <g id="stage-progress" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <circle cx="720" cy="288" r="24" fill="#15a0b83d" stroke="#78cedb" stroke-width="1.5"/>
+    <circle cx="720" cy="288" r="10.5" fill="none" stroke="#c3f5fa" stroke-width="2.8" stroke-dasharray="22 44" transform="rotate(-90 720 288)"/>
+    <text x="754" y="283" fill="#fffffff2" font-size="16" font-weight="700">完成进度</text>
+    <text x="754" y="303" fill="#ffffffa6" font-size="13">随清单即时更新</text>
+  </g>
+
+  <g id="stage-reset" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <circle cx="600" cy="408" r="24" fill="#e0a03038" stroke="#e9bb66" stroke-width="1.5"/>
+    <g transform="translate(589.2 397.2) scale(.9)" fill="none" stroke="#ffe2a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+    </g>
+    <text x="600" y="455.75" text-anchor="middle" fill="#fffffff2" font-size="16" font-weight="700">到点自动重置</text>
+  </g>
+
+  <g id="stage-new-round" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <circle cx="480" cy="288" r="24" fill="#14ad813d" stroke="#68d0ab" stroke-width="1.5"/>
+    <path d="M470 288h20M480 278v20M474 282l12 12M486 282l-12 12" fill="none" stroke="#c0f5de" stroke-width="1.8" stroke-linecap="round"/>
+    <text x="446.25" y="283" text-anchor="end" fill="#fffffff2" font-size="16" font-weight="700">新的一轮</text>
+    <text x="446.25" y="303" text-anchor="end" fill="#ffffffa6" font-size="13">回到 0 / 6</text>
+  </g>
+</svg>
