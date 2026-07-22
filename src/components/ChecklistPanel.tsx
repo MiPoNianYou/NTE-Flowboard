@@ -21,6 +21,7 @@ import { CARD_STYLES } from '../utils/stylePresets'
 import { cn } from '../utils/cn'
 import { UI } from '../utils/constants'
 import { SPRING, ENTRY, PAGE, DRAG_LAYOUT, DROP_ANIMATION_MS } from '../utils/motion'
+import { useTranslation } from 'react-i18next'
 
 interface ChecklistPanelProps {
   visibleItems: ChecklistItem[]
@@ -49,6 +50,7 @@ export function ChecklistPanel({
   shouldConfirmDelete,
   emptyAction,
 }: ChecklistPanelProps) {
+  const { t } = useTranslation()
   const { sortedItems, sortedItemIds } = useSortedItems(visibleItems, isAutoMoveEnabled)
   const outerRef = useRef<HTMLDivElement>(null)
   const [verticalPadding, setVerticalPadding] = useState(0)
@@ -167,7 +169,7 @@ export function ChecklistPanel({
           <div className="relative">
             <div ref={sortedItems.length === 0 ? emptyContentRef : undefined}>
               {isEmpty ? (
-                <EmptyState title="暂无任务" action={emptyAction} />
+                <EmptyState title={t('checklist.emptyTitle')} action={emptyAction} />
               ) : (
                 <div className="space-y-1.5">
                   <SortList

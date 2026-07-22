@@ -162,7 +162,7 @@ body {
 .danger-confirm-button {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   width: 45px;
   height: 45px;
   padding: 0;
@@ -184,7 +184,7 @@ body {
   background: color-mix(in srgb, var(--color-danger) 20%, transparent);
 }
 .danger-confirm-button .sign {
-  width: 100%;
+  width: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -197,9 +197,7 @@ body {
   transition: color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .danger-confirm-button .text {
-  position: absolute;
-  right: 0;
-  width: 0;
+  max-width: 0;
   opacity: 0;
   overflow: hidden;
   font-size: 0.875rem;
@@ -207,7 +205,7 @@ body {
   color: var(--color-text-primary);
   white-space: nowrap;
   transition:
-    width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    max-width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -220,13 +218,14 @@ body {
   background: var(--color-danger);
   border-color: var(--color-danger);
   color: var(--color-text-primary);
+  gap: 8px;
 }
 .danger-confirm-button.expanded .sign svg {
   color: var(--color-text-primary);
 }
 .danger-confirm-button.expanded .text {
   opacity: 1;
-  width: 70%;
+  max-width: 84px;
   letter-spacing: 0.01em;
 }
 .danger-confirm-button:active {
@@ -246,11 +245,7 @@ body {
 }
 
 .danger-confirm-button--default.expanded {
-  width: 125px;
-}
-
-.danger-confirm-button--default.expanded .sign {
-  width: 30%;
+  width: 136px;
 }
 
 .danger-confirm-button--default.expanded .text {
@@ -265,7 +260,7 @@ body {
 }
 
 .danger-confirm-button--compact .sign {
-  width: 100%;
+  width: 11px;
 }
 
 .danger-confirm-button--compact .sign svg {
@@ -274,12 +269,9 @@ body {
 }
 
 .danger-confirm-button--compact.expanded {
-  width: 78px;
+  width: 88px;
   border-radius: 0.375rem;
-}
-
-.danger-confirm-button--compact.expanded .sign {
-  width: 30%;
+  gap: 6px;
 }
 
 .danger-confirm-button--compact.expanded .text {

@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { ChecklistData } from '../types'
 import { isChecklistData } from './validation'
 import { mergeChecklistData } from './dataMigration'
+import i18n from '../i18n'
 
 const SYNC_TABLE = 'sync_data'
 
@@ -116,24 +117,24 @@ export class SyncError extends Error {
 }
 
 export function classifySyncError(error: unknown): string {
-  if (!(error instanceof SyncError)) return '同步失败'
+  if (!(error instanceof SyncError)) return i18n.t('sync.failed')
 
   const errorMessage = error.message.toLowerCase()
 
   if (errorMessage.includes('column') && errorMessage.includes('does not exist'))
-    return '数据表结构不对，请删除后重新执行建表脚本'
+    return i18n.t('sync.tableSchema')
   if (errorMessage.includes('relation') && errorMessage.includes('does not exist'))
-    return '数据表不存在，请执行建表脚本'
+    return i18n.t('sync.tableMissing')
 
   if (errorMessage.includes('permission denied') || error.code === '42501')
-    return '没有访问权限，请检查 RLS 策略'
+    return i18n.t('sync.permission')
   if (errorMessage.includes('invalid api key') || error.code === '28P01')
-    return '密钥无效，请检查 Publishable Key'
-  if (errorMessage.includes('failed to fetch') || !error.code) return '连接失败，请检查网络'
+    return i18n.t('sync.invalidKey')
+  if (errorMessage.includes('failed to fetch') || !error.code) return i18n.t('sync.network')
 
-  if (error.code === 'INVALID_DATA') return '云端数据格式无效，请重新同步'
+  if (error.code === 'INVALID_DATA') return i18n.t('sync.invalidCloudData')
 
-  return '同步失败，请检查配置后重试'
+  return i18n.t('sync.retry')
 }
 
 export type ValidateReason =
@@ -196,11 +197,11 @@ export async function pushData(
   })
 
   if (error) {
-    throw new SyncError(`推送失败: ${error.message}`, 'PUSH_ERROR')
+    throw new SyncError(i18n.t('sync.pushFailed', { message: error.message }), 'PUSH_ERROR')
   }
 
   if (typeof result !== 'string') {
-    throw new SyncError('推送返回格式异常', 'PUSH_ERROR')
+    throw new SyncError(i18n.t('sync.pushInvalid'), 'PUSH_ERROR')
   }
 
   return result
@@ -218,7 +219,7 @@ export async function pullData(
     if (error.code === 'PGRST116') {
       return null
     }
-    throw new SyncError(`拉取失败: ${error.message}`, 'PULL_ERROR')
+    throw new SyncError(i18n.t('sync.pullFailed', { message: error.message }), 'PULL_ERROR')
   }
 
   if (!row) {
@@ -229,15 +230,15 @@ export async function pullData(
   try {
     parsed = JSON.parse(row.data)
   } catch {
-    throw new SyncError('云端数据格式无效', 'INVALID_DATA')
+    throw new SyncError(i18n.t('sync.cloudDataInvalid'), 'INVALID_DATA')
   }
 
   if (!isChecklistData(parsed)) {
-    throw new SyncError('云端数据格式无效', 'INVALID_DATA')
+    throw new SyncError(i18n.t('sync.cloudDataInvalid'), 'INVALID_DATA')
   }
 
   if (typeof row.updated_at !== 'string') {
-    throw new SyncError('云端数据缺少更新时间', 'INVALID_DATA')
+    throw new SyncError(i18n.t('sync.missingUpdatedAt'), 'INVALID_DATA')
   }
 
   return {

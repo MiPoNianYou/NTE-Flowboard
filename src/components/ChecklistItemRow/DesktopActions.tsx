@@ -7,6 +7,7 @@ import {
   PENDING_DELETE_STYLE,
 } from '../../utils/stylePresets'
 import { Button } from '../base/Button'
+import { useTranslation } from 'react-i18next'
 
 export interface ItemActionProps {
   onEdit: () => void
@@ -16,6 +17,7 @@ export interface ItemActionProps {
 }
 
 export function DesktopActions({ onEdit, onHide, onDelete, isPending }: ItemActionProps) {
+  const { t } = useTranslation()
   return (
     <div className="hidden lg:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
       <Button
@@ -25,6 +27,7 @@ export function DesktopActions({ onEdit, onHide, onDelete, isPending }: ItemActi
           onEdit()
         }}
         className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
+        aria-label={t('common.edit')}
       >
         <Pencil size={15} />
       </Button>
@@ -35,6 +38,7 @@ export function DesktopActions({ onEdit, onHide, onDelete, isPending }: ItemActi
           onHide()
         }}
         className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_WARNING)}
+        aria-label={t('common.hide')}
       >
         <EyeOff size={15} />
       </Button>
@@ -42,6 +46,7 @@ export function DesktopActions({ onEdit, onHide, onDelete, isPending }: ItemActi
         variant="tertiary"
         onClick={onDelete}
         className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_DANGER, isPending && PENDING_DELETE_STYLE)}
+        aria-label={isPending ? t('common.confirmDelete') : t('common.delete')}
       >
         <Trash2 size={15} />
       </Button>

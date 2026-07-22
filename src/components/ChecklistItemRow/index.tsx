@@ -28,6 +28,7 @@ import {
 } from '../../utils/stylePresets'
 import { TagEditor } from './TagEditor'
 import { TAG_COLLECTION_LIMIT } from '../../utils/tagCollection'
+import { useTranslation } from 'react-i18next'
 
 const COMPACT_HEADER_CLASS = 'max-[419px]:min-h-14'
 
@@ -56,6 +57,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
   suppressMountAnimation,
   isDragOverlay,
 }: ChecklistItemRowProps) {
+  const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [draftText, setDraftText] = useState(item.text)
@@ -196,7 +198,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
     (nextText: string) => {
       const trimmed = nextText.trim()
       if (!trimmed) {
-        setEditError('任务名称不能为空')
+        setEditError(t('item.nameRequired'))
         inputRef.current?.focus()
         return
       }
@@ -209,7 +211,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
       setIsTagEditorBusy(false)
       setIsExpanded(false)
     },
-    [onEdit, tab, item.id, draftTags],
+    [onEdit, tab, item.id, draftTags, t],
   )
 
   const handleEditKeyDown = useCallback(
@@ -281,7 +283,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                       'cursor-grab active:cursor-grabbing hover:text-text-secondary',
                       isDragging && 'text-primary',
                     )}
-                    aria-label="拖拽排序"
+                    aria-label={t('item.drag')}
                   >
                     <GripVertical size={14} className="lg:hidden" />
                     <GripVertical size={16} className="hidden lg:block" />
@@ -306,8 +308,8 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                             'placeholder:text-text-muted whitespace-nowrap overflow-x-auto',
                             editError && 'placeholder:text-[#e8525266]',
                           )}
-                          placeholder={editError ?? '输入任务名称...'}
-                          aria-label="编辑任务名称"
+                          placeholder={editError ?? t('addItem.placeholder')}
+                          aria-label={t('item.editName')}
                           aria-invalid={!!editError}
                         />
                       </div>
@@ -328,7 +330,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                             variant="tertiary"
                             onClick={cancelEdit}
                             className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_INFO)}
-                            aria-label="取消"
+                            aria-label={t('common.cancel')}
                           >
                             <X size={15} />
                           </Button>
@@ -336,7 +338,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                             variant="tertiary"
                             onClick={() => setTagAddRequest((count) => count + 1)}
                             className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
-                            aria-label="新增标签"
+                            aria-label={t('item.addTag')}
                             disabled={isTagEditorBusy || draftTags.length >= TAG_COLLECTION_LIMIT}
                           >
                             <TagPlus size={15} />
@@ -345,7 +347,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                             variant="tertiary"
                             onClick={() => handleSave(draftText)}
                             className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_SUCCESS)}
-                            aria-label="保存"
+                            aria-label={t('common.save')}
                           >
                             <Save size={15} />
                           </Button>
@@ -362,11 +364,11 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                       onClick={cancelEdit}
                       className={MOBILE_ACTION_LAYOUT.button}
                       contentClassName={MOBILE_ACTION_LAYOUT.content}
-                      aria-label="取消"
-                      title="取消"
+                      aria-label={t('common.cancel')}
+                      title={t('common.cancel')}
                     >
                       <X size={13} className={MOBILE_ACTION_LAYOUT.icon} />
-                      <span className={MOBILE_ACTION_LAYOUT.label}>取消</span>
+                      <span className={MOBILE_ACTION_LAYOUT.label}>{t('common.cancel')}</span>
                     </Button>
                     <Button
                       variant="primary-soft"
@@ -374,22 +376,22 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                       className={MOBILE_ACTION_LAYOUT.button}
                       contentClassName={MOBILE_ACTION_LAYOUT.content}
                       disabled={isTagEditorBusy}
-                      aria-label="新增标签"
-                      title="新增标签"
+                      aria-label={t('item.addTag')}
+                      title={t('item.addTag')}
                     >
                       <TagPlus size={13} className={MOBILE_ACTION_LAYOUT.icon} />
-                      <span className={MOBILE_ACTION_LAYOUT.label}>新增标签</span>
+                      <span className={MOBILE_ACTION_LAYOUT.label}>{t('item.addTag')}</span>
                     </Button>
                     <Button
                       variant="success-soft"
                       onClick={() => handleSave(draftText)}
                       className={MOBILE_ACTION_LAYOUT.button}
                       contentClassName={MOBILE_ACTION_LAYOUT.content}
-                      aria-label="保存"
-                      title="保存"
+                      aria-label={t('common.save')}
+                      title={t('common.save')}
                     >
                       <Save size={13} className={MOBILE_ACTION_LAYOUT.icon} />
-                      <span className={MOBILE_ACTION_LAYOUT.label}>保存</span>
+                      <span className={MOBILE_ACTION_LAYOUT.label}>{t('common.save')}</span>
                     </Button>
                   </div>
                 )}
@@ -420,7 +422,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                     'cursor-grab active:cursor-grabbing hover:text-text-secondary',
                     isDragging && 'text-primary',
                   )}
-                  aria-label="拖拽排序"
+                  aria-label={t('item.drag')}
                 >
                   <GripVertical size={14} className="lg:hidden" />
                   <GripVertical size={16} className="hidden lg:block" />
@@ -432,8 +434,8 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                   initial={suppressMountAnimation && item.isCompleted ? false : undefined}
                   aria-label={
                     item.isCompleted
-                      ? `标记「${item.text}」为未完成`
-                      : `标记「${item.text}」为已完成`
+                      ? t('item.markIncomplete', { name: item.text })
+                      : t('item.markComplete', { name: item.text })
                   }
                   aria-pressed={item.isCompleted}
                   className={cn(
@@ -488,12 +490,14 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                   </div>
                 )}
 
-                <DesktopActions
-                  onEdit={beginEdit}
-                  onHide={() => onHide(tab, item.id)}
-                  onDelete={handleDeleteClick}
-                  isPending={isPending(item.id)}
-                />
+                {!usesMobileActions && (
+                  <DesktopActions
+                    onEdit={beginEdit}
+                    onHide={() => onHide(tab, item.id)}
+                    onDelete={handleDeleteClick}
+                    isPending={isPending(item.id)}
+                  />
+                )}
 
                 <ChevronRight
                   size={15}
@@ -504,13 +508,15 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                 />
               </div>
 
-              <MobileActions
-                onEdit={beginEdit}
-                onHide={() => onHide(tab, item.id)}
-                onDelete={handleDeleteClick}
-                isPending={isPending(item.id)}
-                isExpanded={isExpanded}
-              />
+              {usesMobileActions && (
+                <MobileActions
+                  onEdit={beginEdit}
+                  onHide={() => onHide(tab, item.id)}
+                  onDelete={handleDeleteClick}
+                  isPending={isPending(item.id)}
+                  isExpanded={isExpanded}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>

@@ -2,25 +2,27 @@ import { memo } from 'react'
 import { CalendarDays, CalendarRange, CalendarFold } from 'lucide-react'
 import type { TabType } from '../types'
 import { cn } from '../utils/cn'
+import { useTranslation } from 'react-i18next'
 
 interface TabSwitchProps {
   activeTab: TabType
   onTabChange: (tab: TabType) => void
 }
 
-const tabs: { key: TabType; label: string; icon: typeof CalendarDays }[] = [
-  { key: 'daily', label: '每日清单', icon: CalendarDays },
-  { key: 'weekly', label: '每周清单', icon: CalendarRange },
-  { key: 'monthly', label: '每月清单', icon: CalendarFold },
+const tabs: { key: TabType; icon: typeof CalendarDays }[] = [
+  { key: 'daily', icon: CalendarDays },
+  { key: 'weekly', icon: CalendarRange },
+  { key: 'monthly', icon: CalendarFold },
 ]
 
 export const TabSwitch = memo(function TabSwitch({ activeTab, onTabChange }: TabSwitchProps) {
+  const { t } = useTranslation()
   return (
     <div
       className="glass divide-y divide-border rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.03] hover:shadow-card-hover"
       role="tablist"
     >
-      {tabs.map(({ key, label, icon: Icon }) => (
+      {tabs.map(({ key, icon: Icon }) => (
         <button
           key={key}
           role="tab"
@@ -34,7 +36,7 @@ export const TabSwitch = memo(function TabSwitch({ activeTab, onTabChange }: Tab
           )}
         >
           <Icon className="size-5 shrink-0" />
-          <span className="text-sm font-medium">{label}</span>
+          <span className="text-sm font-medium">{t(`tabs.${key}`)}</span>
         </button>
       ))}
     </div>

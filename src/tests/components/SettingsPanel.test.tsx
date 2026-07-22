@@ -1,8 +1,14 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { render as renderBase, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SettingsPanel } from '../../components/SettingsPanel'
+import { DisplayPreferencesProvider } from '../../context/DisplayPreferencesContext'
 import type { ChecklistData } from '../../types'
 import * as serialization from '../../utils/serialization'
+
+function render(ui: ReactNode) {
+  return renderBase(<DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>)
+}
 
 vi.mock('../../context/SettingsContext', () => ({
   useSettings: () => ({

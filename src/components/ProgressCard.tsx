@@ -4,6 +4,7 @@ import { cn } from '../utils/cn'
 import { ProgressRing } from './ProgressRing'
 import { Card } from './base/Card'
 import { Badge } from './base/Badge'
+import { useTranslation } from 'react-i18next'
 
 interface ProgressCardProps {
   activeTab: TabType
@@ -20,8 +21,8 @@ export const ProgressCard = memo(function ProgressCard({
   isAllDone,
   nextResetLabel,
 }: ProgressCardProps) {
-  const title =
-    activeTab === 'daily' ? '今日进度' : activeTab === 'weekly' ? '本周进度' : '本月进度'
+  const { t } = useTranslation()
+  const title = t(`progress.${activeTab}`)
 
   return (
     <Card variant="glass" className={cn('p-4 md:p-5', isAllDone && 'border-success/30')}>
@@ -30,24 +31,24 @@ export const ProgressCard = memo(function ProgressCard({
           <div className="md:hidden flex flex-col justify-center h-20">
             <h2 className="text-sm font-medium text-text-primary">{title}</h2>
             <p className="text-xs text-text-secondary mt-0.5">
-              {completedCount} / {totalCount} 项已完成
+              {t('progress.completed', { completed: completedCount, total: totalCount })}
             </p>
             <p className="text-xs text-text-muted mt-0.5">{nextResetLabel}</p>
             {isAllDone && (
               <Badge variant="success" className="animate-pulse mt-1.5 self-start">
-                全部完成
+                {t('progress.allDone')}
               </Badge>
             )}
           </div>
           <div className="hidden md:flex md:flex-col justify-center md:h-20">
             <h2 className="text-sm font-medium text-text-primary">{title}</h2>
             <p className="text-xs text-text-secondary mt-0.5">
-              {completedCount} / {totalCount} 项已完成
+              {t('progress.completed', { completed: completedCount, total: totalCount })}
             </p>
             <p className="text-xs text-text-muted mt-0.5">{nextResetLabel}</p>
             {isAllDone && (
               <Badge variant="success" className="animate-pulse mt-1.5 self-start">
-                全部完成
+                {t('progress.allDone')}
               </Badge>
             )}
           </div>

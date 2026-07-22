@@ -9,6 +9,7 @@ import { NAV_ITEMS, type SubPage } from './settings/SettingsNav'
 import { SPRING } from '../utils/motion'
 import { Button } from './base/Button'
 import { useTimedToggle } from '../hooks/useTimedToggle'
+import { useTranslation } from 'react-i18next'
 
 const SETTINGS_BACKDROP_FILTER_CLOSED = 'blur(0px) saturate(1)'
 const SETTINGS_BACKDROP_FILTER_OPEN = 'blur(15px) saturate(1.2)'
@@ -29,6 +30,7 @@ export function SettingsPanel({
   onImport,
   cloudSyncProps: rawCloudSyncProps,
 }: SettingsPanelProps) {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [isDesktopMounted, setIsDesktopMounted] = useState(false)
   const [isMobileMounted, setIsMobileMounted] = useState(false)
@@ -135,31 +137,41 @@ export function SettingsPanel({
       activeTab ? (
         <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
           <h2 className="text-base font-bold text-text-primary">
-            {NAV_ITEMS.find((item) => item.id === activeTab)?.label ?? ''}
+            {t(NAV_ITEMS.find((item) => item.id === activeTab)?.labelKey ?? '')}
           </h2>
           <Button
             variant="tertiary"
             onClick={() => setActiveTab(null)}
             className="p-1.5"
-            aria-label="返回设置列表"
+            aria-label={t('settings.backToList')}
           >
             <ArrowLeft className="size-[18px]" />
           </Button>
         </div>
       ) : (
         <div className="flex items-center justify-between px-5 py-3 border-b border-border flex-shrink-0">
-          <h2 className="text-base font-bold text-text-primary">设置</h2>
-          <Button variant="tertiary" onClick={handleClose} className="p-1.5">
+          <h2 className="text-base font-bold text-text-primary">{t('settings.title')}</h2>
+          <Button
+            variant="tertiary"
+            onClick={handleClose}
+            className="p-1.5"
+            aria-label={t('common.close')}
+          >
             <X className="size-[18px]" />
           </Button>
         </div>
       ),
-    [handleClose],
+    [handleClose, t],
   )
 
   return (
     <>
-      <Button variant="tertiary" onClick={handleOpen} className="p-2 lg:p-2" aria-label="打开设置">
+      <Button
+        variant="tertiary"
+        onClick={handleOpen}
+        className="p-2 lg:p-2"
+        aria-label={t('settings.open')}
+      >
         <Settings className="size-[20px] lg:size-[22px]" />
       </Button>
 
@@ -198,7 +210,7 @@ export function SettingsPanel({
             role="dialog"
             aria-modal="true"
             aria-hidden={!isOpen}
-            aria-label="设置"
+            aria-label={t('settings.title')}
           >
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
               <div className="w-12 h-1.5 rounded-full bg-border-strong/50" />
@@ -244,7 +256,7 @@ export function SettingsPanel({
               role="dialog"
               aria-modal="true"
               aria-hidden={!isOpen}
-              aria-label="设置"
+              aria-label={t('settings.title')}
             >
               <SettingsLayout {...layoutProps} renderHeader={renderSettingsHeader} />
             </motion.div>

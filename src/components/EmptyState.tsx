@@ -1,12 +1,7 @@
 import { type ReactNode, useMemo } from 'react'
 import { motion } from 'motion/react'
 import { STAGGER, APPLE_EASE } from '../utils/motion'
-
-const fallbackSubtitles = [
-  '没什么事做的话，要不要听听我的家族兴建大计？',
-  '早上好！有新的委托吗？柯林斯家族随时可以出发！',
-  '还早还早，再出去转一趟吧',
-]
+import { useTranslation } from 'react-i18next'
 
 interface EmptyStateProps {
   title: string
@@ -30,9 +25,10 @@ const rowVariants = {
 }
 
 export function EmptyState({ title, subtitle, action }: EmptyStateProps) {
+  const { t } = useTranslation()
   const displaySubtitle = useMemo(
-    () => subtitle ?? fallbackSubtitles[Math.floor(Math.random() * fallbackSubtitles.length)],
-    [subtitle],
+    () => subtitle ?? t(`checklist.emptySubtitle${Math.floor(Math.random() * 3) + 1}`),
+    [subtitle, t],
   )
   return (
     <div className="flex flex-col items-center justify-center py-10 md:py-14 gap-4 text-text-muted">

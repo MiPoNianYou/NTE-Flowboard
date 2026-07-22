@@ -2,8 +2,10 @@ import type { ChecklistData, ChecklistItem } from '../types'
 import { MS } from './constants'
 import { isChecklistData } from './validation'
 import { migrateDataStructure, mergeChecklistData } from './dataMigration'
-import { DEFAULT_CHECKLIST_DATA } from './defaultData'
+import { createDefaultChecklistData } from './defaultData'
 import { toastBus } from './toastBus'
+import { getEffectiveLocale } from '../i18n/displayPreferences'
+import i18n from '../i18n'
 
 const STORAGE_KEY = 'flowboard-checklist'
 const CORRUPTED_BACKUP_KEY = 'flowboard-corrupted-backup'
@@ -23,7 +25,7 @@ function migrateLegacyKeys(): void {
       const migrated = migrateDataStructure(parsed)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
     } catch {
-      console.warn('[Storage] 旧数据迁移失败，下次启动将重试')
+      console.warn(`[Storage] ${i18n.t('storage.legacyMigrationFailed')}`)
       return
     }
     localStorage.removeItem(oldDataKey)
@@ -91,7 +93,7 @@ function migrateLegacyKeys(): void {
 function backupCorruptedData(raw: string): void {
   try {
     localStorage.setItem(CORRUPTED_BACKUP_KEY, raw)
-    notifyStorageError(new Error('数据格式异常，已备份原始数据'), '数据恢复')
+    notifyStorageError(new Error(i18n.t('storage.invalidBackup')), i18n.t('storage.recovery'))
   } catch {
     void 0
   }
@@ -101,18 +103,18 @@ export function loadData(): ChecklistData {
   try {
     migrateLegacyKeys()
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return structuredClone(DEFAULT_CHECKLIST_DATA)
+    if (!raw) return createDefaultChecklistData(getEffectiveLocale())
     const parsed: unknown = JSON.parse(raw)
     if (!isChecklistData(parsed)) {
       backupCorruptedData(raw)
-      return structuredClone(DEFAULT_CHECKLIST_DATA)
+      return createDefaultChecklistData(getEffectiveLocale())
     }
     return mergeChecklistData(parsed)
   } catch (error) {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) backupCorruptedData(raw)
-    notifyStorageError(error, '读取数据失败，已重置为默认数据')
-    return structuredClone(DEFAULT_CHECKLIST_DATA)
+    notifyStorageError(error, i18n.t('storage.loadFailed'))
+    return createDefaultChecklistData(getEffectiveLocale())
   }
 }
 
@@ -134,7 +136,7 @@ export function saveData(data: ChecklistData): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
     } catch (error) {
-      notifyStorageError(error, '保存数据失败')
+      notifyStorageError(error, i18n.t('storage.saveFailed'))
     }
     saveTimeout = null
   }, MS.STORAGE_DEBOUNCE)
@@ -145,7 +147,7 @@ export function saveDataImmediate(data: ChecklistData): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   } catch (error) {
-    notifyStorageError(error, '保存数据失败')
+    notifyStorageError(error, i18n.t('storage.saveFailed'))
   }
 }
 

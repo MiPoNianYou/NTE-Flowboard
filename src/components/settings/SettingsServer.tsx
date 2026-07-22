@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { Globe } from 'lucide-react'
 import type { ServerRegion } from '../../types'
 import { SERVER_REGIONS } from '../../utils/defaultData'
 import { cn } from '../../utils/cn'
@@ -6,6 +7,8 @@ import { SPRING } from '../../utils/motion'
 import { SettingsPage } from './SettingsPage'
 import { Card } from '../base/Card'
 import { useSettings } from '../../context/SettingsContext'
+import { useDisplayPreferences } from '../../context/DisplayPreferencesContext'
+import { useTranslation } from 'react-i18next'
 
 interface SettingsServerProps {
   onBack?: () => void
@@ -13,16 +16,24 @@ interface SettingsServerProps {
 }
 
 export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
+  const { t } = useTranslation()
   const { settings, updateSettings } = useSettings()
+  const { locale, timeFormat } = useDisplayPreferences()
+  const resetTime = new Intl.DateTimeFormat(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: timeFormat === '12h',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(2020, 0, 1, 5)))
 
   return (
-    <SettingsPage title="服务器设置" onBack={onBack} isEmbedded={isEmbedded}>
+    <SettingsPage title={t('settings.nav.server')} onBack={onBack} isEmbedded={isEmbedded}>
       <div className="space-y-4">
         <div className="space-y-2">
           {(
             Object.entries(SERVER_REGIONS) as [
               ServerRegion,
-              { label: string; description: string; abbreviation: string },
+              { label: string; description: string },
             ][]
           ).map(([region, regionInfo]) => {
             const isSelected = settings.serverRegion === region
@@ -48,9 +59,7 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
                     : 'bg-surface border border-border',
                 )}
               >
-                <span className="font-mono text-sm font-medium text-text-muted flex-shrink-0 w-8 text-center">
-                  {regionInfo.abbreviation}
-                </span>
+                <Globe aria-hidden="true" className="size-5 flex-shrink-0 text-text-muted" />
                 <div className="flex-1">
                   <p
                     className={cn(
@@ -58,9 +67,13 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
                       isSelected ? 'text-primary' : 'text-text-primary',
                     )}
                   >
-                    {regionInfo.label}
+                    {t(`settings.server.${region}`)}
                   </p>
-                  <p className="text-xs text-text-secondary">{regionInfo.description}</p>
+                  <p className="text-xs text-text-secondary">
+                    {region === 'asia'
+                      ? `UTC+8 (${t('settings.server.fixed')})`
+                      : regionInfo.description}
+                  </p>
                 </div>
               </motion.button>
             )
@@ -69,9 +82,9 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
 
         <Card className="px-4 py-3">
           <p className="text-[11px] text-text-secondary leading-relaxed">
-            每日·每周一·每月一日 <span className="font-medium text-text-primary">5:00 AM</span> 重置
+            {t('settings.server.resetSchedule', { time: resetTime })}
             <br />
-            <span className="text-text-muted">按服务器时区，含夏令时自动调整</span>
+            <span className="text-text-muted">{t('settings.server.timezoneNote')}</span>
           </p>
         </Card>
       </div>

@@ -1,6 +1,12 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { render as renderBase, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { CloudSyncSection } from '../../../components/settings/CloudSyncSection'
+import { DisplayPreferencesProvider } from '../../../context/DisplayPreferencesContext'
+
+function render(ui: ReactNode) {
+  return renderBase(<DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>)
+}
 
 let mockCloudPatchHidden = false
 

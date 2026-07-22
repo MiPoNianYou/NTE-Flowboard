@@ -4,6 +4,7 @@ import type { ChecklistItem } from '../../types'
 import { ACTION_HOVER_SUCCESS, ACTION_HOVER_INFO } from '../../utils/stylePresets'
 import { TagInput } from '../TagInput'
 import { Button } from '../base/Button'
+import { useTranslation } from 'react-i18next'
 
 interface ItemEditorProps {
   item: ChecklistItem
@@ -12,6 +13,7 @@ interface ItemEditorProps {
 }
 
 export function ItemEditor({ item, onSave, onCancel }: ItemEditorProps) {
+  const { t } = useTranslation()
   const [text, setText] = useState(item.text)
   const [tags, setTags] = useState<string[]>(item.tags ?? [])
 
@@ -37,13 +39,23 @@ export function ItemEditor({ item, onSave, onCancel }: ItemEditorProps) {
           onKeyDown={handleKeyDown}
           autoFocus
           className="flex-1 bg-transparent outline-none text-sm text-text-primary placeholder-text-muted"
-          placeholder="输入任务名称..."
+          placeholder={t('addItem.placeholder')}
         />
-        <Button variant="tertiary" onClick={handleSave} className={ACTION_HOVER_SUCCESS}>
+        <Button
+          variant="tertiary"
+          onClick={handleSave}
+          className={ACTION_HOVER_SUCCESS}
+          aria-label={t('common.save')}
+        >
           <Save size={15} className="lg:hidden" />
           <Save size={17} className="hidden lg:block" />
         </Button>
-        <Button variant="tertiary" onClick={onCancel} className={ACTION_HOVER_INFO}>
+        <Button
+          variant="tertiary"
+          onClick={onCancel}
+          className={ACTION_HOVER_INFO}
+          aria-label={t('common.cancel')}
+        >
           <X size={15} className="lg:hidden" />
           <X size={17} className="hidden lg:block" />
         </Button>

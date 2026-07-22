@@ -18,6 +18,7 @@ import {
   removeTagFromCollection,
   TAG_COLLECTION_LIMIT,
 } from '../../utils/tagCollection'
+import { useTranslation } from 'react-i18next'
 
 type TagMode = { kind: 'idle' } | { kind: 'adding-new'; draft: string; width: number }
 
@@ -40,6 +41,7 @@ export function TagEditor({
   onAddRequestHandled,
   onEditStateChange,
 }: TagEditorProps) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<TagMode>({ kind: 'idle' })
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -61,16 +63,19 @@ export function TagEditor({
 
   const activeDisplayText = useMemo(() => {
     if (mode.kind === 'adding-new') {
-      return error && !mode.draft.trim() ? error : mode.draft.trim() || '标签'
+      return error && !mode.draft.trim() ? error : mode.draft.trim() || t('tags.label')
     }
-    return '标签'
-  }, [error, mode])
+    return t('tags.label')
+  }, [error, mode, t])
 
-  const measureDraftWidth = useCallback((draft: string) => {
-    if (!measureRef.current) return 24
-    measureRef.current.textContent = draft.trim() || '标签'
-    return Math.max(Math.ceil(measureRef.current.getBoundingClientRect().width), 24)
-  }, [])
+  const measureDraftWidth = useCallback(
+    (draft: string) => {
+      if (!measureRef.current) return 24
+      measureRef.current.textContent = draft.trim() || t('tags.label')
+      return Math.max(Math.ceil(measureRef.current.getBoundingClientRect().width), 24)
+    },
+    [t],
+  )
 
   useEffect(() => {
     if (!isEditing) return
@@ -111,9 +116,13 @@ export function TagEditor({
       return
     }
 
-    setError(result.kind === 'duplicate' ? '标签已存在' : `最多添加${TAG_COLLECTION_LIMIT}个标签`)
+    setError(
+      result.kind === 'duplicate'
+        ? t('tags.duplicate')
+        : t('tags.limit', { count: TAG_COLLECTION_LIMIT }),
+    )
     inputRef.current?.focus()
-  }, [cancel, mode, onChange, tags])
+  }, [cancel, mode, onChange, t, tags])
 
   const handleInputBlur = useCallback(
     (_event: FocusEvent<HTMLInputElement>) => {
@@ -217,7 +226,7 @@ export function TagEditor({
                   error ? 'text-[#e8525266] placeholder:text-[#e8525266]' : '',
                 )}
                 placeholder={error && !mode.draft.trim() ? error : undefined}
-                aria-label="新增标签"
+                aria-label={t('item.addTag')}
               />
             </motion.span>
           ) : null}

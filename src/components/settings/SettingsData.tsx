@@ -6,6 +6,7 @@ import { SettingsPage } from './SettingsPage'
 import { Card } from '../base/Card'
 import { Button } from '../base/Button'
 import { MS } from '../../utils/constants'
+import { useTranslation } from 'react-i18next'
 
 interface SettingsDataProps extends SettingsPageBaseProps {
   onManualReset: (tab: TabType) => void
@@ -54,24 +55,6 @@ function useTimedStateSet<T extends string>(timeout: number) {
   return { items, add, remove, has }
 }
 
-const RESET_LABELS: Record<TabType, { default: string; confirm: string; success: string }> = {
-  daily: {
-    default: '重置每日进度',
-    confirm: '确认清除所有每日任务的完成状态？',
-    success: '每日进度已重置',
-  },
-  weekly: {
-    default: '重置每周进度',
-    confirm: '确认清除所有每周任务的完成状态？',
-    success: '每周进度已重置',
-  },
-  monthly: {
-    default: '重置每月进度',
-    confirm: '确认清除所有每月任务的完成状态？',
-    success: '每月进度已重置',
-  },
-}
-
 export function SettingsData({
   onManualReset,
   onExport,
@@ -83,6 +66,7 @@ export function SettingsData({
   onBack,
   isEmbedded,
 }: SettingsDataProps) {
+  const { t } = useTranslation()
   const confirming = useTimedStateSet<TabType>(3000)
   const resetDone = useTimedStateSet<TabType>(MS.SUCCESS_HINT)
 
@@ -101,7 +85,7 @@ export function SettingsData({
   )
 
   return (
-    <SettingsPage title="数据管理" onBack={onBack} isEmbedded={isEmbedded}>
+    <SettingsPage title={t('settings.nav.data')} onBack={onBack} isEmbedded={isEmbedded}>
       <div className="space-y-4">
         <Card variant="surface" className="px-4 py-3 space-y-3">
           {(['daily', 'weekly', 'monthly'] as TabType[]).map((tab) => {
@@ -120,10 +104,10 @@ export function SettingsData({
                 <div className="text-left">
                   <p>
                     {isResetDone
-                      ? RESET_LABELS[tab].success
+                      ? t(`settings.data.success${tab[0].toUpperCase()}${tab.slice(1)}`)
                       : isConfirming
-                        ? RESET_LABELS[tab].confirm
-                        : RESET_LABELS[tab].default}
+                        ? t(`settings.data.confirm${tab[0].toUpperCase()}${tab.slice(1)}`)
+                        : t(`settings.data.reset${tab[0].toUpperCase()}${tab.slice(1)}`)}
                   </p>
                 </div>
               </Button>
@@ -141,16 +125,18 @@ export function SettingsData({
             >
               <CircleCheck className="size-4" />
               <div className="text-left">
-                <p>导出成功</p>
-                <p className="text-xs font-normal opacity-70">数据已成功导出</p>
+                <p>{t('settings.data.exportSuccess')}</p>
+                <p className="text-xs font-normal opacity-70">
+                  {t('settings.data.exportSuccessDetail')}
+                </p>
               </div>
             </Button>
           ) : (
             <Button variant="info-soft" onClick={onExport} className="w-full justify-start">
               <Download className="size-4" />
               <div className="text-left">
-                <p>导出数据</p>
-                <p className="text-xs font-normal opacity-70">下载 JSON 文件备份当前数据</p>
+                <p>{t('settings.data.export')}</p>
+                <p className="text-xs font-normal opacity-70">{t('settings.data.exportDetail')}</p>
               </div>
             </Button>
           )}
@@ -171,8 +157,10 @@ export function SettingsData({
               />
               <CircleCheck className="size-4" />
               <div className="text-left">
-                <p>导入成功</p>
-                <p className="text-xs font-normal opacity-70">数据已成功导入</p>
+                <p>{t('settings.data.importSuccess')}</p>
+                <p className="text-xs font-normal opacity-70">
+                  {t('settings.data.importSuccessDetail')}
+                </p>
               </div>
             </Button>
           ) : isImportError ? (
@@ -190,8 +178,10 @@ export function SettingsData({
               />
               <CircleX className="size-4" />
               <div className="text-left">
-                <p>文件错误</p>
-                <p className="text-xs font-normal opacity-70">请选择正确文件</p>
+                <p>{t('settings.data.fileError')}</p>
+                <p className="text-xs font-normal opacity-70">
+                  {t('settings.data.fileErrorDetail')}
+                </p>
               </div>
             </Button>
           ) : (
@@ -209,8 +199,8 @@ export function SettingsData({
               />
               <Upload className="size-4" />
               <div className="text-left">
-                <p>导入数据</p>
-                <p className="text-xs font-normal opacity-70">上传 JSON 文件恢复备份数据</p>
+                <p>{t('settings.data.import')}</p>
+                <p className="text-xs font-normal opacity-70">{t('settings.data.importDetail')}</p>
               </div>
             </Button>
           )}

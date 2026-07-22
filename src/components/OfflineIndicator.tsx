@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { WifiOff, Wifi } from 'lucide-react'
 import { SPRING } from '../utils/motion'
+import { useTranslation } from 'react-i18next'
 
 export function OfflineIndicator() {
+  const { t } = useTranslation()
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [isReconnecting, setIsReconnecting] = useState(false)
   const prevIsOffline = useRef(isOffline)
@@ -92,7 +94,7 @@ export function OfflineIndicator() {
             transition={SPRING}
             exit={{ opacity: 0, width: 0, transition: { delay: 0, ...SPRING } }}
           >
-            {isOffline ? '离线模式，云同步暂不可用' : '网络恢复，云同步重新连接'}
+            {isOffline ? t('offline.offline') : t('offline.restored')}
           </motion.div>
         </motion.div>
       )}

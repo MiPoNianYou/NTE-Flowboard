@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import { SCALE_ENTRY, SCALE_EXIT } from '../../utils/motion'
 import {
@@ -19,25 +21,26 @@ import { Button } from '../base/Button'
 import { Input } from '../base/Input'
 import { Card } from '../base/Card'
 
-const SQL_SNIPPET = `-- NTE Flowboard 云同步配置
--- 在 Supabase SQL Editor 中执行以下语句
+function buildSqlSnippet(t: TFunction) {
+  return `-- ${t('cloud.sql.title')}
+-- ${t('cloud.sql.instructions')}
 
--- 1. 创建数据表
+-- 1. ${t('cloud.sql.createTable')}
 CREATE TABLE sync_data (
   id TEXT PRIMARY KEY DEFAULT 'NTE Flowboard',
   data TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 2. 启用 Row Level Security
+-- 2. ${t('cloud.sql.enableRls')}
 ALTER TABLE sync_data ENABLE ROW LEVEL SECURITY;
 
--- 3. 创建 RLS 策略（anon key 通过 RPC 访问，需要完全放行）
+-- 3. ${t('cloud.sql.createPolicy')}
 CREATE POLICY "Allow RPC" ON sync_data
   FOR ALL USING (true)
   WITH CHECK (true);
 
--- 4. 推送函数（upsert 单行数据）
+-- 4. ${t('cloud.sql.pushFunction')}
 CREATE OR REPLACE FUNCTION upsert_sync(p_data TEXT)
 RETURNS TIMESTAMPTZ
 LANGUAGE sql SECURITY DEFINER
@@ -50,7 +53,7 @@ AS $$
   RETURNING updated_at;
 $$;
 
--- 5. 拉取函数（返回最新数据）
+-- 5. ${t('cloud.sql.pullFunction')}
 CREATE OR REPLACE FUNCTION pull_sync()
 RETURNS TABLE(data TEXT, updated_at TIMESTAMPTZ)
 LANGUAGE sql SECURITY DEFINER
@@ -58,7 +61,7 @@ AS $$
   SELECT data, updated_at FROM sync_data WHERE id = 'NTE Flowboard';
 $$;
 
--- 6. 自动维护 updated_at（兼容未来直写表）
+-- 6. ${t('cloud.sql.updatedAt')}
 CREATE OR REPLACE FUNCTION set_sync_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -75,8 +78,9 @@ CREATE TRIGGER sync_data_set_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION set_sync_updated_at();
 
--- 7. 启用 Realtime
+-- 7. ${t('cloud.sql.realtime')}
 ALTER PUBLICATION supabase_realtime ADD TABLE sync_data;`
+}
 
 interface CloudSyncSetupProps {
   syncError: string | null
@@ -86,6 +90,8 @@ interface CloudSyncSetupProps {
 type ButtonPhase = 'idle' | 'loading' | 'error'
 
 export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupProps) {
+  const { t } = useTranslation()
+  const sqlSnippet = useMemo(() => buildSqlSnippet(t), [t])
   const [projectUrlInput, setProjectUrlInput] = useState('')
   const [anonKeyInput, setAnonKeyInput] = useState('')
   const [isAnonKeyVisible, setIsAnonKeyVisible] = useState(false)
@@ -233,7 +239,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
       await onSetupSupabase(projectUrlInput.trim(), anonKeyInput.trim())
       setButtonPhase('idle')
     } catch {
-      setLocalError('连接失败，请检查配置')
+      setLocalError(t('sync.setupUnknown'))
     } finally {
       const elapsed = Date.now() - start
       if (elapsed < 500) await new Promise((resolve) => setTimeout(resolve, 500 - elapsed))
@@ -242,7 +248,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
   }
 
   const handleCopySql = () => {
-    navigator.clipboard.writeText(SQL_SNIPPET)
+    navigator.clipboard.writeText(sqlSnippet)
     setIsCopied(true)
     setTimeout(() => setIsCopied(false), 2000)
   }
@@ -250,9 +256,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
   return (
     <div className="space-y-4">
       <Card variant="surface" className="px-4 py-3">
-        <p className="text-xs font-medium text-text-primary">
-          通过 Supabase 在多设备间同步清单数据
-        </p>
+        <p className="text-xs font-medium text-text-primary">{t('cloud.description')}</p>
       </Card>
 
       <Card variant="surface" className="px-4 py-3">
@@ -282,7 +286,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
               <button
                 type="button"
                 onClick={() => setIsAnonKeyVisible((prev) => !prev)}
-                aria-label={isAnonKeyVisible ? '隐藏密钥' : '显示密钥'}
+                aria-label={isAnonKeyVisible ? t('cloud.hideKey') : t('cloud.showKey')}
                 className="p-0 text-text-muted hover:text-text-primary transition-colors duration-200"
               >
                 {isAnonKeyVisible ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -316,7 +320,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
                 className="inline-flex items-center gap-1.5"
               >
                 <Loader2 className="size-3.5 animate-spin" />
-                <span>连接中</span>
+                <span>{t('cloud.connecting')}</span>
               </motion.span>
             ) : buttonPhase === 'error' && buttonErrorMessage ? (
               <motion.span
@@ -371,7 +375,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
                 className="inline-flex items-center gap-1.5"
               >
                 <Cloud className="size-3.5" />
-                <span>连接 Supabase</span>
+                <span>{t('cloud.connect')}</span>
               </motion.span>
             )}
           </AnimatePresence>
@@ -383,9 +387,9 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         className="px-4 py-3 text-[13px] text-text-secondary leading-relaxed space-y-3"
       >
         <div>
-          <p className="font-medium text-text-primary mb-1">1.创建 Supabase 项目</p>
+          <p className="font-medium text-text-primary mb-1">{t('cloud.setupProjectTitle')}</p>
           <p>
-            访问{' '}
+            {t('cloud.setupProjectBeforeLink')}{' '}
             <a
               href="https://supabase.com"
               target="_blank"
@@ -395,12 +399,12 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
               supabase.com
               <ExternalLink className="size-3" />
             </a>{' '}
-            注册并创建一个免费项目
+            {t('cloud.setupProjectAfterLink')}
           </p>
         </div>
         <div>
-          <p className="font-medium text-text-primary mb-1">2.创建数据表</p>
-          <p className="mb-2">复制下方 SQL 至 Supabase SQL Editor 运行</p>
+          <p className="font-medium text-text-primary mb-1">{t('cloud.setupTableTitle')}</p>
+          <p className="mb-2">{t('cloud.setupTableDescription')}</p>
           <div className="relative bg-surface rounded-xl overflow-hidden">
             <div
               role="button"
@@ -419,7 +423,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
             >
               <span className="flex items-center gap-1.5 text-[11px] text-text-muted font-medium font-mono">
                 <Database className="size-3" />
-                SQL 建表脚本
+                {t('cloud.setupSqlLabel')}
                 <ChevronDown
                   className={cn(
                     'size-3 transition-transform duration-150',
@@ -431,7 +435,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
                 <button
                   type="button"
                   onClick={handleCopySql}
-                  aria-label={isCopied ? '已复制' : '复制 SQL'}
+                  aria-label={isCopied ? t('common.copied') : t('cloud.copySql')}
                   className={cn(
                     'inline-flex items-center justify-center size-6 rounded-lg border border-border',
                     'transition-colors duration-200',
@@ -473,27 +477,27 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
             >
               <div className="overflow-hidden">
                 <pre className="px-3 pb-3 pt-1 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
-                  {SQL_SNIPPET}
+                  {sqlSnippet}
                 </pre>
               </div>
             </div>
           </div>
         </div>
         <div>
-          <p className="font-medium text-text-primary mb-1">3.获取连接信息</p>
+          <p className="font-medium text-text-primary mb-1">{t('cloud.setupCredentialsTitle')}</p>
           <div className="flex items-center gap-1 text-xs text-text-secondary flex-wrap">
-            <Path>Dashboard 主界面</Path>
+            <Path>{t('cloud.dashboardHome')}</Path>
             <ChevronRight className="size-3 text-text-muted" />
             <Path>Copy</Path>
             <ChevronRight className="size-3 text-text-muted" />
             <Path>Project URL</Path>
-            <span>和</span>
+            <span>{t('cloud.conjunction')}</span>
             <Path>Publishable key</Path>
           </div>
         </div>
         <div>
-          <p className="font-medium text-text-primary mb-1">4.完成</p>
-          <p>回到网站输入 Project URL 和 Publishable Key 即可连接</p>
+          <p className="font-medium text-text-primary mb-1">{t('cloud.setupFinishTitle')}</p>
+          <p>{t('cloud.setupFinishDescription')}</p>
         </div>
       </Card>
     </div>

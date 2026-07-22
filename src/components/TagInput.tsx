@@ -11,6 +11,7 @@ import {
   removeTagFromCollection,
   TAG_COLLECTION_LIMIT,
 } from '../utils/tagCollection'
+import { useTranslation } from 'react-i18next'
 
 interface TagInputProps {
   tags: string[]
@@ -20,6 +21,7 @@ interface TagInputProps {
 }
 
 export function TagInput({ tags, onChange, onCompositionChange, compactFocus }: TagInputProps) {
+  const { t } = useTranslation()
   const [inputValue, setInputValue] = useState('')
   const [isInputVisible, setIsInputVisible] = useState(false)
   const isAtLimit = tags.length >= TAG_COLLECTION_LIMIT
@@ -88,7 +90,7 @@ export function TagInput({ tags, onChange, onCompositionChange, compactFocus }: 
             setIsInputVisible(false)
           }}
           autoFocus
-          placeholder="标签名"
+          placeholder={t('tags.namePlaceholder')}
           inputSize="sm"
           disabled={isAtLimit}
           className={cn(
@@ -104,7 +106,7 @@ export function TagInput({ tags, onChange, onCompositionChange, compactFocus }: 
           disabled={isAtLimit}
           className="self-start px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs justify-center"
         >
-          <Plus className="size-[10px] lg:size-[12px]" /> 标签
+          <Plus className="size-[10px] lg:size-[12px]" /> {t('tags.label')}
           <span className="text-text-muted ml-0.5">
             {tags.length}/{TAG_COLLECTION_LIMIT}
           </span>

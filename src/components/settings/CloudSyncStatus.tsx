@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Cloud,
@@ -14,6 +16,7 @@ import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { APPLE_EASE } from '../../utils/motion'
 import { useSettings } from '../../context/SettingsContext'
+import { useDisplayPreferences } from '../../context/DisplayPreferencesContext'
 import { Button } from '../base/Button'
 import { Card } from '../base/Card'
 import { StatusMessage } from '../base/StatusMessage'
@@ -41,25 +44,31 @@ interface CloudSyncStatusProps {
   onTeardownSupabase: () => void
 }
 
-function formatSyncTime(isoString: string | null): string {
-  if (!isoString) return '从未'
+function formatSyncTime(
+  isoString: string | null,
+  locale: string,
+  timeFormat: '24h' | '12h',
+  t: TFunction,
+): string {
+  if (!isoString) return t('cloud.never')
   try {
     const date = new Date(isoString)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
     const diffMin = Math.floor(diffMs / 60000)
-    if (diffMin < 1) return '刚刚'
-    if (diffMin < 60) return `${diffMin} 分钟前`
+    if (diffMin < 1) return t('cloud.justNow')
+    if (diffMin < 60) return t('cloud.minutesAgo', { count: diffMin })
     const diffHrs = Math.floor(diffMin / 60)
-    if (diffHrs < 24) return `${diffHrs} 小时前`
-    return date.toLocaleDateString('zh-CN', {
+    if (diffHrs < 24) return t('cloud.hoursAgo', { count: diffHrs })
+    return new Intl.DateTimeFormat(locale, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    })
+      hour12: timeFormat === '12h',
+    }).format(date)
   } catch {
-    return '未知'
+    return t('common.unknown')
   }
 }
 
@@ -70,7 +79,9 @@ export function CloudSyncStatus({
   onTriggerSync,
   onTeardownSupabase,
 }: CloudSyncStatusProps) {
+  const { t } = useTranslation()
   const { uiPreferences, updateUiPreferences } = useSettings()
+  const { locale, timeFormat } = useDisplayPreferences()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDisconnectExpanded, setIsDisconnectExpanded] = useState(false)
   const [isPatchExpanded, setIsPatchExpanded] = useState(false)
@@ -184,14 +195,14 @@ export function CloudSyncStatus({
   }
 
   const statusText = (() => {
-    if (syncStatus === 'syncing' || isSyncing) return '同步中'
+    if (syncStatus === 'syncing' || isSyncing) return t('cloud.statusSyncing')
     switch (syncStatus) {
       case 'connected':
-        return '已连接'
+        return t('cloud.statusConnected')
       case 'error':
-        return '出错了'
+        return t('cloud.statusError')
       default:
-        return '未连接'
+        return t('cloud.statusDisconnected')
     }
   })()
 
@@ -234,7 +245,9 @@ export function CloudSyncStatus({
               {statusText}
             </span>
             <span className="mx-1.5 opacity-40">·</span>
-            上次同步: {formatSyncTime(lastSyncTime)}
+            {t('cloud.lastSync', {
+              time: formatSyncTime(lastSyncTime, locale, timeFormat, t),
+            })}
           </p>
         </div>
         <AnimatePresence initial={false}>
@@ -278,7 +291,7 @@ export function CloudSyncStatus({
             isLoading={isSyncing}
             className="flex-1 justify-center"
           >
-            <Cloud className="size-[15px]" /> 手动同步
+            <Cloud className="size-[15px]" /> {t('cloud.manualSync')}
           </Button>
           <button
             className={cn(
@@ -288,12 +301,12 @@ export function CloudSyncStatus({
             onClick={handleDisconnectClick}
             onMouseEnter={handleDisconnectEnter}
             onMouseLeave={handleDisconnectLeave}
-            aria-label="断开连接"
+            aria-label={t('cloud.disconnect')}
           >
             <span className="sign">
               <LogOut size={18} />
             </span>
-            <span className="text danger-confirm-text">确认断开？</span>
+            <span className="text danger-confirm-text">{t('cloud.confirmDisconnect')}</span>
           </button>
         </div>
       </Card>
@@ -305,8 +318,8 @@ export function CloudSyncStatus({
         >
           <div className="relative">
             <div className="min-w-0 flex-1 pr-12">
-              <p className="font-medium text-text-primary mb-1">数据库补丁</p>
-              <p>已有云同步配置但较早建表的用户，可单独执行 `updated_at` 触发器增量脚本。</p>
+              <p className="font-medium text-text-primary mb-1">{t('cloud.patchTitle')}</p>
+              <p>{t('cloud.patchDescription')}</p>
             </div>
             <button
               className={cn(
@@ -317,12 +330,14 @@ export function CloudSyncStatus({
               onClick={handleHidePatchCard}
               onMouseEnter={handlePatchHideEnter}
               onMouseLeave={handlePatchHideLeave}
-              aria-label={isPatchHideExpanded ? '确认隐藏补丁卡片' : '隐藏补丁卡片'}
+              aria-label={isPatchHideExpanded ? t('cloud.confirmHidePatch') : t('cloud.hidePatch')}
             >
               <span className="sign">
                 <EyeOff size={18} />
               </span>
-              <span className="text danger-confirm-text leading-none">确认隐藏？</span>
+              <span className="text danger-confirm-text leading-none">
+                {t('cloud.confirmHide')}
+              </span>
             </button>
           </div>
 
@@ -341,7 +356,7 @@ export function CloudSyncStatus({
             >
               <span className="flex items-center gap-1.5 text-[11px] text-text-muted font-medium font-mono">
                 <Database className="size-3" />
-                执行补丁 SQL
+                {t('cloud.patchSqlLabel')}
                 <ChevronDown
                   className={cn(
                     'size-3 transition-transform duration-150',
@@ -353,7 +368,7 @@ export function CloudSyncStatus({
                 <button
                   type="button"
                   onClick={handleCopyPatchSql}
-                  aria-label={isPatchCopied ? '已复制' : '复制补丁 SQL'}
+                  aria-label={isPatchCopied ? t('common.copied') : t('cloud.copyPatchSql')}
                   className={cn(
                     'inline-flex items-center justify-center size-6 rounded-lg border border-border transition-colors duration-200',
                     isPatchCopied

@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SettingsNav, NAV_ITEMS } from '../../../components/settings/SettingsNav'
+import i18n from '../../../i18n'
 
 describe('SettingsNav', () => {
   const mockOnTabChange = vi.fn()
@@ -8,7 +9,7 @@ describe('SettingsNav', () => {
   it('should render all nav items', () => {
     render(<SettingsNav activeTab="general" onTabChange={mockOnTabChange} />)
     NAV_ITEMS.forEach((item) => {
-      expect(screen.getByText(item.label)).toBeInTheDocument()
+      expect(screen.getByText(i18n.t(item.labelKey))).toBeInTheDocument()
     })
   })
 
@@ -29,6 +30,19 @@ describe('SettingsNav', () => {
     render(<SettingsNav activeTab="general" onTabChange={mockOnTabChange} labels={labels} />)
     expect(screen.getByText('亚太服')).toBeInTheDocument()
     expect(screen.getByText('已连接')).toBeInTheDocument()
+  })
+
+  it('keeps navigation titles and status labels on one line', () => {
+    render(
+      <SettingsNav
+        activeTab="general"
+        onTabChange={mockOnTabChange}
+        labels={{ cloud: 'Not set' }}
+      />,
+    )
+
+    expect(screen.getByText('云同步')).toHaveClass('whitespace-nowrap', 'shrink-0')
+    expect(screen.getByText('Not set')).toHaveClass('whitespace-nowrap', 'shrink-0')
   })
 
   it('should not show labels for items without label', () => {

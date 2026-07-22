@@ -15,6 +15,7 @@ import {
 import { TagPill } from './TagPill'
 import { Button } from './base/Button'
 import { CollapsibleSection } from './base/CollapsibleSection'
+import { useTranslation } from 'react-i18next'
 
 interface HiddenSectionProps {
   hiddenItems: ChecklistItem[]
@@ -37,6 +38,7 @@ export function HiddenSection({
   isOpen,
   onToggle,
 }: HiddenSectionProps) {
+  const { t } = useTranslation()
   const isVisible = hiddenItems.length > 0
   const isMountedRef = useRef(false)
   useEffect(() => {
@@ -64,7 +66,7 @@ export function HiddenSection({
       onAnimationComplete={frameOpacity === 1 ? onFrameEnter : onFrameExit}
     >
       <CollapsibleSection
-        label={`隐藏任务 (${hiddenItems.length})`}
+        label={t('checklist.hidden', { count: hiddenItems.length })}
         variant="surface"
         isOpen={isOpen}
         onToggle={onToggle}
@@ -102,6 +104,7 @@ export function HiddenSection({
                         variant="tertiary"
                         onClick={() => onShowItem(activeTab, item.id)}
                         className={ACTION_HOVER_WARNING}
+                        aria-label={t('common.show')}
                       >
                         <Eye size={15} />
                       </Button>
@@ -112,6 +115,9 @@ export function HiddenSection({
                           ACTION_HOVER_DANGER,
                           isPending(item.id) && PENDING_DELETE_STYLE,
                         )}
+                        aria-label={
+                          isPending(item.id) ? t('common.confirmDelete') : t('common.delete')
+                        }
                       >
                         <Trash2 size={15} />
                       </Button>

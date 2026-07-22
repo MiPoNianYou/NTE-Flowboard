@@ -15,9 +15,9 @@ import { SettingsGeneral } from './SettingsGeneral'
 import { SettingsServer } from './SettingsServer'
 import { SettingsData } from './SettingsData'
 import { CloudSyncSection } from './CloudSyncSection'
-import { SERVER_REGIONS } from '../../utils/defaultData'
 import { PAGE } from '../../utils/motion'
 import { useSettings } from '../../context/SettingsContext'
+import { useTranslation } from 'react-i18next'
 
 interface SettingsLayoutProps {
   onManualReset: (tab: TabType) => void
@@ -34,10 +34,6 @@ interface SettingsLayoutProps {
   ) => ReactNode
 }
 
-const REGION_LABELS: Record<string, string> = Object.fromEntries(
-  Object.entries(SERVER_REGIONS).map(([region, regionInfo]) => [region, regionInfo.label]),
-)
-
 export function SettingsLayout({
   onManualReset,
   onExport,
@@ -49,6 +45,7 @@ export function SettingsLayout({
   cloudSyncProps,
   renderHeader,
 }: SettingsLayoutProps) {
+  const { t } = useTranslation()
   const { settings } = useSettings()
   const [activeTab, setActiveTab] = useState<SubPage | null>(null)
   const [direction, setDirection] = useState(1)
@@ -78,11 +75,13 @@ export function SettingsLayout({
   const sidebarLabels = useMemo<Record<SubPage, string | undefined>>(
     () => ({
       general: undefined,
-      server: REGION_LABELS[settings.serverRegion] ?? '亚太服',
-      cloud: cloudSyncProps?.isConfigured ? '已连接' : '未配置',
+      server: t(`settings.server.${settings.serverRegion}`),
+      cloud: cloudSyncProps?.isConfigured
+        ? t('settings.status.connected')
+        : t('settings.status.notConfigured'),
       data: undefined,
     }),
-    [settings.serverRegion, cloudSyncProps?.isConfigured],
+    [settings.serverRegion, cloudSyncProps?.isConfigured, t],
   )
 
   const tab = activeTab ?? 'general'
@@ -157,7 +156,7 @@ export function SettingsLayout({
       </div>
 
       <div className="hidden md:flex flex-1 min-h-0">
-        <div className="w-[240px] lg:w-[260px] border-r border-border flex-shrink-0 flex flex-col p-3">
+        <div className="w-[260px] border-r border-border flex-shrink-0 flex flex-col p-3">
           <SettingsNav
             activeTab={tab}
             onTabChange={handleTabChange}

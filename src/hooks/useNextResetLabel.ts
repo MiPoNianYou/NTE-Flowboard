@@ -3,6 +3,7 @@ import type { ServerRegion, TabType } from '../types'
 import { MS } from '../utils/constants'
 import { getResetSchedule } from '../utils/resetCalendar'
 import { useVisibilityInterval } from './useVisibilityInterval'
+import { useTranslation } from 'react-i18next'
 
 interface UseNextResetLabelProps {
   activeTab: TabType
@@ -10,6 +11,7 @@ interface UseNextResetLabelProps {
 }
 
 export function useNextResetLabel({ activeTab, serverRegion }: UseNextResetLabelProps) {
+  const { t } = useTranslation()
   const [now, setNow] = useState(() => Date.now())
 
   useVisibilityInterval(() => setNow(Date.now()), MS.LABEL_REFRESH)
@@ -23,9 +25,9 @@ export function useNextResetLabel({ activeTab, serverRegion }: UseNextResetLabel
 
     if (hours >= 24) {
       const days = Math.floor(hours / 24)
-      return `${days}天${hours % 24}小时后重置`
+      return t('reset.inDaysHours', { days, hours: hours % 24 })
     }
 
-    return `${hours}小时${minutes}分钟后重置`
-  }, [activeTab, now, serverRegion])
+    return t('reset.inHoursMinutes', { hours, minutes })
+  }, [activeTab, now, serverRegion, t])
 }

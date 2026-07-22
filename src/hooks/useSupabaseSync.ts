@@ -27,6 +27,7 @@ import {
 import { useVisibilityInterval } from './useVisibilityInterval'
 import { useRetryScheduler } from './useRetryScheduler'
 import { useCrossTabSync } from './useCrossTabSync'
+import { useTranslation } from 'react-i18next'
 
 interface UseSupabaseSyncOptions {
   data: ChecklistData
@@ -55,6 +56,7 @@ export function useSupabaseSync({
   onDataImport,
   externalDataVersion = 0,
 }: UseSupabaseSyncOptions): UseSupabaseSyncReturn {
+  const { t } = useTranslation()
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
     const config = loadSupabaseConfig()
     return config ? 'connecting' : 'disconnected'
@@ -286,14 +288,14 @@ export function useSupabaseSync({
         const valid = await validateConfig(projectUrl, anonKey)
         if (!valid.ok) {
           const messages: Record<string, string> = {
-            network: '连接失败，请检查 Project URL 或网络',
-            auth: '密钥无效，请检查 Publishable Key',
-            table_missing: '数据表不存在，请执行建表脚本',
-            table_schema: '数据表结构不对，请删除后重新执行脚本',
-            table_permission: '没有访问权限，请检查 RLS 策略',
-            unknown: '连接失败，请检查 Project URL 和密钥',
+            network: t('sync.setupNetwork'),
+            auth: t('sync.invalidKey'),
+            table_missing: t('sync.tableMissing'),
+            table_schema: t('sync.tableSchema'),
+            table_permission: t('sync.permission'),
+            unknown: t('sync.setupUnknown'),
           }
-          const base = messages[valid.reason] ?? '连接失败，请检查 Project URL 和密钥'
+          const base = messages[valid.reason] ?? t('sync.setupUnknown')
           setSyncError(base)
           setSyncStatus('disconnected')
           setIsConfigured(false)
@@ -320,7 +322,7 @@ export function useSupabaseSync({
         setIsConfigured(false)
       }
     },
-    [pullSync, pushSync],
+    [pullSync, pushSync, t],
   )
 
   const triggerSync = useCallback(async () => {

@@ -7,6 +7,7 @@ import { TagInput } from './TagInput'
 import { APPLE_EASE } from '../utils/motion'
 import { useComposition } from '../hooks/useComposition'
 import { useMeasuredHeight } from '../hooks/useMeasuredHeight'
+import { useTranslation } from 'react-i18next'
 
 interface AddItemFormProps {
   tab: TabType
@@ -16,6 +17,7 @@ interface AddItemFormProps {
 const MORPH = { duration: 0.55, ease: APPLE_EASE }
 
 export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -65,7 +67,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
           <div className="flex items-center justify-center gap-2 py-3 lg:py-3">
             <Plus size={16} className="lg:hidden text-text-muted" />
             <Plus size={20} className="hidden lg:block text-text-muted" />
-            <span className="text-sm font-medium text-text-secondary">添加新任务</span>
+            <span className="text-sm font-medium text-text-secondary">{t('addItem.open')}</span>
           </div>
         </button>
       </motion.div>
@@ -99,7 +101,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
               setIsComposing(false)
             }}
             tabIndex={isFormOpen ? 0 : -1}
-            placeholder="输入任务名称..."
+            placeholder={t('addItem.placeholder')}
             className="w-full px-3 py-2 bg-transparent text-sm text-text-primary outline-none placeholder-text-muted border-b border-border"
           />
           <div className="flex items-center flex-wrap gap-1.5 px-3 py-2 border-b border-border">
@@ -112,10 +114,10 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
           </div>
           <div className="flex gap-2 p-3">
             <Button type="submit" disabled={!text.trim()} className="flex-1">
-              添加
+              {t('common.add')}
             </Button>
             <Button type="button" variant="tertiary" onClick={handleClose}>
-              取消
+              {t('common.cancel')}
             </Button>
           </div>
         </form>

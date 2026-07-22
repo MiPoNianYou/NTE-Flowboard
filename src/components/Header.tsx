@@ -4,6 +4,7 @@ import type { CloudSyncProps } from './settings/CloudSyncSection'
 import { SettingsPanel } from './SettingsPanel'
 import { OfflineIndicator } from './OfflineIndicator'
 import ShinkuLogo from '../assets/shinku-logo.png'
+import { useTranslation } from 'react-i18next'
 
 interface HeaderProps {
   data: ChecklistData
@@ -18,6 +19,7 @@ export const Header = memo(function Header({
   onImport,
   cloudSyncProps,
 }: HeaderProps) {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center justify-between mb-5 md:mb-7">
       <div className="flex items-center gap-2 md:gap-3">
@@ -33,7 +35,7 @@ export const Header = memo(function Header({
           <h1 className="text-base md:text-xl font-bold text-text-primary tracking-tight chromatic-aberration">
             NTE Flowboard
           </h1>
-          <p className="text-[11px] md:text-xs text-text-muted">每日 · 每周 · 每月任务追踪看板</p>
+          <p className="text-[11px] md:text-xs text-text-muted">{t('header.tagline')}</p>
         </div>
       </div>
       <OfflineIndicator />

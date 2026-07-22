@@ -57,7 +57,25 @@ function setTouchDevice(isTouch: boolean) {
 
 describe('ChecklistItemRow', () => {
   beforeEach(() => {
+    setDeviceCapabilities({ isCompact: false, isTouch: false })
     pendingDeleteState = { handleDelete: vi.fn(), isPending: vi.fn(() => false) }
+  })
+
+  it('keeps collapsed compact actions out of the accessibility tree', () => {
+    setTouchDevice(true)
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
   })
 
   it('shows the mobile action bar after tapping a task', () => {

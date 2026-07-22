@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react'
 import { AlertCircle, RotateCcw } from 'lucide-react'
 import { PAGE_GRADIENT } from '../../utils/colors'
 import { Button } from './Button'
+import i18n from '../../i18n'
 import ShinkuLogo from '../../assets/shinku-logo.png'
 
 interface ErrorBoundaryProps {
@@ -38,22 +39,24 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   <img src={ShinkuLogo} alt="Shinku" className="w-full h-full object-cover" />
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-text-primary mb-2">出现了一些问题</h2>
+              <h2 className="text-xl font-bold text-text-primary mb-2">
+                {i18n.t('errorBoundary.title')}
+              </h2>
               <p className="text-text-secondary mb-6 text-sm leading-relaxed">
-                网站遇到了一个错误，请刷新页面重试
+                {i18n.t('errorBoundary.description')}
               </p>
               <div className="max-w-lg mx-auto w-full mb-8">
                 <div className="flex items-center gap-3 text-left text-sm bg-danger/10 rounded-xl p-4 border border-danger/20">
                   <AlertCircle className="text-danger shrink-0" size={18} />
                   <span className="block text-xs text-danger whitespace-pre-wrap break-words overflow-auto max-h-48 flex-1 m-0">
-                    {this.state.error?.message ?? '未知错误'}
+                    {this.state.error?.message ?? i18n.t('errorBoundary.unknown')}
                   </span>
                 </div>
               </div>
               <div className="flex justify-center">
                 <Button onClick={() => window.location.reload()} className="px-10 py-4">
                   <RotateCcw size={16} />
-                  刷新页面
+                  {i18n.t('errorBoundary.reload')}
                 </Button>
               </div>
             </div>

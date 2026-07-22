@@ -18,8 +18,10 @@ import { Header } from './components/Header'
 import { ErrorBoundary } from './components/base/ErrorBoundary'
 import { StorageToast } from './components/StorageToast'
 import { Badge } from './components/base/Badge'
+import { useTranslation } from 'react-i18next'
 
 function AppContent() {
+  const { t } = useTranslation()
   const { value: isHiddenSectionOpen, onChange: setIsHiddenSectionOpen } = useLocalStorageBoolean(
     'flowboard-hidden-section-open',
   )
@@ -167,7 +169,7 @@ function AppContent() {
                   onHide={hideItem}
                   onReorder={reorderItem}
                   shouldConfirmDelete={settings.shouldConfirmDelete}
-                  emptyAction={<Badge variant="primary">在左侧添加第一个任务</Badge>}
+                  emptyAction={<Badge variant="primary">{t('checklist.emptyAction')}</Badge>}
                 />
               </div>
             </div>

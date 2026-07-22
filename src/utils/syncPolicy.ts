@@ -1,5 +1,5 @@
 import type { ChecklistData } from '../types'
-import { DEFAULT_CHECKLIST_DATA } from './defaultData'
+import { createDefaultChecklistData, DEFAULT_CHECKLIST_DATA } from './defaultData'
 
 interface PullGuards {
   isPulling: boolean
@@ -28,9 +28,11 @@ export function shouldImport(decision: ImportDecision): boolean {
 }
 
 export function shouldImportInitialRemoteData(data: ChecklistData): boolean {
-  return (
-    JSON.stringify(data.daily) === JSON.stringify(DEFAULT_CHECKLIST_DATA.daily) &&
-    JSON.stringify(data.weekly) === JSON.stringify(DEFAULT_CHECKLIST_DATA.weekly) &&
-    JSON.stringify(data.monthly) === JSON.stringify(DEFAULT_CHECKLIST_DATA.monthly)
+  const defaults = [DEFAULT_CHECKLIST_DATA, createDefaultChecklistData('en-US')]
+  return defaults.some(
+    (defaultData) =>
+      JSON.stringify(data.daily) === JSON.stringify(defaultData.daily) &&
+      JSON.stringify(data.weekly) === JSON.stringify(defaultData.weekly) &&
+      JSON.stringify(data.monthly) === JSON.stringify(defaultData.monthly),
   )
 }
