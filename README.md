@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/assets/shinku-logo.png" width="108" alt="NTE Flowboard 的 Shinku 图标" />
+  <img src="./src/assets/shinku-logo.png" width="108" alt="NTE Flowboard 的 Shinku 图标" />
 </p>
 
 <h1 align="center">NTE Flowboard</h1>
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="NTE Flowboard：显示每日任务、进度和每日、每周、每月重置时间的本地优先看板。" />
+  <img src="./src/assets/readme/hero.svg" width="100%" alt="NTE Flowboard：显示每日任务、进度和每日、每周、每月重置时间的本地优先看板。" />
 </p>
 
 > 选好服务器，按清单完成这一轮；到重置时间，下一轮会自动开始。
@@ -39,7 +39,7 @@ NTE Flowboard 将常见的周期事项分为每日、每周和每月三份清单
 | 每月 | 集市迷迭、大亨猎人、玩法异境等商店兑换           | 每月 1 日 05:00 |
 
 <p align="center">
-  <img src="./assets/readme/cycle-flow.svg" width="100%" alt="本轮清单、完成进度、自动重置和新一轮的循环示意图。" />
+  <img src="./src/assets/readme/cycle-flow.svg" width="100%" alt="本轮清单、完成进度、自动重置和新一轮的循环示意图。" />
 </p>
 
 ## 按服务器时间自动重置
@@ -103,6 +103,7 @@ npm run build
 
 ```text
 src/
+  assets/           应用图标与 README 插图
   components/       界面与交互组件
   context/          全局设置状态
   hooks/            清单、同步、交互逻辑

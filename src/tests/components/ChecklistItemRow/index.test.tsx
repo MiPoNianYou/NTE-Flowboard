@@ -32,13 +32,27 @@ const mockItem: ChecklistItem = {
   tags: ['地图'],
 }
 
-function setTouchDevice(isTouch: boolean) {
+function setDeviceCapabilities({
+  isCompact = false,
+  isTouch = false,
+}: {
+  isCompact?: boolean
+  isTouch?: boolean
+}) {
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query: string) => ({
-      matches: isTouch && (query === '(hover: none)' || query === '(pointer: coarse)'),
+      matches:
+        (isCompact && query === '(max-width: 1023px)') ||
+        (isTouch && (query === '(hover: none)' || query === '(pointer: coarse)')),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
     })),
   )
+}
+
+function setTouchDevice(isTouch: boolean) {
+  setDeviceCapabilities({ isCompact: isTouch, isTouch })
 }
 
 describe('ChecklistItemRow', () => {
@@ -67,6 +81,25 @@ describe('ChecklistItemRow', () => {
     expect(screen.getByRole('button', { name: '删除' })).toBeInTheDocument()
   })
 
+  it('expands the action bar in a narrow desktop-input viewport', () => {
+    setDeviceCapabilities({ isCompact: true, isTouch: false })
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('测试任务'))
+
+    expect(screen.getByRole('button', { name: '编辑' }).closest('.collapse-open')).not.toBeNull()
+  })
+
   it('uses the mobile edit action bar in the agreed order', () => {
     setTouchDevice(true)
     render(
@@ -90,6 +123,63 @@ describe('ChecklistItemRow', () => {
         .slice(-3)
         .map((button) => button.textContent),
     ).toEqual(['取消', '新增标签', '保存'])
+  })
+
+  it('matches the expanded-menu layout in compact edit mode', () => {
+    setTouchDevice(true)
+    render(
+      <ChecklistItemRow
+        item={mockItem}
+        tab="daily"
+        onToggle={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onHide={vi.fn()}
+        shouldConfirmDelete={false}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('测试任务'))
+
+    const menuEditButton = screen.getByRole('button', { name: '编辑' })
+    const menuActionBar = menuEditButton.closest('.grid')
+    const menuHeader = screen.getByText('测试任务').closest('.group')
+
+    expect(menuActionBar).toHaveClass('grid', 'grid-cols-3', 'gap-2', 'px-3', 'pt-2', 'pb-3')
+    expect(menuEditButton).toHaveClass('h-10', 'max-[419px]:px-0')
+    expect(menuHeader).toHaveClass(
+      'flex',
+      'items-center',
+      'gap-3',
+      'px-3',
+      'py-2',
+      'max-[419px]:min-h-14',
+    )
+
+    fireEvent.click(menuEditButton)
+
+    const cancelButton = screen.getByRole('button', { name: '取消' })
+    const actionBar = cancelButton.closest('.grid')
+    const editHeader = screen
+      .getByLabelText('编辑任务名称')
+      .closest('.flex.items-center.gap-3.px-3.py-2')
+
+    expect(actionBar?.className).toBe(menuActionBar?.className)
+    expect(editHeader).toHaveClass(
+      'flex',
+      'items-center',
+      'gap-3',
+      'px-3',
+      'py-2',
+      'max-[419px]:min-h-14',
+    )
+    expect(cancelButton).toHaveClass('h-10', 'max-[419px]:px-0')
+    expect(cancelButton).toHaveAttribute('title', '取消')
+    expect(screen.getByText('取消')).toHaveClass('whitespace-nowrap', 'max-[419px]:text-[10px]')
+    expect(screen.getByRole('button', { name: '新增标签' })).toHaveClass('h-10', 'max-[419px]:px-0')
+    expect(screen.getByText('新增标签')).toHaveClass('whitespace-nowrap', 'max-[419px]:text-[10px]')
+    expect(screen.getByRole('button', { name: '保存' })).toHaveClass('h-10', 'max-[419px]:px-0')
+    expect(screen.getByText('保存')).toHaveClass('whitespace-nowrap', 'max-[419px]:text-[10px]')
   })
 
   it('shows a confirm-delete action while deletion is pending', () => {

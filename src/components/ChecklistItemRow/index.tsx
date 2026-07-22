@@ -15,10 +15,11 @@ import { useSortable } from '@dnd-kit/sortable'
 import type { ChecklistItem, TabType } from '../../types'
 import { cn } from '../../utils/cn'
 import { usePendingDelete } from '../../hooks/usePendingDelete'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import { FADE_IN, FADE_OUT, SPRING } from '../../utils/motion'
 import { TagPill } from '../TagPill'
 import { DesktopActions } from './DesktopActions'
-import { MobileActions } from './MobileActions'
+import { MOBILE_ACTION_LAYOUT, MobileActions } from './MobileActions'
 import { Button } from '../base/Button'
 import {
   ACTION_HOVER_PRIMARY,
@@ -27,6 +28,8 @@ import {
 } from '../../utils/stylePresets'
 import { TagEditor } from './TagEditor'
 import { TAG_COLLECTION_LIMIT } from '../../utils/tagCollection'
+
+const COMPACT_HEADER_CLASS = 'max-[419px]:min-h-14'
 
 interface ChecklistItemRowProps {
   item: ChecklistItem
@@ -63,6 +66,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
   const rowRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<ResizeObserver | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isCompactLayout = useIsMobile(1024)
 
   const measuredRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -141,6 +145,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
       return navigator.maxTouchPoints > 0
     }
   }, [])
+  const usesMobileActions = isCompactLayout || isTouch
 
   const { handleDelete, isPending } = usePendingDelete(
     shouldConfirmDelete,
@@ -156,7 +161,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
   )
 
   useEffect(() => {
-    if (!isExpanded || !isTouch) return
+    if (!isExpanded || !usesMobileActions) return
     const handleClick = (event: PointerEvent) => {
       if (rowRef.current && !rowRef.current.contains(event.target as Node)) {
         setIsExpanded(false)
@@ -164,7 +169,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
     }
     document.addEventListener('pointerdown', handleClick)
     return () => document.removeEventListener('pointerdown', handleClick)
-  }, [isExpanded, isTouch])
+  }, [isExpanded, usesMobileActions])
 
   const tags = useMemo(() => item.tags ?? [], [item.tags])
 
@@ -260,8 +265,13 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
               exit={{ opacity: 0, transition: FADE_OUT }}
               transition={FADE_IN}
             >
-              <div className="px-3 py-2 lg:px-4 lg:py-3">
-                <div className="flex items-center gap-3">
+              <>
+                <div
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 lg:px-4 lg:py-3',
+                    usesMobileActions && COMPACT_HEADER_CLASS,
+                  )}
+                >
                   <button
                     {...attributes}
                     {...listeners}
@@ -277,95 +287,113 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                     <GripVertical size={16} className="hidden lg:block" />
                   </button>
 
-                  <div className="flex flex-1 min-w-0 items-center rounded-lg px-2 transition-colors duration-200">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={draftText}
-                      onChange={(event) => {
-                        setDraftText(event.target.value)
-                        if (editError) setEditError(null)
-                      }}
-                      onKeyDown={handleEditKeyDown}
-                      autoFocus
-                      spellCheck={false}
-                      className={cn(
-                        'w-full min-w-0 bg-transparent border-0 p-0 text-sm text-text-primary outline-none',
-                        'placeholder:text-text-muted whitespace-nowrap overflow-x-auto',
-                        editError && 'placeholder:text-[#e8525266]',
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-1 min-w-0 items-center rounded-lg px-2 transition-colors duration-200">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={draftText}
+                          onChange={(event) => {
+                            setDraftText(event.target.value)
+                            if (editError) setEditError(null)
+                          }}
+                          onKeyDown={handleEditKeyDown}
+                          autoFocus
+                          spellCheck={false}
+                          className={cn(
+                            'w-full min-w-0 bg-transparent border-0 p-0 text-sm text-text-primary outline-none',
+                            'placeholder:text-text-muted whitespace-nowrap overflow-x-auto',
+                            editError && 'placeholder:text-[#e8525266]',
+                          )}
+                          placeholder={editError ?? '输入任务名称...'}
+                          aria-label="编辑任务名称"
+                          aria-invalid={!!editError}
+                        />
+                      </div>
+
+                      <TagEditor
+                        tags={draftTags}
+                        onChange={setDraftTags}
+                        isEditing={isEditing}
+                        suppressMountAnimation={suppressMountAnimation}
+                        addRequest={tagAddRequest}
+                        onAddRequestHandled={() => setTagAddRequest(0)}
+                        onEditStateChange={setIsTagEditorBusy}
+                      />
+
+                      {!usesMobileActions && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="tertiary"
+                            onClick={cancelEdit}
+                            className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_INFO)}
+                            aria-label="取消"
+                          >
+                            <X size={15} />
+                          </Button>
+                          <Button
+                            variant="tertiary"
+                            onClick={() => setTagAddRequest((count) => count + 1)}
+                            className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
+                            aria-label="新增标签"
+                            disabled={isTagEditorBusy || draftTags.length >= TAG_COLLECTION_LIMIT}
+                          >
+                            <TagPlus size={15} />
+                          </Button>
+                          <Button
+                            variant="tertiary"
+                            onClick={() => handleSave(draftText)}
+                            className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_SUCCESS)}
+                            aria-label="保存"
+                          >
+                            <Save size={15} />
+                          </Button>
+                        </div>
                       )}
-                      placeholder={editError ?? '输入任务名称...'}
-                      aria-label="编辑任务名称"
-                      aria-invalid={!!editError}
-                    />
-                  </div>
-
-                  <TagEditor
-                    tags={draftTags}
-                    onChange={setDraftTags}
-                    isEditing={isEditing}
-                    suppressMountAnimation={suppressMountAnimation}
-                    addRequest={tagAddRequest}
-                    onAddRequestHandled={() => setTagAddRequest(0)}
-                    onEditStateChange={setIsTagEditorBusy}
-                  />
-
-                  {!isTouch && (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="tertiary"
-                        onClick={cancelEdit}
-                        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_INFO)}
-                        aria-label="取消"
-                      >
-                        <X size={15} />
-                      </Button>
-                      <Button
-                        variant="tertiary"
-                        onClick={() => setTagAddRequest((count) => count + 1)}
-                        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_PRIMARY)}
-                        aria-label="新增标签"
-                        disabled={isTagEditorBusy || draftTags.length >= TAG_COLLECTION_LIMIT}
-                      >
-                        <TagPlus size={15} />
-                      </Button>
-                      <Button
-                        variant="tertiary"
-                        onClick={() => handleSave(draftText)}
-                        className={cn('w-8 h-8 px-0 py-0', ACTION_HOVER_SUCCESS)}
-                        aria-label="保存"
-                      >
-                        <Save size={15} />
-                      </Button>
                     </div>
-                  )}
+                  </div>
                 </div>
-                {isTouch && (
-                  <div className="mt-3 grid grid-cols-3 gap-2 pt-2">
-                    <Button variant="info-soft" onClick={cancelEdit} className="h-10 px-2 text-xs">
-                      <X size={15} />
-                      <span>取消</span>
+
+                {usesMobileActions && (
+                  <div className={MOBILE_ACTION_LAYOUT.bar}>
+                    <Button
+                      variant="info-soft"
+                      onClick={cancelEdit}
+                      className={MOBILE_ACTION_LAYOUT.button}
+                      contentClassName={MOBILE_ACTION_LAYOUT.content}
+                      aria-label="取消"
+                      title="取消"
+                    >
+                      <X size={13} className={MOBILE_ACTION_LAYOUT.icon} />
+                      <span className={MOBILE_ACTION_LAYOUT.label}>取消</span>
                     </Button>
                     <Button
                       variant="primary-soft"
                       onClick={() => setTagAddRequest((count) => count + 1)}
-                      className="h-10 px-2 text-xs"
+                      className={MOBILE_ACTION_LAYOUT.button}
+                      contentClassName={MOBILE_ACTION_LAYOUT.content}
                       disabled={isTagEditorBusy}
+                      aria-label="新增标签"
+                      title="新增标签"
                     >
-                      <TagPlus size={15} />
-                      <span>新增标签</span>
+                      <TagPlus size={13} className={MOBILE_ACTION_LAYOUT.icon} />
+                      <span className={MOBILE_ACTION_LAYOUT.label}>新增标签</span>
                     </Button>
                     <Button
                       variant="success-soft"
                       onClick={() => handleSave(draftText)}
-                      className="h-10 px-2 text-xs"
+                      className={MOBILE_ACTION_LAYOUT.button}
+                      contentClassName={MOBILE_ACTION_LAYOUT.content}
+                      aria-label="保存"
+                      title="保存"
                     >
-                      <Save size={15} />
-                      <span>保存</span>
+                      <Save size={13} className={MOBILE_ACTION_LAYOUT.icon} />
+                      <span className={MOBILE_ACTION_LAYOUT.label}>保存</span>
                     </Button>
                   </div>
                 )}
-              </div>
+              </>
             </motion.div>
           ) : (
             <motion.div
@@ -377,8 +405,11 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
               transition={FADE_IN}
             >
               <div
-                onClick={isTouch ? () => setIsExpanded((prev) => !prev) : undefined}
-                className="group flex items-center gap-3 px-3 py-2 lg:px-4 lg:py-3"
+                onClick={usesMobileActions ? () => setIsExpanded((prev) => !prev) : undefined}
+                className={cn(
+                  'group flex items-center gap-3 px-3 py-2 lg:px-4 lg:py-3',
+                  usesMobileActions && COMPACT_HEADER_CLASS,
+                )}
               >
                 <button
                   {...attributes}
