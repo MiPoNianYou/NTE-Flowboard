@@ -405,7 +405,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
         <div>
           <p className="font-medium text-text-primary mb-1">{t('cloud.setupTableTitle')}</p>
           <p className="mb-2">{t('cloud.setupTableDescription')}</p>
-          <div className="relative bg-surface rounded-xl overflow-hidden">
+          <div className="cloud-sync-sql relative bg-surface rounded-xl overflow-hidden">
             <div
               role="button"
               tabIndex={0}
@@ -417,8 +417,8 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
                 }
               }}
               className={cn(
-                'flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
-                isSqlExpanded ? '' : 'rounded-xl',
+                'cloud-sync-sql__header flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
+                isSqlExpanded ? 'cloud-sync-sql__header--expanded' : 'rounded-xl',
               )}
             >
               <span className="flex items-center gap-1.5 text-[11px] text-text-muted font-medium font-mono">
@@ -476,7 +476,7 @@ export function CloudSyncSetup({ syncError, onSetupSupabase }: CloudSyncSetupPro
               className={cn(GRID_COLLAPSE, isSqlExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}
             >
               <div className="overflow-hidden">
-                <pre className="px-3 pb-3 pt-1 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
+                <pre className="cloud-sync-sql__body px-3 pb-3 pt-1 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
                   {sqlSnippet}
                 </pre>
               </div>

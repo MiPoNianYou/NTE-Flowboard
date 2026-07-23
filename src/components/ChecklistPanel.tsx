@@ -157,7 +157,7 @@ export function ChecklistPanel({
       ref={outerRef}
       animate={totalHeight !== null ? { height: totalHeight } : undefined}
       transition={!isFirstSetRef.current ? SPRING : { duration: 0 }}
-      className={cn(CARD_STYLES.glass, 'overflow-hidden')}
+      className={cn(CARD_STYLES.panel, 'overflow-hidden')}
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.div

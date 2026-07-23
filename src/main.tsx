@@ -4,6 +4,7 @@ import i18n from './i18n'
 import './index.css'
 import App from './App'
 import { DisplayPreferencesProvider } from './context/DisplayPreferencesContext'
+import { ThemeProvider } from './context/ThemeContext'
 import { getEffectiveLocale } from './i18n/displayPreferences'
 
 const initialLocale = getEffectiveLocale()
@@ -14,8 +15,10 @@ document
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <DisplayPreferencesProvider>
-      <App />
-    </DisplayPreferencesProvider>
+    <ThemeProvider>
+      <DisplayPreferencesProvider>
+        <App />
+      </DisplayPreferencesProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

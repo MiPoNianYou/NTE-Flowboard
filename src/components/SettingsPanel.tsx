@@ -13,8 +13,8 @@ import { useTranslation } from 'react-i18next'
 
 const SETTINGS_BACKDROP_FILTER_CLOSED = 'blur(0px) saturate(1)'
 const SETTINGS_BACKDROP_FILTER_OPEN = 'blur(15px) saturate(1.2)'
-const SETTINGS_BACKDROP_COLOR_CLOSED = 'rgba(13, 13, 18, 0)'
-const SETTINGS_BACKDROP_COLOR_OPEN = 'rgba(13, 13, 18, 0.8)'
+const SETTINGS_BACKDROP_COLOR_CLOSED = 'transparent'
+const SETTINGS_BACKDROP_COLOR_OPEN = 'var(--color-overlay)'
 const SETTINGS_CLOSE = { duration: 0.48, ease: [0.42, 0, 0.58, 1] as const }
 
 interface SettingsPanelProps {

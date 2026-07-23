@@ -30,12 +30,6 @@ vi.mock('../../utils/tagColors', () => ({
   cleanupRegistry: vi.fn(),
 }))
 
-vi.mock('../../utils/colors', () => ({
-  injectColorTokens: vi.fn(),
-  pageGradient: vi.fn(() => ''),
-  PAGE_GRADIENT: '',
-}))
-
 describe('App', () => {
   it('renders without crashing', () => {
     render(<App />)

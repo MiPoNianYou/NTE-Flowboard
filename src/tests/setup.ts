@@ -27,6 +27,8 @@ beforeEach(() => {
 
 afterEach(() => {
   localStorage.clear()
+  delete document.documentElement.dataset.theme
+  document.documentElement.style.colorScheme = ''
   vi.restoreAllMocks()
   vi.useRealTimers()
 })

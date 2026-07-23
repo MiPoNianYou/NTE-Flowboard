@@ -19,7 +19,7 @@ export const TabSwitch = memo(function TabSwitch({ activeTab, onTabChange }: Tab
   const { t } = useTranslation()
   return (
     <div
-      className="glass divide-y divide-border rounded-xl overflow-hidden transition-all duration-200 hover:scale-[1.03] hover:shadow-card-hover"
+      className="bg-surface divide-y divide-border rounded-xl border border-border shadow-card overflow-hidden transition-all duration-200 hover:shadow-card-hover"
       role="tablist"
     >
       {tabs.map(({ key, icon: Icon }) => (

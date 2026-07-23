@@ -8,7 +8,6 @@ import { SettingsContext } from './context/SettingsContext'
 
 import { useNextResetLabel } from './hooks/useNextResetLabel'
 import { cleanupRegistry } from './utils/tagColors'
-import { injectColorTokens, PAGE_GRADIENT } from './utils/colors'
 import { TabSwitch } from './components/TabSwitch'
 import { ProgressCard } from './components/ProgressCard'
 import { HiddenSection } from './components/HiddenSection'
@@ -25,10 +24,6 @@ function AppContent() {
   const { value: isHiddenSectionOpen, onChange: setIsHiddenSectionOpen } = useLocalStorageBoolean(
     'flowboard-hidden-section-open',
   )
-
-  useEffect(() => {
-    injectColorTokens()
-  }, [])
 
   const {
     data,
@@ -86,12 +81,7 @@ function AppContent() {
     >
       <StorageToast />
 
-      <div
-        className="relative min-h-[100dvh] flex flex-col transition-colors duration-[480ms] page-gradient"
-        style={{
-          background: PAGE_GRADIENT,
-        }}
-      >
+      <div className="relative min-h-[100dvh] flex flex-col page-gradient">
         <div className="relative max-w-lg md:max-w-[1280px] mx-auto px-6 py-8 sm:py-12 md:py-10 flex-1 w-full">
           <Header
             data={data}

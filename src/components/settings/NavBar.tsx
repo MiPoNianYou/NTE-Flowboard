@@ -10,7 +10,7 @@ interface NavBarProps {
 
 export function NavBar({ title, onBack, rightContent }: NavBarProps) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0 glass">
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
       {onBack && (
         <Button variant="tertiary" onClick={onBack} className="p-1.5">
           <ArrowLeft className="size-5" />

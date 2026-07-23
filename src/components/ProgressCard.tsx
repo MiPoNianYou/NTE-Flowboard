@@ -25,7 +25,7 @@ export const ProgressCard = memo(function ProgressCard({
   const title = t(`progress.${activeTab}`)
 
   return (
-    <Card variant="glass" className={cn('p-4 md:p-5', isAllDone && 'border-success/30')}>
+    <Card variant="surface" className={cn('p-4 md:p-5', isAllDone && 'border-success/30')}>
       <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <div className="md:hidden flex flex-col justify-center h-20">

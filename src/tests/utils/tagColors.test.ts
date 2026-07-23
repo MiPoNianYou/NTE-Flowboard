@@ -1,3 +1,4 @@
+import { colord } from 'colord'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { getTagColors, cleanupRegistry } from '../../utils/tagColors'
 
@@ -7,6 +8,7 @@ function clearMap() {
 
 beforeEach(() => {
   clearMap()
+  document.documentElement.dataset.theme = 'light'
 })
 
 describe('getTagColors', () => {
@@ -26,6 +28,16 @@ describe('getTagColors', () => {
     const { text, backgroundColor } = getTagColors('any-tag')
     expect(text).toMatch(/^#[0-9A-Fa-f]{6}$/)
     expect(backgroundColor).toMatch(/^#[0-9A-Fa-f]{8}$/)
+  })
+
+  it('keeps tag text readable in the light theme without changing its assignment', () => {
+    const light = getTagColors('contrast')
+    document.documentElement.dataset.theme = 'dark'
+    const dark = getTagColors('contrast')
+
+    expect(colord(light.text).isReadable('#F4F6FB', { level: 'AA', size: 'normal' })).toBe(true)
+    expect(colord(dark.text).isReadable('#0D0D12', { level: 'AA', size: 'normal' })).toBe(true)
+    expect(light.text).not.toBe(dark.text)
   })
 
   it('should assign unique colors to different tags', () => {

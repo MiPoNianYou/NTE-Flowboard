@@ -18,14 +18,14 @@ export function ToggleSwitch({ checked, onCheckedChange }: ToggleSwitchProps) {
         'backdrop-blur-sm transition-colors duration-200',
         'focus:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]',
         checked
-          ? 'bg-primary/80 shadow-[0_0_12px_var(--color-primary-glow)]'
+          ? 'bg-primary shadow-[0_0_12px_var(--color-primary-glow)]'
           : 'bg-surface hover:bg-surface-hover',
       )}
     >
       <span
         className={cn(
           'absolute w-[20px] h-[20px] left-[1px] top-[1px]',
-          'bg-text-primary rounded-full shadow-sm',
+          'bg-[var(--color-text-on-accent)] rounded-full shadow-sm',
           'transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]',
           checked && 'translate-x-[18px]',
         )}

@@ -12,18 +12,17 @@ const MIN_DISTANCE = 8
 const MAX_DISTANCE = 18
 
 type StoredAssignment = { kind: 'palette'; index: number } | { kind: 'generated'; hex: string }
+type TagTheme = 'light' | 'dark'
+
+const LIGHT_BACKGROUND = '#F4F6FB'
+const DARK_BACKGROUND = '#0D0D12'
 
 let cachedMap: Map<string, StoredAssignment> | null = null
 
-function getOptimalAlpha(hex: string): number {
+function getOptimalAlpha(hex: string, theme: TagTheme): number {
   const luminance = colord(hex).luminance()
-  return 0.12 + luminance * 0.15
+  return theme === 'light' ? 0.12 + (1 - luminance) * 0.1 : 0.12 + luminance * 0.15
 }
-
-const TAG_COLORS: [text: string, backgroundColor: string][] = TAG_HEX.map((hex) => {
-  const backgroundColor = colord(hex).alpha(getOptimalAlpha(hex)).toHex()
-  return [hex, backgroundColor]
-})
 
 function isPaletteAssignment(value: unknown): value is { kind: 'palette'; index: number } {
   return (
@@ -100,29 +99,61 @@ function getNextAvailableColorIndex(map: Map<string, StoredAssignment>): number 
   return null
 }
 
-function getTagColorByIndex(index: number): { text: string; backgroundColor: string } {
-  const [text, backgroundColor] = TAG_COLORS[index % TAG_COLORS.length]
-  return { text, backgroundColor }
+function getCurrentTheme(): TagTheme {
+  if (typeof document === 'undefined') return 'light'
+  if (document.documentElement.dataset.theme === 'dark') return 'dark'
+  return 'light'
 }
 
-function getAssignmentColors(assignment: StoredAssignment): {
+function getReadableText(hex: string, theme: TagTheme): string {
+  const background = theme === 'light' ? LIGHT_BACKGROUND : DARK_BACKGROUND
+  const source = colord(hex)
+  if (source.isReadable(background, { level: 'AA', size: 'normal' })) return source.toHex()
+
+  const adjustment = theme === 'light' ? 'darken' : 'lighten'
+  for (let amount = 0.04; amount <= 0.64; amount += 0.04) {
+    const candidate = source[adjustment](amount)
+    if (candidate.isReadable(background, { level: 'AA', size: 'normal' })) return candidate.toHex()
+  }
+
+  return theme === 'light' ? '#202633' : '#FFFFFF'
+}
+
+function getTagColorsFromHex(
+  hex: string,
+  theme: TagTheme,
+): { text: string; backgroundColor: string } {
+  return {
+    text: getReadableText(hex, theme),
+    backgroundColor: colord(hex).alpha(getOptimalAlpha(hex, theme)).toHex(),
+  }
+}
+
+function getTagColorByIndex(
+  index: number,
+  theme: TagTheme,
+): { text: string; backgroundColor: string } {
+  return getTagColorsFromHex(TAG_HEX[index % TAG_HEX.length], theme)
+}
+
+function getAssignmentColors(
+  assignment: StoredAssignment,
+  theme: TagTheme,
+): {
   text: string
   backgroundColor: string
 } {
   if (assignment.kind === 'palette') {
-    return getTagColorByIndex(assignment.index)
+    return getTagColorByIndex(assignment.index, theme)
   }
-  return {
-    text: assignment.hex,
-    backgroundColor: colord(assignment.hex).alpha(getOptimalAlpha(assignment.hex)).toHex(),
-  }
+  return getTagColorsFromHex(assignment.hex, theme)
 }
 
 function getActiveCoreColors(map: Map<string, StoredAssignment>): string[] {
   const colors: string[] = []
   for (const assignment of map.values()) {
     if (assignment.kind === 'palette') {
-      colors.push(getTagColorByIndex(assignment.index).text)
+      colors.push(TAG_HEX[assignment.index % TAG_HEX.length])
     } else {
       colors.push(assignment.hex)
     }
@@ -235,7 +266,7 @@ export function getTagColors(tag: string): { text: string; backgroundColor: stri
     map.set(tag, assignment)
     saveMap(map)
   }
-  return getAssignmentColors(map.get(tag)!)
+  return getAssignmentColors(map.get(tag)!, getCurrentTheme())
 }
 
 export function cleanupRegistry(activeTags: string[]) {

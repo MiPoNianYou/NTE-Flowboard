@@ -3,11 +3,16 @@ import { render as renderBase, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SettingsPanel } from '../../components/SettingsPanel'
 import { DisplayPreferencesProvider } from '../../context/DisplayPreferencesContext'
+import { ThemeProvider } from '../../context/ThemeContext'
 import type { ChecklistData } from '../../types'
 import * as serialization from '../../utils/serialization'
 
 function render(ui: ReactNode) {
-  return renderBase(<DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>)
+  return renderBase(
+    <ThemeProvider>
+      <DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>
+    </ThemeProvider>,
+  )
 }
 
 vi.mock('../../context/SettingsContext', () => ({

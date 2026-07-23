@@ -341,7 +341,7 @@ export function CloudSyncStatus({
             </button>
           </div>
 
-          <div className="relative bg-surface rounded-xl overflow-hidden">
+          <div className="cloud-sync-sql relative bg-surface rounded-xl overflow-hidden">
             <div
               role="button"
               tabIndex={0}
@@ -352,7 +352,10 @@ export function CloudSyncStatus({
                   setIsPatchExpanded((prev) => !prev)
                 }
               }}
-              className="flex items-center justify-between px-3 py-1.5 w-full cursor-pointer"
+              className={cn(
+                'cloud-sync-sql__header flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
+                isPatchExpanded && 'cloud-sync-sql__header--expanded',
+              )}
             >
               <span className="flex items-center gap-1.5 text-[11px] text-text-muted font-medium font-mono">
                 <Database className="size-3" />
@@ -392,7 +395,7 @@ export function CloudSyncStatus({
               )}
             >
               <div className="overflow-hidden">
-                <pre className="px-3 pb-3 pt-1 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
+                <pre className="cloud-sync-sql__body px-3 pb-3 pt-1 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
                   {UPDATED_AT_PATCH_SQL}
                 </pre>
               </div>
