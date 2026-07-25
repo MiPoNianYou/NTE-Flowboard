@@ -7,7 +7,7 @@ describe('ToggleSwitch', () => {
     render(<ToggleSwitch checked onCheckedChange={vi.fn()} />)
 
     const thumb = screen.getByRole('switch').firstElementChild
-    expect(thumb).toHaveClass('bg-[var(--color-text-on-accent)]')
+    expect(thumb).toHaveClass('bg-white')
   })
 
   it('uses the shared solid primary token when enabled', () => {

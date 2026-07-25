@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const THEME_STORAGE_KEY = 'flowboard-theme-preference'
 const DISPLAY_PREFERENCES_STORAGE_KEY = 'flowboard-display-preferences'
@@ -21,6 +21,26 @@ async function openFreshPage(page: Page, colorScheme: 'light' | 'dark') {
 async function openSettings(page: Page) {
   await page.getByRole('button', { name: '打开设置' }).click()
   return page.locator('[role="dialog"]:visible')
+}
+
+async function expectWithinViewport(locator: Locator, width: number) {
+  const box = await locator.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.x).toBeGreaterThanOrEqual(0)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+}
+
+async function expectWithinContainer(locator: Locator, container: DOMRect) {
+  const box = await locator.boundingBox()
+  expect(box).not.toBeNull()
+  expect(box!.x).toBeGreaterThanOrEqual(container.x)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(container.x + container.width)
+}
+
+async function waitForMobilePageToSettle(dialog: Locator) {
+  await expect
+    .poll(() => dialog.locator('[data-settings-mobile-page]').count(), { timeout: 2000 })
+    .toBe(1)
 }
 
 test('uses the system appearance from the first light-theme frame', async ({ page }, testInfo) => {
@@ -61,24 +81,36 @@ for (const width of [320, 765, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await openFreshPage(page, 'light')
     const dialog = await openSettings(page)
-    const generalButton = dialog.getByRole('button', { name: '通用' })
-    if (await generalButton.isVisible()) await generalButton.click()
-    await page.mouse.move(0, 0)
-    await page.waitForTimeout(250)
-    const themeControl = dialog.getByRole('group', { name: '外观' })
+    if (width < 768) {
+      await dialog.getByRole('button', { name: '通用', exact: true }).click()
+      await waitForMobilePageToSettle(dialog)
+      await expect(dialog.getByRole('heading', { name: '通用', exact: true })).toBeVisible()
 
-    await expect(themeControl).toBeVisible()
-    await expect(dialog.getByRole('heading', { name: '偏好设置' })).toBeVisible()
-    await expect(dialog.getByRole('heading', { name: '任务行为' })).toBeVisible()
+      const themeEntry = dialog.getByRole('button', { name: /^外观/ })
+      await expect(themeEntry).toBeVisible()
+      await expectWithinViewport(themeEntry, width)
+
+      await themeEntry.click()
+      await waitForMobilePageToSettle(dialog)
+      await expect(dialog.getByRole('heading', { name: '外观', exact: true })).toBeVisible()
+      const selectedTheme = dialog.getByRole('button', { name: '系统', exact: true })
+      await expect(selectedTheme).toBeVisible()
+      await expectWithinViewport(selectedTheme, width)
+    } else {
+      const generalButton = dialog.getByRole('button', { name: '通用', exact: true })
+      if (await generalButton.isVisible()) await generalButton.click()
+      const themeControl = dialog.getByRole('group', { name: '外观' })
+
+      await expect(themeControl).toBeVisible()
+      await expect(dialog.getByRole('heading', { name: '偏好设置' })).toBeVisible()
+      await expect(dialog.getByRole('heading', { name: '任务行为' })).toBeVisible()
+      await expectWithinViewport(themeControl, width)
+    }
+
     const viewportHasOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
     )
     expect(viewportHasOverflow).toBe(false)
-
-    const box = await themeControl.boundingBox()
-    expect(box).not.toBeNull()
-    expect(box!.x).toBeGreaterThanOrEqual(0)
-    expect(box!.x + box!.width).toBeLessThanOrEqual(width)
     await testInfo.attach(`theme-light-${width}`, {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
@@ -93,10 +125,43 @@ for (const width of [616, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await openFreshPage(page, 'dark')
     const dialog = await openSettings(page)
-    const generalButton = dialog.getByRole('button', { name: '通用' })
-    if (await generalButton.isVisible()) await generalButton.click()
-    await page.mouse.move(0, 0)
-    await page.waitForTimeout(250)
+    if (width < 768) {
+      await dialog.getByRole('button', { name: '通用', exact: true }).click()
+      await waitForMobilePageToSettle(dialog)
+      await expect(dialog.getByRole('heading', { name: '通用', exact: true })).toBeVisible()
+
+      const section = dialog.getByRole('heading', { name: '偏好设置' }).locator('..')
+      const card = section.locator(':scope > div')
+      const cardBox = await card.boundingBox()
+      expect(cardBox).not.toBeNull()
+
+      const preferenceEntries = [
+        dialog.getByRole('button', { name: /^外观/ }),
+        dialog.getByRole('button', { name: /^语言/ }),
+        dialog.getByRole('button', { name: /^时间格式/ }),
+      ]
+      for (const entry of preferenceEntries) {
+        await expect(entry).toBeVisible()
+        await expectWithinContainer(entry, cardBox!)
+      }
+
+      await dialog.getByRole('button', { name: /^语言/ }).click()
+      await waitForMobilePageToSettle(dialog)
+      await expect(dialog.getByRole('heading', { name: '语言', exact: true })).toBeVisible()
+      const englishChoice = dialog.getByRole('button', { name: '英文', exact: true })
+      await expect(englishChoice).toBeVisible()
+      await expectWithinViewport(englishChoice, width)
+
+      await englishChoice.click()
+      await expect(dialog.getByRole('heading', { name: 'Language', exact: true })).toBeVisible()
+      await expect(dialog.getByRole('button', { name: 'English', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+    } else {
+      const generalButton = dialog.getByRole('button', { name: '通用', exact: true })
+      if (await generalButton.isVisible()) await generalButton.click()
+    }
 
     async function expectPreferenceControlsToFit(
       heading: string,
@@ -134,6 +199,14 @@ for (const width of [616, 1440]) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true)
+    }
+
+    if (width < 768) {
+      await testInfo.attach(`preferences-mobile-${width}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png',
+      })
+      return
     }
 
     await expectPreferenceControlsToFit('偏好设置', [

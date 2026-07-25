@@ -247,7 +247,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
     >
       <div
         className={cn(
-          'rounded-xl transition-colors duration-200',
+          'rounded-lg transition-colors duration-200',
           editError
             ? 'border border-solid border-danger/30 bg-danger/5'
             : isEditing

@@ -50,7 +50,7 @@ export function CollapsibleSection({
         onAnimationComplete={onAnimationComplete}
         className="w-full flex items-center justify-between px-4 py-3 text-text-primary"
       >
-        <span className="flex items-center gap-2 text-[13px] font-medium text-text-primary">
+        <span className="flex items-center gap-2 text-footnote font-medium text-text-primary">
           {icon}
           {label}
           {count !== undefined && <span className="text-text-muted">({count})</span>}

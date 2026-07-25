@@ -42,6 +42,7 @@ interface CloudSyncStatusProps {
   syncError: string | null
   onTriggerSync: () => Promise<void>
   onTeardownSupabase: () => void
+  mobile?: boolean
 }
 
 function formatSyncTime(
@@ -78,6 +79,7 @@ export function CloudSyncStatus({
   syncError,
   onTriggerSync,
   onTeardownSupabase,
+  mobile = false,
 }: CloudSyncStatusProps) {
   const { t } = useTranslation()
   const { uiPreferences, updateUiPreferences } = useSettings()
@@ -85,6 +87,7 @@ export function CloudSyncStatus({
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDisconnectExpanded, setIsDisconnectExpanded] = useState(false)
   const [isPatchExpanded, setIsPatchExpanded] = useState(false)
+  const [isMobilePatchExpanded, setIsMobilePatchExpanded] = useState(false)
   const [isPatchCopied, setIsPatchCopied] = useState(false)
   const [isPatchHideExpanded, setIsPatchHideExpanded] = useState(false)
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -208,7 +211,13 @@ export function CloudSyncStatus({
 
   return (
     <div className="space-y-4">
-      <Card variant="surface" className="flex flex-col items-center py-5 px-4">
+      <Card
+        variant="surface"
+        className={cn(
+          'flex flex-col items-center px-4 py-5',
+          mobile && 'mobile-settings-surface hover:scale-100',
+        )}
+      >
         <div className="flex flex-col items-center">
           <div
             className={cn(
@@ -314,90 +323,122 @@ export function CloudSyncStatus({
       {!uiPreferences.cloudPatchHidden && (
         <Card
           variant="surface"
-          className="px-4 py-3 text-[13px] text-text-secondary leading-relaxed space-y-3"
+          className={cn(
+            'px-4 text-xs leading-relaxed text-text-secondary',
+            mobile ? 'py-0' : 'space-y-3 py-3',
+            mobile && 'mobile-settings-surface hover:scale-100',
+          )}
         >
-          <div className="relative">
-            <div className="min-w-0 flex-1 pr-12">
-              <p className="font-medium text-text-primary mb-1">{t('cloud.patchTitle')}</p>
-              <p>{t('cloud.patchDescription')}</p>
-            </div>
+          {mobile && (
             <button
-              className={cn(
-                'danger-confirm-button danger-confirm-button--compact',
-                isPatchHideExpanded && 'expanded',
-              )}
-              style={{ position: 'absolute', top: 0, right: 0 }}
-              onClick={handleHidePatchCard}
-              onMouseEnter={handlePatchHideEnter}
-              onMouseLeave={handlePatchHideLeave}
-              aria-label={isPatchHideExpanded ? t('cloud.confirmHidePatch') : t('cloud.hidePatch')}
+              type="button"
+              onClick={() => setIsMobilePatchExpanded((expanded) => !expanded)}
+              aria-expanded={isMobilePatchExpanded}
+              className="flex min-h-14 w-full items-center justify-between gap-3 text-left text-text-primary"
             >
-              <span className="sign">
-                <EyeOff size={18} />
-              </span>
-              <span className="text danger-confirm-text leading-none">
-                {t('cloud.confirmHide')}
-              </span>
+              <span className="text-sm font-semibold">{t('cloud.patchTitle')}</span>
+              <ChevronDown
+                className={cn(
+                  'size-4 flex-shrink-0 transition-transform duration-150',
+                  !isMobilePatchExpanded && '-rotate-90',
+                )}
+              />
             </button>
-          </div>
-
-          <div className="cloud-sync-sql relative bg-surface rounded-xl overflow-hidden">
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => setIsPatchExpanded((prev) => !prev)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  setIsPatchExpanded((prev) => !prev)
+          )}
+          <div
+            className={cn(
+              'space-y-3',
+              mobile && !isMobilePatchExpanded && 'hidden',
+              mobile && isMobilePatchExpanded && 'mobile-settings-divider py-3',
+            )}
+          >
+            <div className="relative">
+              <div className="min-w-0 flex-1 pr-12">
+                <p className="text-sm font-semibold text-text-primary mb-1">
+                  {t('cloud.patchTitle')}
+                </p>
+                <p>{t('cloud.patchDescription')}</p>
+              </div>
+              <button
+                className={cn(
+                  'danger-confirm-button danger-confirm-button--compact',
+                  isPatchHideExpanded && 'expanded',
+                )}
+                style={{ position: 'absolute', top: 0, right: 0 }}
+                onClick={handleHidePatchCard}
+                onMouseEnter={handlePatchHideEnter}
+                onMouseLeave={handlePatchHideLeave}
+                aria-label={
+                  isPatchHideExpanded ? t('cloud.confirmHidePatch') : t('cloud.hidePatch')
                 }
-              }}
-              className={cn(
-                'cloud-sync-sql__header flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
-                isPatchExpanded && 'cloud-sync-sql__header--expanded',
-              )}
-            >
-              <span className="flex items-center gap-1.5 text-[11px] text-text-muted font-medium font-mono">
-                <Database className="size-3" />
-                {t('cloud.patchSqlLabel')}
-                <ChevronDown
-                  className={cn(
-                    'size-3 transition-transform duration-150',
-                    !isPatchExpanded && '-rotate-90',
-                  )}
-                />
-              </span>
-              <span onClick={(event) => event.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={handleCopyPatchSql}
-                  aria-label={isPatchCopied ? t('common.copied') : t('cloud.copyPatchSql')}
-                  className={cn(
-                    'inline-flex items-center justify-center size-6 rounded-lg border border-border transition-colors duration-200',
-                    isPatchCopied
-                      ? 'bg-success/15 text-success'
-                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover',
-                  )}
-                >
-                  {isPatchCopied ? (
-                    <ClipboardCheck className="size-3.5" />
-                  ) : (
-                    <ClipboardPlus className="size-3.5" />
-                  )}
-                </button>
-              </span>
+              >
+                <span className="sign">
+                  <EyeOff size={18} />
+                </span>
+                <span className="text danger-confirm-text leading-none">
+                  {t('cloud.confirmHide')}
+                </span>
+              </button>
             </div>
 
-            <div
-              className={cn(
-                'grid transition-all duration-200 ease-out',
-                isPatchExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-              )}
-            >
-              <div className="overflow-hidden">
-                <pre className="cloud-sync-sql__body px-3 pb-3 pt-1 text-[11px] font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
-                  {UPDATED_AT_PATCH_SQL}
-                </pre>
+            <div className="cloud-sync-sql relative bg-surface rounded-lg overflow-hidden">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setIsPatchExpanded((prev) => !prev)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    setIsPatchExpanded((prev) => !prev)
+                  }
+                }}
+                className={cn(
+                  'cloud-sync-sql__header flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
+                  isPatchExpanded && 'cloud-sync-sql__header--expanded',
+                )}
+              >
+                <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium font-mono">
+                  <Database className="size-3" />
+                  {t('cloud.patchSqlLabel')}
+                  <ChevronDown
+                    className={cn(
+                      'size-3 transition-transform duration-150',
+                      !isPatchExpanded && '-rotate-90',
+                    )}
+                  />
+                </span>
+                <span onClick={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={handleCopyPatchSql}
+                    aria-label={isPatchCopied ? t('common.copied') : t('cloud.copyPatchSql')}
+                    className={cn(
+                      'inline-flex items-center justify-center size-6 rounded-lg border border-border transition-colors duration-200',
+                      isPatchCopied
+                        ? 'bg-success/15 text-success'
+                        : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover',
+                    )}
+                  >
+                    {isPatchCopied ? (
+                      <ClipboardCheck className="size-3.5" />
+                    ) : (
+                      <ClipboardPlus className="size-3.5" />
+                    )}
+                  </button>
+                </span>
+              </div>
+
+              <div
+                className={cn(
+                  'grid transition-all duration-200 ease-out',
+                  isPatchExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+                )}
+              >
+                <div className="overflow-hidden">
+                  <pre className="cloud-sync-sql__body px-3 pb-3 pt-1 text-xs font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
+                    {UPDATED_AT_PATCH_SQL}
+                  </pre>
+                </div>
               </div>
             </div>
           </div>

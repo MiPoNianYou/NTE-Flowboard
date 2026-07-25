@@ -48,13 +48,29 @@ describe('SettingsPanel', () => {
     expect(dialogs.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('should close settings when close button clicked', () => {
+  it('should not render a close button in the mobile sheet', () => {
     render(<SettingsPanel data={mockData} onManualReset={vi.fn()} onImport={vi.fn()} />)
     fireEvent.click(screen.getByLabelText('打开设置'))
     expect(screen.getAllByRole('dialog').length).toBeGreaterThanOrEqual(1)
-    const closeButton = screen.getAllByRole('button').find((b) => b.querySelector('.lucide-x'))
-    if (closeButton) fireEvent.click(closeButton)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.querySelectorAll('.lucide-x')).toHaveLength(0)
+  })
+
+  it('should show a return control without a mobile close button while viewing a settings page', () => {
+    render(<SettingsPanel data={mockData} onManualReset={vi.fn()} onImport={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('打开设置'))
+    fireEvent.click(screen.getAllByText('服务器设置')[0])
+
+    expect(screen.getAllByLabelText('返回设置').length).toBeGreaterThanOrEqual(1)
+    expect(document.querySelectorAll('.lucide-x')).toHaveLength(0)
+  })
+
+  it('should return focus to the settings button after closing', () => {
+    render(<SettingsPanel data={mockData} onManualReset={vi.fn()} onImport={vi.fn()} />)
+    const settingsButton = screen.getByLabelText('打开设置')
+    fireEvent.click(settingsButton)
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(settingsButton).toHaveFocus()
   })
 
   it('should close on Escape key', () => {

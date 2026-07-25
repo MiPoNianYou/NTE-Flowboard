@@ -16,6 +16,7 @@ interface SettingsDataProps extends SettingsPageBaseProps {
   isImportError: boolean
   isImportSuccess: boolean
   isExportSuccess: boolean
+  mobile?: boolean
 }
 
 function useTimedStateSet<T extends string>(timeout: number) {
@@ -65,6 +66,7 @@ export function SettingsData({
   isExportSuccess,
   onBack,
   isEmbedded,
+  mobile = false,
 }: SettingsDataProps) {
   const { t } = useTranslation()
   const confirming = useTimedStateSet<TabType>(3000)
@@ -83,6 +85,137 @@ export function SettingsData({
     },
     [confirming, resetDone, onManualReset],
   )
+
+  if (mobile) {
+    return (
+      <SettingsPage title={t('settings.nav.data')} onBack={onBack} isEmbedded={isEmbedded}>
+        <div className="space-y-5">
+          <Card variant="surface" className="px-3 py-3 space-y-2">
+            {(['daily', 'weekly', 'monthly'] as TabType[]).map((tab) => {
+              const isResetDone = resetDone.items.has(tab)
+              const isConfirming = confirming.items.has(tab)
+              return (
+                <Button
+                  key={tab}
+                  variant={
+                    isResetDone ? 'success-soft' : isConfirming ? 'danger-soft' : 'warning-soft'
+                  }
+                  onClick={() => handleResetClick(tab)}
+                  className="w-full justify-start py-3"
+                >
+                  <RotateCcw className="size-4" />
+                  <div className="text-left">
+                    <p>
+                      {isResetDone
+                        ? t(`settings.data.success${tab[0].toUpperCase()}${tab.slice(1)}`)
+                        : isConfirming
+                          ? t(`settings.data.confirm${tab[0].toUpperCase()}${tab.slice(1)}`)
+                          : t(`settings.data.reset${tab[0].toUpperCase()}${tab.slice(1)}`)}
+                    </p>
+                  </div>
+                </Button>
+              )
+            })}
+          </Card>
+          <Card variant="surface" className="px-3 py-3 space-y-2">
+            {isExportSuccess ? (
+              <Button
+                variant="success-soft"
+                onClick={() => {
+                  return
+                }}
+                className="w-full justify-start"
+              >
+                <CircleCheck className="size-4" />
+                <div className="text-left">
+                  <p>{t('settings.data.exportSuccess')}</p>
+                  <p className="text-xs font-normal text-text-secondary">
+                    {t('settings.data.exportSuccessDetail')}
+                  </p>
+                </div>
+              </Button>
+            ) : (
+              <Button variant="info-soft" onClick={onExport} className="w-full justify-start">
+                <Download className="size-4" />
+                <div className="text-left">
+                  <p>{t('settings.data.export')}</p>
+                  <p className="text-xs font-normal text-text-secondary">
+                    {t('settings.data.exportDetail')}
+                  </p>
+                </div>
+              </Button>
+            )}
+            {isImportSuccess ? (
+              <Button
+                variant="success-soft"
+                onClick={() => {
+                  return
+                }}
+                className="w-full justify-start"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={onImportFile}
+                  className="hidden"
+                />
+                <CircleCheck className="size-4" />
+                <div className="text-left">
+                  <p>{t('settings.data.importSuccess')}</p>
+                  <p className="text-xs font-normal text-text-secondary">
+                    {t('settings.data.importSuccessDetail')}
+                  </p>
+                </div>
+              </Button>
+            ) : isImportError ? (
+              <Button
+                variant="danger-soft"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full justify-start"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={onImportFile}
+                  className="hidden"
+                />
+                <CircleX className="size-4" />
+                <div className="text-left">
+                  <p>{t('settings.data.fileError')}</p>
+                  <p className="text-xs font-normal text-text-secondary">
+                    {t('settings.data.fileErrorDetail')}
+                  </p>
+                </div>
+              </Button>
+            ) : (
+              <Button
+                variant="info-soft"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full justify-start"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={onImportFile}
+                  className="hidden"
+                />
+                <Upload className="size-4" />
+                <div className="text-left">
+                  <p>{t('settings.data.import')}</p>
+                  <p className="text-xs font-normal text-text-secondary">
+                    {t('settings.data.importDetail')}
+                  </p>
+                </div>
+              </Button>
+            )}
+          </Card>
+        </div>
+      </SettingsPage>
+    )
+  }
 
   return (
     <SettingsPage title={t('settings.nav.data')} onBack={onBack} isEmbedded={isEmbedded}>
@@ -126,7 +259,7 @@ export function SettingsData({
               <CircleCheck className="size-4" />
               <div className="text-left">
                 <p>{t('settings.data.exportSuccess')}</p>
-                <p className="text-xs font-normal opacity-70">
+                <p className="text-xs font-normal text-text-secondary">
                   {t('settings.data.exportSuccessDetail')}
                 </p>
               </div>
@@ -136,7 +269,9 @@ export function SettingsData({
               <Download className="size-4" />
               <div className="text-left">
                 <p>{t('settings.data.export')}</p>
-                <p className="text-xs font-normal opacity-70">{t('settings.data.exportDetail')}</p>
+                <p className="text-xs font-normal text-text-secondary">
+                  {t('settings.data.exportDetail')}
+                </p>
               </div>
             </Button>
           )}
@@ -158,7 +293,7 @@ export function SettingsData({
               <CircleCheck className="size-4" />
               <div className="text-left">
                 <p>{t('settings.data.importSuccess')}</p>
-                <p className="text-xs font-normal opacity-70">
+                <p className="text-xs font-normal text-text-secondary">
                   {t('settings.data.importSuccessDetail')}
                 </p>
               </div>
@@ -179,7 +314,7 @@ export function SettingsData({
               <CircleX className="size-4" />
               <div className="text-left">
                 <p>{t('settings.data.fileError')}</p>
-                <p className="text-xs font-normal opacity-70">
+                <p className="text-xs font-normal text-text-secondary">
                   {t('settings.data.fileErrorDetail')}
                 </p>
               </div>
@@ -200,7 +335,9 @@ export function SettingsData({
               <Upload className="size-4" />
               <div className="text-left">
                 <p>{t('settings.data.import')}</p>
-                <p className="text-xs font-normal opacity-70">{t('settings.data.importDetail')}</p>
+                <p className="text-xs font-normal text-text-secondary">
+                  {t('settings.data.importDetail')}
+                </p>
               </div>
             </Button>
           )}

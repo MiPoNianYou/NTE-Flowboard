@@ -12,6 +12,7 @@ export interface CloudSyncProps {
   onTriggerSync: () => Promise<void>
   onTeardownSupabase: () => void
   onClearSyncError?: () => void
+  mobile?: boolean
 }
 
 export const CloudSyncSection = memo(function CloudSyncSection({
@@ -23,6 +24,7 @@ export const CloudSyncSection = memo(function CloudSyncSection({
   onTriggerSync,
   onTeardownSupabase,
   onClearSyncError,
+  mobile = false,
 }: CloudSyncProps) {
   useEffect(() => {
     return () => {
@@ -31,7 +33,9 @@ export const CloudSyncSection = memo(function CloudSyncSection({
   }, [onClearSyncError])
 
   if (!isConfigured) {
-    return <CloudSyncSetup syncError={syncError} onSetupSupabase={onSetupSupabase} />
+    return (
+      <CloudSyncSetup syncError={syncError} onSetupSupabase={onSetupSupabase} mobile={mobile} />
+    )
   }
 
   return (
@@ -41,6 +45,7 @@ export const CloudSyncSection = memo(function CloudSyncSection({
       syncError={syncError}
       onTriggerSync={onTriggerSync}
       onTeardownSupabase={onTeardownSupabase}
+      mobile={mobile}
     />
   )
 })

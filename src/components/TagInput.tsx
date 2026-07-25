@@ -95,7 +95,7 @@ export function TagInput({ tags, onChange, onCompositionChange, compactFocus }: 
           disabled={isAtLimit}
           className={cn(
             compactFocus &&
-              'rounded-full border-border bg-transparent focus:border-primary focus:ring-1 focus:ring-primary/30 focus:ring-offset-0',
+              'rounded-md border-border bg-transparent focus:border-primary focus:ring-1 focus:ring-primary/30 focus:ring-offset-0',
           )}
         />
       ) : (

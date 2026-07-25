@@ -25,7 +25,7 @@ export function ToggleSwitch({ checked, onCheckedChange }: ToggleSwitchProps) {
       <span
         className={cn(
           'absolute w-[20px] h-[20px] left-[1px] top-[1px]',
-          'bg-[var(--color-text-on-accent)] rounded-full shadow-sm',
+          'bg-white rounded-full shadow-sm',
           'transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]',
           checked && 'translate-x-[18px]',
         )}

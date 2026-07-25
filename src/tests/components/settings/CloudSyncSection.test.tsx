@@ -196,6 +196,17 @@ describe('CloudSyncSection', () => {
       expect(screen.getByText('数据库补丁').parentElement?.className).toContain('pr-12')
     })
 
+    it('should keep the mobile patch card from scaling after it is tapped', () => {
+      render(<CloudSyncSection {...mockConfiguredProps} mobile />)
+
+      const patchToggle = screen.getByRole('button', { name: '数据库补丁' })
+      expect(patchToggle.parentElement?.className).toContain('hover:scale-100')
+      expect(patchToggle.parentElement?.className).not.toContain('hover:scale-[1.03]')
+
+      fireEvent.click(patchToggle)
+      expect(patchToggle).toHaveAttribute('aria-expanded', 'true')
+    })
+
     it('should require a second click before hiding the patch card', () => {
       render(<CloudSyncSection {...mockConfiguredProps} />)
 

@@ -114,6 +114,24 @@ describe('SettingsGeneral', () => {
     expect(choices[2]).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('uses white text for selected segmented choices', () => {
+    renderSettingsGeneral({ isEmbedded: true })
+
+    const selectedTheme = screen
+      .getByRole('group', { name: '外观' })
+      .querySelector('[aria-pressed="true"]')
+    const selectedLanguage = screen
+      .getByRole('group', { name: '语言' })
+      .querySelector('[aria-pressed="true"]')
+    const selectedTimeFormat = screen
+      .getByRole('group', { name: '时间格式' })
+      .querySelector('[aria-pressed="true"]')
+
+    expect(selectedTheme).toHaveClass('text-white')
+    expect(selectedLanguage).toHaveClass('text-white')
+    expect(selectedTimeFormat).toHaveClass('text-white')
+  })
+
   it('uses 24-hour time by default and persists a 12-hour selection', () => {
     renderSettingsGeneral({ isEmbedded: true })
 

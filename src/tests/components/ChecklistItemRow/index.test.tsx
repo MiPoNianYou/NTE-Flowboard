@@ -193,11 +193,11 @@ describe('ChecklistItemRow', () => {
     )
     expect(cancelButton).toHaveClass('h-10', 'max-[419px]:px-0')
     expect(cancelButton).toHaveAttribute('title', '取消')
-    expect(screen.getByText('取消')).toHaveClass('whitespace-nowrap', 'max-[419px]:text-[10px]')
+    expect(screen.getByText('取消')).toHaveClass('whitespace-nowrap')
     expect(screen.getByRole('button', { name: '新增标签' })).toHaveClass('h-10', 'max-[419px]:px-0')
-    expect(screen.getByText('新增标签')).toHaveClass('whitespace-nowrap', 'max-[419px]:text-[10px]')
+    expect(screen.getByText('新增标签')).toHaveClass('whitespace-nowrap')
     expect(screen.getByRole('button', { name: '保存' })).toHaveClass('h-10', 'max-[419px]:px-0')
-    expect(screen.getByText('保存')).toHaveClass('whitespace-nowrap', 'max-[419px]:text-[10px]')
+    expect(screen.getByText('保存')).toHaveClass('whitespace-nowrap')
   })
 
   it('shows a confirm-delete action while deletion is pending', () => {

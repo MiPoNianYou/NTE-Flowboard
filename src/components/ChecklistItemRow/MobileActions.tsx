@@ -14,7 +14,7 @@ export const MOBILE_ACTION_LAYOUT = {
   button: 'h-10 px-2 text-xs max-[419px]:px-0',
   content: 'max-[419px]:gap-1',
   icon: 'max-[419px]:size-3',
-  label: 'whitespace-nowrap max-[419px]:text-[10px]',
+  label: 'whitespace-nowrap',
 } as const
 
 export function MobileActions({

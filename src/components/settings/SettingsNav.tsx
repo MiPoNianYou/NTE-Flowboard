@@ -1,4 +1,4 @@
-import { Settings2, Globe, Cloud, Database, type LucideIcon } from 'lucide-react'
+import { Settings2, Globe, Cloud, Database, ChevronRight, type LucideIcon } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { useTranslation } from 'react-i18next'
 
@@ -18,10 +18,11 @@ export const NAV_ITEMS: NavItem[] = [
 ]
 
 interface SettingsNavProps {
-  activeTab: SubPage
+  activeTab: SubPage | null
   onTabChange: (tab: SubPage) => void
   labels?: Partial<Record<SubPage, string>>
   orientation?: 'vertical' | 'horizontal'
+  showDisclosure?: boolean
   className?: string
 }
 
@@ -30,13 +31,20 @@ export function SettingsNav({
   onTabChange,
   labels,
   orientation = 'vertical',
+  showDisclosure = false,
   className,
 }: SettingsNavProps) {
   const { t } = useTranslation()
+  const isMobileEntry = showDisclosure
+
   return (
     <nav
       className={cn(
-        orientation === 'vertical' ? 'flex flex-col gap-0.5' : 'flex flex-col',
+        isMobileEntry
+          ? 'settings-mobile-list flex flex-col overflow-hidden rounded-xl bg-surface'
+          : orientation === 'vertical'
+            ? 'flex flex-col gap-0.5'
+            : 'flex flex-col',
         className,
       )}
     >
@@ -47,34 +55,55 @@ export function SettingsNav({
             key={item.id}
             type="button"
             onClick={() => onTabChange(item.id)}
+            data-settings-initial-focus={isMobileEntry && item.id === 'general' ? true : undefined}
             className={cn(
-              'group relative flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-colors duration-200',
-              isActive
-                ? 'md:bg-primary/5 md:text-primary text-text-secondary hover:text-text-primary hover:bg-surface-hover md:hover:bg-primary/5 md:hover:text-primary'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+              isMobileEntry
+                ? 'settings-mobile-list-row group relative flex min-h-14 items-center gap-3 px-3 py-2.5 text-left text-text-primary hover:bg-surface-hover'
+                : cn(
+                    'group relative flex min-h-16 items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors duration-200',
+                    isActive
+                      ? 'md:bg-primary/5 md:text-primary text-text-secondary hover:text-text-primary hover:bg-surface-hover md:hover:bg-primary/5 md:hover:text-primary'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+                  ),
             )}
           >
             <div
               className={cn(
-                'size-8 rounded-lg flex items-center justify-center transition-colors duration-200',
-                isActive ? 'md:bg-primary/15 bg-surface' : 'bg-surface group-hover:bg-elevated',
+                'size-8 rounded-md flex items-center justify-center transition-colors duration-200',
+                isMobileEntry
+                  ? 'bg-elevated text-primary'
+                  : isActive
+                    ? 'md:bg-primary/15 bg-surface'
+                    : 'bg-surface group-hover:bg-elevated',
               )}
             >
-              <item.icon className={cn('size-4', isActive && 'md:text-primary')} />
+              <item.icon
+                className={cn('size-4', isActive && !isMobileEntry && 'md:text-primary')}
+              />
             </div>
-            <span className="shrink-0 whitespace-nowrap text-sm font-medium">
-              {t(item.labelKey)}
-            </span>
-            {labels?.[item.id] && (
-              <span
-                className={cn(
-                  'ml-auto shrink-0 whitespace-nowrap text-right text-xs',
-                  isActive ? 'md:text-primary/70 text-text-muted' : 'text-text-muted',
-                )}
-              >
-                {labels[item.id]}
-              </span>
-            )}
+            <div
+              className={cn(
+                'min-w-0 flex-1',
+                !isMobileEntry && 'md:flex md:items-baseline md:gap-2',
+              )}
+            >
+              <span className="block text-sm font-medium leading-snug">{t(item.labelKey)}</span>
+              {labels?.[item.id] && (
+                <span
+                  className={cn(
+                    'block text-xs leading-snug',
+                    isMobileEntry
+                      ? 'text-text-muted'
+                      : isActive
+                        ? 'md:ml-auto md:text-right md:text-primary/70 text-text-muted'
+                        : 'md:ml-auto md:text-right text-text-muted',
+                  )}
+                >
+                  {labels[item.id]}
+                </span>
+              )}
+            </div>
+            {showDisclosure && <ChevronRight className="size-4 flex-shrink-0 text-text-muted" />}
           </button>
         )
       })}

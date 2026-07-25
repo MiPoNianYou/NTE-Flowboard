@@ -26,7 +26,7 @@ export function SettingRow({
           </div>
         )}
         <div className="flex-1">
-          <p className="text-[13px] text-text-primary font-medium">{label}</p>
+          <p className="text-footnote text-text-primary font-medium">{label}</p>
           {description && <p className="text-xs text-text-secondary mt-0.5">{description}</p>}
         </div>
       </div>

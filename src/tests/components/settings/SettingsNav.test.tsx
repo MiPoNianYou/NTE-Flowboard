@@ -25,6 +25,14 @@ describe('SettingsNav', () => {
     expect(cloudButton.className).toContain('bg-primary/5')
   })
 
+  it('renders the mobile entry page as an unselected navigation list', () => {
+    render(<SettingsNav activeTab={null} onTabChange={mockOnTabChange} showDisclosure />)
+
+    const generalButton = screen.getByText('通用').closest('button')!
+    expect(generalButton.className).not.toContain('bg-primary/5')
+    expect(document.querySelectorAll('.lucide-chevron-right')).toHaveLength(NAV_ITEMS.length)
+  })
+
   it('should show labels when provided', () => {
     const labels = { server: '亚太服', cloud: '已连接' }
     render(<SettingsNav activeTab="general" onTabChange={mockOnTabChange} labels={labels} />)
@@ -32,7 +40,7 @@ describe('SettingsNav', () => {
     expect(screen.getByText('已连接')).toBeInTheDocument()
   })
 
-  it('keeps navigation titles and status labels on one line', () => {
+  it('allows navigation titles and status labels to reflow at larger text sizes', () => {
     render(
       <SettingsNav
         activeTab="general"
@@ -41,8 +49,9 @@ describe('SettingsNav', () => {
       />,
     )
 
-    expect(screen.getByText('云同步')).toHaveClass('whitespace-nowrap', 'shrink-0')
-    expect(screen.getByText('Not set')).toHaveClass('whitespace-nowrap', 'shrink-0')
+    expect(screen.getByText('云同步')).toHaveClass('block', 'leading-snug')
+    expect(screen.getByText('Not set')).toHaveClass('block', 'leading-snug')
+    expect(screen.getByText('云同步').parentElement).toHaveClass('min-w-0', 'flex-1')
   })
 
   it('should not show labels for items without label', () => {

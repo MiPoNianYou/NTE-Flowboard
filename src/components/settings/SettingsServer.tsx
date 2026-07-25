@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { Globe } from 'lucide-react'
+import { Check, Globe } from 'lucide-react'
 import type { ServerRegion } from '../../types'
 import { SERVER_REGIONS } from '../../utils/defaultData'
 import { cn } from '../../utils/cn'
@@ -13,9 +13,10 @@ import { useTranslation } from 'react-i18next'
 interface SettingsServerProps {
   onBack?: () => void
   isEmbedded?: boolean
+  mobile?: boolean
 }
 
-export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
+export function SettingsServer({ onBack, isEmbedded, mobile = false }: SettingsServerProps) {
   const { t } = useTranslation()
   const { settings, updateSettings } = useSettings()
   const { locale, timeFormat } = useDisplayPreferences()
@@ -25,6 +26,57 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
     hour12: timeFormat === '12h',
     timeZone: 'UTC',
   }).format(new Date(Date.UTC(2020, 0, 1, 5)))
+
+  if (mobile) {
+    return (
+      <SettingsPage title={t('settings.nav.server')} onBack={onBack} isEmbedded={isEmbedded}>
+        <div className="space-y-4">
+          <Card variant="surface" className="overflow-hidden p-0 divide-y divide-border">
+            {(
+              Object.entries(SERVER_REGIONS) as [
+                ServerRegion,
+                { label: string; description: string },
+              ][]
+            ).map(([region, regionInfo]) => {
+              const isSelected = settings.serverRegion === region
+              return (
+                <button
+                  key={region}
+                  type="button"
+                  onClick={() => updateSettings({ serverRegion: region })}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-hover',
+                    isSelected && 'text-primary',
+                  )}
+                >
+                  <Globe aria-hidden="true" className="size-4 flex-shrink-0 text-text-muted" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-footnote font-medium">
+                      {t(`settings.server.${region}`)}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-text-secondary">
+                      {region === 'asia'
+                        ? `UTC+8 (${t('settings.server.fixed')})`
+                        : regionInfo.description}
+                    </span>
+                  </span>
+                  {isSelected && <Check className="size-4 flex-shrink-0" aria-hidden="true" />}
+                </button>
+              )
+            })}
+          </Card>
+          <Card variant="surface" className="px-4 py-3">
+            <p className="text-xs leading-relaxed text-text-secondary">
+              {t('settings.server.resetSchedule', { time: resetTime })}
+              <br />
+              <span className="text-text-muted">{t('settings.server.timezoneNote')}</span>
+            </p>
+          </Card>
+        </div>
+      </SettingsPage>
+    )
+  }
 
   return (
     <SettingsPage title={t('settings.nav.server')} onBack={onBack} isEmbedded={isEmbedded}>
@@ -45,15 +97,13 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
                 onClick={() => updateSettings({ serverRegion: region })}
                 initial={false}
                 animate={{
-                  scale: isSelected ? 1.04 : 0.97,
                   opacity: isSelected ? 1 : 0.6,
                   boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.25)' : '0 0 0 0 transparent',
                   zIndex: isSelected ? 1 : 0,
                 }}
                 transition={SPRING}
-                whileTap={{ scale: isSelected ? 1.01 : 0.94 }}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-3 text-left rounded-xl',
+                  'w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg',
                   isSelected
                     ? 'bg-primary-soft border border-primary/30'
                     : 'bg-surface border border-border',
@@ -81,7 +131,7 @@ export function SettingsServer({ onBack, isEmbedded }: SettingsServerProps) {
         </div>
 
         <Card className="px-4 py-3">
-          <p className="text-[11px] text-text-secondary leading-relaxed">
+          <p className="text-xs text-text-secondary leading-relaxed">
             {t('settings.server.resetSchedule', { time: resetTime })}
             <br />
             <span className="text-text-muted">{t('settings.server.timezoneNote')}</span>

@@ -14,7 +14,7 @@ export function ProgressRing({ completed, total }: ProgressRingProps) {
   const circumference = 2 * Math.PI * 32
   const [hasMounted, setHasMounted] = useState(false)
   const isBelowDesktop = useIsMobile(1024)
-  const counterFontSize = isBelowDesktop ? 12 : 15
+  const counterFontSize = isBelowDesktop ? 0.75 : 0.9375
 
   useEffect(() => {
     setHasMounted(true)
@@ -58,6 +58,7 @@ export function ProgressRing({ completed, total }: ProgressRingProps) {
         <Counter
           value={percentage}
           fontSize={counterFontSize}
+          sizeUnit="rem"
           gap={0}
           padding={0}
           horizontalPadding={0}

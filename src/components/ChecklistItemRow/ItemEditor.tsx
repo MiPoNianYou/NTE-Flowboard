@@ -30,7 +30,7 @@ export function ItemEditor({ item, onSave, onCancel }: ItemEditorProps) {
   )
 
   return (
-    <div className="px-3 py-3 lg:px-4 lg:py-3 rounded-xl glass border border-primary space-y-2 lg:space-y-2">
+    <div className="px-3 py-3 lg:px-4 lg:py-3 rounded-lg glass border border-primary space-y-2 lg:space-y-2">
       <div className="flex items-center gap-2 lg:gap-2">
         <input
           type="text"

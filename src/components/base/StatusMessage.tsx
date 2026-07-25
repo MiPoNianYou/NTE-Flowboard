@@ -15,23 +15,23 @@ interface StatusMessageProps {
 const toneStyles: Record<MessageTone, { inline: string; banner: string; callout: string }> = {
   danger: {
     inline: 'text-xs text-danger',
-    banner: 'text-xs text-danger bg-danger/10 px-3 py-2 rounded-xl border border-danger/20',
-    callout: 'flex gap-3 bg-danger/10 rounded-xl px-4 py-3 border border-danger/20',
+    banner: 'text-xs text-danger bg-danger/10 px-3 py-2 rounded-md border border-danger/20',
+    callout: 'flex gap-3 bg-danger/10 rounded-lg px-4 py-3 border border-danger/20',
   },
   success: {
     inline: 'text-xs text-success',
-    banner: 'text-xs text-success bg-success/10 px-3 py-2 rounded-xl border border-success/20',
-    callout: 'flex gap-3 bg-success/10 rounded-xl px-4 py-3 border border-success/20',
+    banner: 'text-xs text-success bg-success/10 px-3 py-2 rounded-md border border-success/20',
+    callout: 'flex gap-3 bg-success/10 rounded-lg px-4 py-3 border border-success/20',
   },
   warning: {
     inline: 'text-xs text-warning',
-    banner: 'text-xs text-warning bg-warning/10 px-3 py-2 rounded-xl border border-warning/20',
-    callout: 'flex gap-3 bg-warning/10 rounded-xl px-4 py-3 border border-warning/20',
+    banner: 'text-xs text-warning bg-warning/10 px-3 py-2 rounded-md border border-warning/20',
+    callout: 'flex gap-3 bg-warning/10 rounded-lg px-4 py-3 border border-warning/20',
   },
   info: {
     inline: 'text-xs text-info',
-    banner: 'text-xs text-info bg-info/10 px-3 py-2 rounded-xl border border-info/20',
-    callout: 'flex gap-3 bg-info/10 rounded-xl px-4 py-3 border border-info/20',
+    banner: 'text-xs text-info bg-info/10 px-3 py-2 rounded-md border border-info/20',
+    callout: 'flex gap-3 bg-info/10 rounded-lg px-4 py-3 border border-info/20',
   },
 }
 

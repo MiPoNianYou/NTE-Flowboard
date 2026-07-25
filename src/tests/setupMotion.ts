@@ -13,6 +13,12 @@ const motionProps = [
   'whileFocus',
   'layout',
   'layoutId',
+  'drag',
+  'dragControls',
+  'dragListener',
+  'dragConstraints',
+  'dragElastic',
+  'onDragEnd',
   'onAnimationComplete',
 ]
 
@@ -40,6 +46,8 @@ vi.mock('motion/react', () => ({
     createElement(Fragment, null, children),
   useSpring: (value: number) => ({ get: () => value, set: vi.fn() }),
   useTransform: (_motionValue: unknown, fn: (v: number) => number) => ({ get: () => fn(0) }),
+  useDragControls: () => ({ start: vi.fn() }),
+  useReducedMotion: () => false,
   MotionValue: class MotionValue {
     value: number
     constructor(value: number) {

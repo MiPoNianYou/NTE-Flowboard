@@ -23,7 +23,7 @@ describe('TagInput', () => {
     fireEvent.click(screen.getByText('标签'))
 
     expect(screen.getByPlaceholderText('标签名')).toHaveClass(
-      'rounded-full',
+      'rounded-md',
       'focus:ring-1',
       'focus:ring-offset-0',
     )

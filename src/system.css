@@ -2,7 +2,9 @@
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC',
     'Microsoft YaHei', sans-serif;
-  --font-mono: 'Maple Mono NF CN', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, 'PingFang SC', 'Maple Mono NF CN', 'JetBrains Mono',
+    monospace;
 
   --font-weight-body: 400;
   --font-weight-ui: 500;
@@ -15,6 +17,7 @@
   --color-surface-hover: #ffffff14;
   --color-elevated: #ffffff1a;
   --color-overlay: #0d0d12cc;
+  --color-settings-overlay: #0d0d1299;
 
   --color-glass: #ffffff0d;
   --color-glass-border: #ffffff1a;
@@ -26,8 +29,8 @@
 
   --color-text-primary: #fffffff2;
   --color-text-secondary: #ffffffa6;
-  --color-text-muted: #ffffff66;
-  --color-text-on-accent: #ffffff;
+  --color-text-muted: #ffffff8a;
+  --color-text-on-accent: #16181f;
 
   --color-primary: #9080f0;
   --color-primary-hover: #a090f4;
@@ -56,6 +59,8 @@
   --shadow-card-hover: 0 4px 20px #0a0a0a1a;
   --shadow-elevated: 0 12px 40px #0a0a0a66;
   --text-xs: 0.75rem;
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.125rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
   --text-lg: 1.125rem;
@@ -99,6 +104,7 @@
   --color-surface-hover: #ffffffdc;
   --color-elevated: #ffffffe0;
   --color-overlay: #e9edf4cc;
+  --color-settings-overlay: #e9edf499;
 
   --color-glass: #ffffffad;
   --color-glass-border: #4d5c702b;
@@ -110,7 +116,7 @@
 
   --color-text-primary: #202633;
   --color-text-secondary: #526078;
-  --color-text-muted: #74819a;
+  --color-text-muted: #606d84;
   --color-text-on-accent: #ffffff;
 
   --color-primary: #5b48c5;
@@ -161,6 +167,11 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* The Supabase setup action keeps white text in both color schemes. */
+.supabase-connect-button {
+  color: #ffffff;
+}
+
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) .cloud-sync-sql {
     background-color: var(--color-background-subtle);
@@ -186,6 +197,7 @@
   --color-surface-hover: #ffffff14;
   --color-elevated: #ffffff1a;
   --color-overlay: #0d0d12cc;
+  --color-settings-overlay: #0d0d1299;
 
   --color-glass: #ffffff0d;
   --color-glass-border: #ffffff1a;
@@ -197,8 +209,8 @@
 
   --color-text-primary: #fffffff2;
   --color-text-secondary: #ffffffa6;
-  --color-text-muted: #ffffff66;
-  --color-text-on-accent: #ffffff;
+  --color-text-muted: #ffffff8a;
+  --color-text-on-accent: #16181f;
 
   --color-primary: #9080f0;
   --color-primary-hover: #a090f4;
@@ -243,6 +255,7 @@
     --color-surface-hover: #ffffff14;
     --color-elevated: #ffffff1a;
     --color-overlay: #0d0d12cc;
+    --color-settings-overlay: #0d0d1299;
     --color-glass: #ffffff0d;
     --color-glass-border: #ffffff1a;
     --color-glass-strong: #ffffff14;
@@ -251,8 +264,8 @@
     --color-border-soft: #ffffff0a;
     --color-text-primary: #fffffff2;
     --color-text-secondary: #ffffffa6;
-    --color-text-muted: #ffffff66;
-    --color-text-on-accent: #ffffff;
+    --color-text-muted: #ffffff8a;
+    --color-text-on-accent: #16181f;
     --color-primary: #9080f0;
     --color-primary-hover: #a090f4;
     --color-primary-pressed: #7060d0;
@@ -289,8 +302,6 @@ body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 .lucide {
@@ -347,7 +358,6 @@ body {
   font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: 0.08em;
   color: var(--color-text-secondary);
   transition: color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -413,16 +423,15 @@ body {
   border-radius: 0.75rem;
   background: var(--color-danger);
   border-color: var(--color-danger);
-  color: var(--color-text-primary);
+  color: var(--color-text-on-accent);
   gap: 8px;
 }
 .danger-confirm-button.expanded .sign svg {
-  color: var(--color-text-primary);
+  color: var(--color-text-on-accent);
 }
 .danger-confirm-button.expanded .text {
   opacity: 1;
   max-width: 84px;
-  letter-spacing: 0.01em;
 }
 .danger-confirm-button:active {
   opacity: 0.9;
@@ -446,7 +455,6 @@ body {
 
 .danger-confirm-button--default.expanded .text {
   font-size: 0.875rem;
-  letter-spacing: 0;
 }
 
 .danger-confirm-button--compact {
@@ -471,8 +479,7 @@ body {
 }
 
 .danger-confirm-button--compact.expanded .text {
-  font-size: 0.6875rem;
-  letter-spacing: 0.01em;
+  font-size: 0.75rem;
 }
 
 @keyframes iridescent {
@@ -594,10 +601,69 @@ body {
   border: 1px solid var(--color-border-strong);
 }
 
+/* Keep the blur layer separate from text to avoid mobile filter rasterization. */
+.settings-mobile-sheet.glass-strong {
+  isolation: isolate;
+  border: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.settings-mobile-sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border-strong);
+  border-bottom: 0;
+  border-radius: inherit;
+  background: var(--color-glass-strong);
+  -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
+  backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
+}
+
+.settings-mobile-sheet > * {
+  position: relative;
+  z-index: 1;
+}
+
+.settings-mobile-header {
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+.settings-mobile-list {
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.settings-mobile-list-row:not(:last-child) {
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+.settings-mobile-sheet .mobile-settings-surface {
+  border: 0;
+  box-shadow:
+    var(--shadow-card),
+    inset 0 0 0 1px var(--color-border);
+}
+
+.settings-mobile-sheet .mobile-settings-divider {
+  border-top: 0;
+  box-shadow: inset 0 1px 0 var(--color-border);
+}
+
 .glass-overlay {
   background: var(--color-overlay);
   -webkit-backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
   backdrop-filter: blur(var(--blur-amount)) saturate(var(--saturate-amount));
+}
+
+.settings-panel-overlay {
+  background: var(--color-settings-overlay);
+  -webkit-backdrop-filter: blur(8px) saturate(1.05);
+  backdrop-filter: blur(8px) saturate(1.05);
 }
 
 .page-gradient {
@@ -640,17 +706,6 @@ body {
     text-decoration-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.chromatic-aberration {
-  text-shadow:
-    -1px 0 rgba(255, 0, 80, 0.35),
-    1px 0 rgba(0, 128, 255, 0.35);
-}
-.chromatic-aberration-box {
-  box-shadow:
-    -1px 0 0 rgba(255, 0, 80, 0.25),
-    1px 0 0 rgba(0, 128, 255, 0.25);
-}
-
 @keyframes morph {
   0%,
   100% {
@@ -676,7 +731,8 @@ body {
 
   .glass,
   .glass-strong,
-  .glass-overlay {
+  .glass-overlay,
+  .settings-mobile-sheet::before {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -690,7 +746,8 @@ body {
 
   .glass,
   .glass-strong,
-  .glass-overlay {
+  .glass-overlay,
+  .settings-mobile-sheet::before {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

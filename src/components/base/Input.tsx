@@ -25,7 +25,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           className={cn(
             'relative flex items-center flex-1',
             suffix &&
-              'rounded-xl border border-border bg-surface transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary/30',
+              'rounded-lg border border-border bg-surface transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary/30',
             suffix &&
               error &&
               'border-danger focus-within:border-danger focus-within:ring-danger/30',
@@ -38,7 +38,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               sizeStyles[inputSize],
               suffix
                 ? 'bg-transparent border-none rounded-none'
-                : 'rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-offset-2 focus:ring-primary/30',
+                : 'rounded-lg bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-offset-2 focus:ring-primary/30',
               !suffix && icon && 'pr-10',
               !suffix && error && 'border-danger focus:border-danger focus:ring-danger/30',
               className,
@@ -50,7 +50,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           {suffix && <div className="flex items-center shrink-0 pl-2.5 pr-3 py-2">{suffix}</div>}
         </div>
-        {error && inputSize === 'md' && <p className="text-[11px] text-danger mt-1">{error}</p>}
+        {error && inputSize === 'md' && <p className="text-xs text-danger mt-1">{error}</p>}
       </div>
     )
   },

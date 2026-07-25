@@ -1,10 +1,10 @@
 export const CARD_STYLES = {
   panel:
-    'bg-surface rounded-xl border border-border shadow-card p-4 md:p-6 transition-colors duration-[480ms]',
+    'bg-surface rounded-2xl border border-border shadow-card p-4 md:p-6 transition-colors duration-[480ms]',
   sectionSpaced:
     'bg-surface rounded-xl border border-border shadow-card px-4 py-3 space-y-3 transition-colors duration-[480ms]',
   elevated:
-    'bg-elevated rounded-xl border border-border-strong p-6 shadow-elevated backdrop-blur-md transition-colors duration-[480ms]',
+    'bg-elevated rounded-2xl border border-border-strong p-6 shadow-elevated backdrop-blur-md transition-colors duration-[480ms]',
   glass: 'glass rounded-xl p-4 md:p-6 transition-colors duration-200',
 } as const
 

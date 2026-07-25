@@ -53,7 +53,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
       animate={{ height: containerHeight }}
       transition={MORPH}
       style={{ position: 'relative', overflow: 'hidden' }}
-      className="bg-surface rounded-xl border border-border shadow-card"
+      className="bg-surface rounded-2xl border border-border shadow-card"
     >
       <motion.div
         initial={false}

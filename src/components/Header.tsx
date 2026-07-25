@@ -29,13 +29,11 @@ export const Header = memo(function Header({
           rel="noopener noreferrer"
           aria-label="GitHub"
         >
-          <img src={ShinkuLogo} alt="Shinku" className="w-9 h-9 md:w-12 md:h-12" />
+          <img src={ShinkuLogo} alt="Shinku" className="w-8 h-8 md:w-10 md:h-10" />
         </a>
         <div>
-          <h1 className="text-base md:text-xl font-bold text-text-primary tracking-tight chromatic-aberration">
-            NTE Flowboard
-          </h1>
-          <p className="text-[11px] md:text-xs text-text-muted">{t('header.tagline')}</p>
+          <h1 className="text-lg md:text-xl font-semibold text-text-primary">NTE Flowboard</h1>
+          <p className="text-xs text-text-muted">{t('header.tagline')}</p>
         </div>
       </div>
       <OfflineIndicator />
