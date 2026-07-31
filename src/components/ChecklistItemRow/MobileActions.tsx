@@ -6,6 +6,7 @@ import type { ItemActionProps } from './DesktopActions'
 import { useTranslation } from 'react-i18next'
 
 interface MobileActionsProps extends ItemActionProps {
+  id: string
   isExpanded: boolean
 }
 
@@ -18,6 +19,7 @@ export const MOBILE_ACTION_LAYOUT = {
 } as const
 
 export function MobileActions({
+  id,
   onEdit,
   onHide,
   onDelete,
@@ -27,6 +29,7 @@ export function MobileActions({
   const { t } = useTranslation()
   return (
     <div
+      id={id}
       className={cn(GRID_COLLAPSE, isExpanded ? 'collapse-open' : 'collapse-closed')}
       aria-hidden={!isExpanded}
       inert={!isExpanded}

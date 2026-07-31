@@ -11,7 +11,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('clsx') || id.includes('tailwind-merge')) {
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('clsx') ||
+              id.includes('tailwind-merge')
+            ) {
               return 'vendor'
             }
             if (id.includes('supabase')) {
@@ -34,13 +39,19 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/tests/**/*.test.{ts,tsx}'],
-    setupFiles: ['src/tests/setup.ts', 'src/tests/setupMotion.ts'],
+    include: ['tests/**/*.test.{ts,tsx}'],
+    setupFiles: ['tests/setup.ts', 'tests/setupMotion.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/vite-env.d.ts'],
+      exclude: ['src/main.tsx', 'src/vite-env.d.ts'],
       reporter: ['text', 'html'],
+      thresholds: {
+        statements: 80,
+        branches: 70,
+        functions: 75,
+        lines: 80,
+      },
     },
   },
 })

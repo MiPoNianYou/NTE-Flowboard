@@ -27,23 +27,12 @@ export const ProgressCard = memo(function ProgressCard({
   return (
     <Card
       variant="surface"
-      className={cn('rounded-2xl p-4 md:p-5', isAllDone && 'border-success/30')}
+      radius="panel"
+      className={cn('p-4 md:p-5', isAllDone && 'border-success/30')}
     >
       <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
-          <div className="md:hidden flex flex-col justify-center h-20">
-            <h2 className="text-sm font-medium text-text-primary">{title}</h2>
-            <p className="text-xs text-text-secondary mt-0.5">
-              {t('progress.completed', { completed: completedCount, total: totalCount })}
-            </p>
-            <p className="text-xs text-text-muted mt-0.5">{nextResetLabel}</p>
-            {isAllDone && (
-              <Badge variant="success" className="animate-pulse mt-1.5 self-start">
-                {t('progress.allDone')}
-              </Badge>
-            )}
-          </div>
-          <div className="hidden md:flex md:flex-col justify-center md:h-20">
+          <div className="flex flex-col justify-center h-20">
             <h2 className="text-sm font-medium text-text-primary">{title}</h2>
             <p className="text-xs text-text-secondary mt-0.5">
               {t('progress.completed', { completed: completedCount, total: totalCount })}

@@ -13,17 +13,14 @@ import { motion, AnimatePresence } from 'motion/react'
 import type { TabType } from '../../types'
 import type { CloudSyncProps } from './CloudSyncSection'
 import { SettingsNav, type SubPage } from './SettingsNav'
-import {
-  SettingsGeneral,
-  SettingsGeneralChoice,
-  type MobileGeneralPreference,
-} from './SettingsGeneral'
+import { SettingsGeneral } from './SettingsGeneral'
 import { SettingsServer } from './SettingsServer'
 import { SettingsData } from './SettingsData'
 import { CloudSyncSection } from './CloudSyncSection'
 import { PAGE } from '../../utils/motion'
 import { useSettings } from '../../context/SettingsContext'
 import { useTranslation } from 'react-i18next'
+import type { RestoreDefaultsControls } from '../../utils/checklistRestoreBackup'
 
 const TAB_ORDER: SubPage[] = ['general', 'server', 'cloud', 'data']
 const REDUCED_MOTION = { duration: 0 }
@@ -38,10 +35,7 @@ const MOBILE_PAGE_CORNER_RADIUS = 16
 const MOBILE_KEYBOARD_FIELD_SELECTOR =
   'input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable="true"]'
 
-type MobileRoute =
-  | { kind: 'navigation' }
-  | { kind: 'tab'; tab: SubPage }
-  | { kind: 'preference'; preference: MobileGeneralPreference }
+type MobileRoute = { kind: 'navigation' } | { kind: 'tab'; tab: SubPage }
 
 export interface MobileSettingsHeader {
   title: string
@@ -81,6 +75,7 @@ function shouldKeepMobileFieldVisible(target: HTMLElement) {
 
 interface SettingsLayoutProps {
   onManualReset: (tab: TabType) => void
+  restoreDefaultsControls: RestoreDefaultsControls
   onExport: () => void
   onImportFile: (event: ChangeEvent<HTMLInputElement>) => void
   fileInputRef: RefObject<HTMLInputElement | null>
@@ -94,11 +89,12 @@ interface SettingsLayoutProps {
 
 function getMobileRouteKey(route: MobileRoute) {
   if (route.kind === 'navigation') return 'navigation'
-  return `${route.kind}-${route.kind === 'tab' ? route.tab : route.preference}`
+  return `${route.kind}-${route.tab}`
 }
 
 export function SettingsLayout({
   onManualReset,
+  restoreDefaultsControls,
   onExport,
   onImportFile,
   fileInputRef,
@@ -178,12 +174,33 @@ export function SettingsLayout({
   }, [])
 
   const handleMobileBack = useCallback(() => {
-    if (mobileRoute.kind === 'preference') {
-      navigateMobile({ kind: 'tab', tab: 'general' }, -1)
-      return
-    }
     if (mobileRoute.kind === 'tab') navigateMobile({ kind: 'navigation' }, -1)
   }, [mobileRoute.kind, navigateMobile])
+
+  const settingsDataProps = useMemo(
+    () => ({
+      onManualReset,
+      restoreDefaultsControls,
+      isCloudConfigured: Boolean(cloudSyncProps?.isConfigured),
+      onExport,
+      onImportFile,
+      fileInputRef,
+      isImportError,
+      isImportSuccess,
+      isExportSuccess,
+    }),
+    [
+      cloudSyncProps?.isConfigured,
+      fileInputRef,
+      isExportSuccess,
+      isImportError,
+      isImportSuccess,
+      onExport,
+      onImportFile,
+      onManualReset,
+      restoreDefaultsControls,
+    ],
+  )
 
   const renderDesktopContent = useMemo(() => {
     switch (desktopTab) {
@@ -198,30 +215,9 @@ export function SettingsLayout({
           </div>
         ) : null
       case 'data':
-        return (
-          <SettingsData
-            onManualReset={onManualReset}
-            onExport={onExport}
-            onImportFile={onImportFile}
-            fileInputRef={fileInputRef}
-            isImportError={isImportError}
-            isImportSuccess={isImportSuccess}
-            isExportSuccess={isExportSuccess}
-            isEmbedded
-          />
-        )
+        return <SettingsData {...settingsDataProps} isEmbedded />
     }
-  }, [
-    desktopTab,
-    cloudSyncProps,
-    onManualReset,
-    onExport,
-    onImportFile,
-    fileInputRef,
-    isImportError,
-    isImportSuccess,
-    isExportSuccess,
-  ])
+  }, [desktopTab, cloudSyncProps, settingsDataProps])
 
   const renderMobileContent = useMemo(() => {
     if (mobileRoute.kind === 'navigation') {
@@ -235,62 +231,20 @@ export function SettingsLayout({
       )
     }
 
-    if (mobileRoute.kind === 'preference') {
-      return <SettingsGeneralChoice preference={mobileRoute.preference} />
-    }
-
     switch (mobileRoute.tab) {
       case 'general':
-        return (
-          <SettingsGeneral
-            isEmbedded
-            mobile
-            onOpenPreference={(preference) => navigateMobile({ kind: 'preference', preference }, 1)}
-          />
-        )
+        return <SettingsGeneral isEmbedded />
       case 'server':
         return <SettingsServer isEmbedded mobile />
       case 'cloud':
         return cloudSyncProps ? <CloudSyncSection {...cloudSyncProps} mobile /> : null
       case 'data':
-        return (
-          <SettingsData
-            onManualReset={onManualReset}
-            onExport={onExport}
-            onImportFile={onImportFile}
-            fileInputRef={fileInputRef}
-            isImportError={isImportError}
-            isImportSuccess={isImportSuccess}
-            isExportSuccess={isExportSuccess}
-            isEmbedded
-            mobile
-          />
-        )
+        return <SettingsData {...settingsDataProps} isEmbedded mobile />
     }
-  }, [
-    mobileRoute,
-    sidebarLabels,
-    navigateMobile,
-    cloudSyncProps,
-    onManualReset,
-    onExport,
-    onImportFile,
-    fileInputRef,
-    isImportError,
-    isImportSuccess,
-    isExportSuccess,
-  ])
+  }, [mobileRoute, sidebarLabels, navigateMobile, cloudSyncProps, settingsDataProps])
 
   const mobileHeader = useMemo<MobileSettingsHeader>(() => {
     if (mobileRoute.kind === 'navigation') return { title: t('settings.title') }
-    if (mobileRoute.kind === 'preference') {
-      return {
-        title: t(`settings.general.${mobileRoute.preference}`),
-        backLabel: t('settings.nav.general'),
-        onBack: handleMobileBack,
-      }
-    }
-
     return {
       title: t(`settings.nav.${mobileRoute.tab}`),
       backLabel: t('settings.title'),

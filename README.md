@@ -69,7 +69,7 @@ Project URL 与 Publishable Key 只保存在当前浏览器。Publishable Key �
 
 直接使用：<https://miponianyou.github.io/NTE-Flowboard/>
 
-本地开发需要 Node.js 20+：
+本地开发建议使用 Node.js 22.22.2；也支持 Node.js 24.15.0+ 和 26+：
 
 ```bash
 git clone https://github.com/MiPoNianYou/NTE-Flowboard.git
@@ -80,15 +80,17 @@ npm run dev
 
 ## 开发与验证
 
-| 命令                   | 作用                              |
-| ---------------------- | --------------------------------- |
-| `npm run dev`          | 启动开发服务器                    |
-| `npm run test`         | 运行 Vitest 测试                  |
-| `npm run test:watch`   | 监听测试变更                      |
-| `npm run lint`         | 检查 `src/`                       |
-| `npm run typecheck`    | 运行 TypeScript 检查              |
-| `npm run format:check` | 检查格式                          |
-| `npm run build`        | 运行 lint、类型检查并生成生产构建 |
+| 命令                                | 作用                              |
+| ----------------------------------- | --------------------------------- |
+| `npm run dev`                       | 启动开发服务器                    |
+| `npm run test`                      | 运行 Vitest 测试                  |
+| `npm run test:watch`                | 监听测试变更                      |
+| `npm run test:browser`              | 运行 Playwright 端到端测试        |
+| `npm run test:integration:supabase` | 运行真实 Supabase 集成测试        |
+| `npm run lint`                      | 检查 `src/` 与 `tests/`           |
+| `npm run typecheck`                 | 运行 TypeScript 检查              |
+| `npm run format:check`              | 检查格式                          |
+| `npm run build`                     | 运行 lint、类型检查并生成生产构建 |
 
 提交前请按 CI 的顺序运行：
 
@@ -97,6 +99,19 @@ npm run format:check
 npm run test
 npm run build
 ```
+
+要让 CI 在合并前真正阻止回归，还需在 GitHub 的 `main` 分支 Ruleset 中将 `quality`、`browser (chromium)`、`browser (firefox)` 和 `browser (webkit)` 配置为 Required status checks。工作流文件本身不会自动开启合并保护。
+
+真实 Supabase 集成测试默认跳过写入。请使用独立测试项目，并在当前终端设置环境变量后显式启用：
+
+```powershell
+$env:SUPABASE_TEST_URL='https://your-project.supabase.co'
+$env:SUPABASE_TEST_PUBLISHABLE_KEY='sb_publishable_...'
+$env:SUPABASE_TEST_ALLOW_WRITE='true'
+npm run test:integration:supabase
+```
+
+测试会临时替换固定的 `NTE Flowboard` 云端记录，验证 RPC 与 Realtime 后恢复原 JSON；恢复操作会刷新该记录的 `updated_at`。
 
 <details>
 <summary>项目结构</summary>
@@ -107,16 +122,21 @@ src/
   components/       界面与交互组件
   context/          全局设置状态
   hooks/            清单、同步、交互逻辑
-  tests/            业务行为与数据契约测试
   utils/            存储、迁移、时间与服务接口
   system.css        Liquid Glass 设计令牌
+tests/
+  components/       组件行为测试
+  hooks/            Hook 行为测试
+  integration/      可选的真实服务集成测试
+  utils/            数据与工具契约测试
+  e2e/              Playwright 端到端测试
 ```
 
 </details>
 
 ## 技术栈
 
-React 19 · TypeScript · Vite 8 · Tailwind CSS 4 · Motion · dnd-kit · Supabase · Vitest
+React 19 · TypeScript · Vite 8 · Tailwind CSS 4 · Motion · dnd-kit · Supabase · Vitest · Playwright
 
 ## 发布
 

@@ -1,11 +1,11 @@
 export const CARD_STYLES = {
   panel:
-    'bg-surface rounded-2xl border border-border shadow-card p-4 md:p-6 transition-colors duration-[480ms]',
+    'bg-surface rounded-panel border border-border shadow-card p-4 md:p-6 transition-colors duration-[480ms]',
   sectionSpaced:
-    'bg-surface rounded-xl border border-border shadow-card px-4 py-3 space-y-3 transition-colors duration-[480ms]',
+    'bg-surface rounded-card border border-border shadow-card px-4 py-3 space-y-3 transition-colors duration-[480ms]',
   elevated:
-    'bg-elevated rounded-2xl border border-border-strong p-6 shadow-elevated backdrop-blur-md transition-colors duration-[480ms]',
-  glass: 'glass rounded-xl p-4 md:p-6 transition-colors duration-200',
+    'bg-elevated rounded-panel border border-border-strong p-6 shadow-elevated backdrop-blur-md transition-colors duration-[480ms]',
+  glass: 'glass rounded-card p-4 md:p-6 transition-colors duration-200',
 } as const
 
 export const ACTION_HOVER_PRIMARY = 'p-1.5 hover:bg-primary/10 hover:text-primary'

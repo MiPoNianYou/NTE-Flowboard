@@ -1,17 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
-import {
-  Cloud,
-  LogOut,
-  AlertCircle,
-  ClipboardPlus,
-  ClipboardCheck,
-  Database,
-  ChevronDown,
-  EyeOff,
-} from 'lucide-react'
+import { Cloud, LogOut, AlertCircle, ChevronDown, EyeOff } from 'lucide-react'
 import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { APPLE_EASE } from '../../utils/motion'
@@ -20,6 +11,7 @@ import { useDisplayPreferences } from '../../context/DisplayPreferencesContext'
 import { Button } from '../base/Button'
 import { Card } from '../base/Card'
 import { StatusMessage } from '../base/StatusMessage'
+import { SqlCodeBlock } from './SqlCodeBlock'
 
 const UPDATED_AT_PATCH_SQL = `CREATE OR REPLACE FUNCTION set_sync_updated_at()
 RETURNS TRIGGER
@@ -86,12 +78,10 @@ export function CloudSyncStatus({
   const { locale, timeFormat } = useDisplayPreferences()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDisconnectExpanded, setIsDisconnectExpanded] = useState(false)
-  const [isPatchExpanded, setIsPatchExpanded] = useState(false)
   const [isMobilePatchExpanded, setIsMobilePatchExpanded] = useState(false)
-  const [isPatchCopied, setIsPatchCopied] = useState(false)
   const [isPatchHideExpanded, setIsPatchHideExpanded] = useState(false)
+  const mobilePatchContentId = useId()
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const patchCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const patchHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDisconnectHoveringRef = useRef(false)
   const isPatchHideHoveringRef = useRef(false)
@@ -117,7 +107,6 @@ export function CloudSyncStatus({
   useEffect(() => {
     return () => {
       if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current)
-      if (patchCopiedTimerRef.current) clearTimeout(patchCopiedTimerRef.current)
       if (patchHideTimerRef.current) clearTimeout(patchHideTimerRef.current)
     }
   }, [])
@@ -159,16 +148,6 @@ export function CloudSyncStatus({
       if (elapsed < 500) await new Promise((resolve) => setTimeout(resolve, 500 - elapsed))
       setIsSyncing(false)
     }
-  }
-
-  const handleCopyPatchSql = () => {
-    navigator.clipboard.writeText(UPDATED_AT_PATCH_SQL)
-    setIsPatchCopied(true)
-    if (patchCopiedTimerRef.current) clearTimeout(patchCopiedTimerRef.current)
-    patchCopiedTimerRef.current = setTimeout(() => {
-      setIsPatchCopied(false)
-      patchCopiedTimerRef.current = null
-    }, 2000)
   }
 
   const handleHidePatchCard = () => {
@@ -213,15 +192,13 @@ export function CloudSyncStatus({
     <div className="space-y-4">
       <Card
         variant="surface"
-        className={cn(
-          'flex flex-col items-center px-4 py-5',
-          mobile && 'mobile-settings-surface hover:scale-100',
-        )}
+        disableHoverScale={mobile}
+        className={cn('flex flex-col items-center px-4 py-5', mobile && 'mobile-settings-surface')}
       >
         <div className="flex flex-col items-center">
           <div
             className={cn(
-              'relative size-10 rounded-full flex items-center justify-center',
+              'relative size-10 rounded-pill flex items-center justify-center',
               isLoading && 'bg-info/15',
               !isLoading && syncStatus === 'connected' && 'bg-success/15',
               !isLoading && syncStatus === 'error' && 'bg-danger/15',
@@ -229,11 +206,11 @@ export function CloudSyncStatus({
             )}
           >
             {isLoading ? (
-              <span className="size-3.5 rounded-full bg-info animate-ripple" />
+              <span className="size-3.5 rounded-pill bg-info animate-ripple" />
             ) : (
               <span
                 className={cn(
-                  'size-3.5 rounded-full',
+                  'size-3.5 rounded-pill',
                   syncStatus === 'connected' && 'bg-success animate-breathe',
                   syncStatus === 'error' && 'bg-danger animate-blink',
                   syncStatus === 'disconnected' && 'bg-text-muted',
@@ -323,10 +300,11 @@ export function CloudSyncStatus({
       {!uiPreferences.cloudPatchHidden && (
         <Card
           variant="surface"
+          disableHoverScale={mobile}
           className={cn(
             'px-4 text-xs leading-relaxed text-text-secondary',
             mobile ? 'py-0' : 'space-y-3 py-3',
-            mobile && 'mobile-settings-surface hover:scale-100',
+            mobile && 'mobile-settings-surface',
           )}
         >
           {mobile && (
@@ -334,10 +312,12 @@ export function CloudSyncStatus({
               type="button"
               onClick={() => setIsMobilePatchExpanded((expanded) => !expanded)}
               aria-expanded={isMobilePatchExpanded}
+              aria-controls={mobilePatchContentId}
               className="flex min-h-14 w-full items-center justify-between gap-3 text-left text-text-primary"
             >
               <span className="text-sm font-semibold">{t('cloud.patchTitle')}</span>
               <ChevronDown
+                aria-hidden="true"
                 className={cn(
                   'size-4 flex-shrink-0 transition-transform duration-150',
                   !isMobilePatchExpanded && '-rotate-90',
@@ -346,6 +326,7 @@ export function CloudSyncStatus({
             </button>
           )}
           <div
+            id={mobilePatchContentId}
             className={cn(
               'space-y-3',
               mobile && !isMobilePatchExpanded && 'hidden',
@@ -381,66 +362,11 @@ export function CloudSyncStatus({
               </button>
             </div>
 
-            <div className="cloud-sync-sql relative bg-surface rounded-lg overflow-hidden">
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => setIsPatchExpanded((prev) => !prev)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    setIsPatchExpanded((prev) => !prev)
-                  }
-                }}
-                className={cn(
-                  'cloud-sync-sql__header flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
-                  isPatchExpanded && 'cloud-sync-sql__header--expanded',
-                )}
-              >
-                <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium font-mono">
-                  <Database className="size-3" />
-                  {t('cloud.patchSqlLabel')}
-                  <ChevronDown
-                    className={cn(
-                      'size-3 transition-transform duration-150',
-                      !isPatchExpanded && '-rotate-90',
-                    )}
-                  />
-                </span>
-                <span onClick={(event) => event.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={handleCopyPatchSql}
-                    aria-label={isPatchCopied ? t('common.copied') : t('cloud.copyPatchSql')}
-                    className={cn(
-                      'inline-flex items-center justify-center size-6 rounded-lg border border-border transition-colors duration-200',
-                      isPatchCopied
-                        ? 'bg-success/15 text-success'
-                        : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover',
-                    )}
-                  >
-                    {isPatchCopied ? (
-                      <ClipboardCheck className="size-3.5" />
-                    ) : (
-                      <ClipboardPlus className="size-3.5" />
-                    )}
-                  </button>
-                </span>
-              </div>
-
-              <div
-                className={cn(
-                  'grid transition-all duration-200 ease-out',
-                  isPatchExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-                )}
-              >
-                <div className="overflow-hidden">
-                  <pre className="cloud-sync-sql__body px-3 pb-3 pt-1 text-xs font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
-                    {UPDATED_AT_PATCH_SQL}
-                  </pre>
-                </div>
-              </div>
-            </div>
+            <SqlCodeBlock
+              label={t('cloud.patchSqlLabel')}
+              copyLabel={t('cloud.copyPatchSql')}
+              content={UPDATED_AT_PATCH_SQL}
+            />
           </div>
         </Card>
       )}

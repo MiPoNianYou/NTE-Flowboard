@@ -1,25 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
 import { SCALE_ENTRY, SCALE_EXIT } from '../../utils/motion'
-import {
-  Cloud,
-  Eye,
-  EyeOff,
-  ChevronRight,
-  ChevronDown,
-  ClipboardPlus,
-  ClipboardCheck,
-  Database,
-  ExternalLink,
-  Loader2,
-} from 'lucide-react'
+import { Cloud, Eye, EyeOff, ChevronRight, ChevronDown, ExternalLink, Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
-import { GRID_COLLAPSE } from '../../utils/stylePresets'
 import { Button } from '../base/Button'
 import { Input } from '../base/Input'
 import { Card } from '../base/Card'
+import { SqlCodeBlock } from './SqlCodeBlock'
+
+function ConnectButtonLabel({ children }: { children: ReactNode }) {
+  return (
+    <motion.span
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4, transition: SCALE_EXIT }}
+      transition={SCALE_ENTRY}
+      className="inline-flex items-center gap-1.5"
+    >
+      {children}
+    </motion.span>
+  )
+}
 
 function buildSqlSnippet(t: TFunction) {
   return `-- ${t('cloud.sql.title')}
@@ -102,9 +105,8 @@ export function CloudSyncSetup({
   const [isAnonKeyVisible, setIsAnonKeyVisible] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
-  const [isSqlExpanded, setIsSqlExpanded] = useState(false)
   const [isSetupGuideExpanded, setIsSetupGuideExpanded] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
+  const setupGuideContentId = useId()
   const [buttonPhase, setButtonPhase] = useState<ButtonPhase>('idle')
   const [buttonErrorMessage, setButtonErrorMessage] = useState<string | null>(null)
   const [isMarqueeNeeded, setIsMarqueeNeeded] = useState(false)
@@ -253,12 +255,6 @@ export function CloudSyncSetup({
     }
   }
 
-  const handleCopySql = () => {
-    navigator.clipboard.writeText(sqlSnippet)
-    setIsCopied(true)
-    setTimeout(() => setIsCopied(false), 2000)
-  }
-
   return (
     <div className="space-y-4">
       {!mobile && (
@@ -269,7 +265,8 @@ export function CloudSyncSetup({
 
       <Card
         variant="surface"
-        className={cn('px-4 py-3', mobile && 'mobile-settings-surface hover:scale-100')}
+        disableHoverScale={mobile}
+        className={cn('px-4 py-3', mobile && 'mobile-settings-surface')}
       >
         <div className="space-y-3">
           <Input
@@ -323,17 +320,10 @@ export function CloudSyncSetup({
         >
           <AnimatePresence mode="wait" initial={false}>
             {buttonPhase === 'loading' ? (
-              <motion.span
-                key="loading-label"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4, transition: SCALE_EXIT }}
-                transition={SCALE_ENTRY}
-                className="inline-flex items-center gap-1.5"
-              >
+              <ConnectButtonLabel key="loading-label">
                 <Loader2 className="size-3.5 animate-spin" />
                 <span>{t('cloud.connecting')}</span>
-              </motion.span>
+              </ConnectButtonLabel>
             ) : buttonPhase === 'error' && buttonErrorMessage ? (
               <motion.span
                 key={buttonErrorMessage}
@@ -378,17 +368,10 @@ export function CloudSyncSetup({
                 </span>
               </motion.span>
             ) : (
-              <motion.span
-                key="connect-label"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4, transition: SCALE_EXIT }}
-                transition={SCALE_ENTRY}
-                className="inline-flex items-center gap-1.5"
-              >
+              <ConnectButtonLabel key="connect-label">
                 <Cloud className="size-3.5" />
                 <span>{t('cloud.connect')}</span>
-              </motion.span>
+              </ConnectButtonLabel>
             )}
           </AnimatePresence>
         </Button>
@@ -396,10 +379,11 @@ export function CloudSyncSetup({
 
       <Card
         variant="surface"
+        disableHoverScale={mobile}
         className={cn(
           'px-4 text-xs leading-relaxed text-text-secondary',
           mobile ? 'py-0' : 'space-y-3 py-3',
-          mobile && 'mobile-settings-surface hover:scale-100',
+          mobile && 'mobile-settings-surface',
         )}
       >
         {mobile && (
@@ -407,10 +391,12 @@ export function CloudSyncSetup({
             type="button"
             onClick={() => setIsSetupGuideExpanded((expanded) => !expanded)}
             aria-expanded={isSetupGuideExpanded}
+            aria-controls={setupGuideContentId}
             className="flex min-h-14 w-full items-center justify-between gap-3 text-left text-text-primary"
           >
             <span className="text-sm font-semibold">{t('cloud.setupGuide')}</span>
             <ChevronDown
+              aria-hidden="true"
               className={cn(
                 'size-4 flex-shrink-0 transition-transform duration-150',
                 !isSetupGuideExpanded && '-rotate-90',
@@ -419,6 +405,7 @@ export function CloudSyncSetup({
           </button>
         )}
         <div
+          id={setupGuideContentId}
           className={cn(
             'space-y-3',
             mobile && !isSetupGuideExpanded && 'hidden',
@@ -435,7 +422,7 @@ export function CloudSyncSetup({
                 href="https://supabase.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors duration-200"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-pill bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors duration-200"
               >
                 supabase.com
                 <ExternalLink className="size-3" />
@@ -448,83 +435,11 @@ export function CloudSyncSetup({
               {t('cloud.setupTableTitle')}
             </p>
             <p className="mb-2">{t('cloud.setupTableDescription')}</p>
-            <div className="cloud-sync-sql relative bg-surface rounded-lg overflow-hidden">
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => setIsSqlExpanded((prev) => !prev)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    setIsSqlExpanded((prev) => !prev)
-                  }
-                }}
-                className={cn(
-                  'cloud-sync-sql__header flex items-center justify-between px-3 py-1.5 w-full cursor-pointer',
-                  isSqlExpanded ? 'cloud-sync-sql__header--expanded' : 'rounded-lg',
-                )}
-              >
-                <span className="flex items-center gap-1.5 text-xs text-text-muted font-medium font-mono">
-                  <Database className="size-3" />
-                  {t('cloud.setupSqlLabel')}
-                  <ChevronDown
-                    className={cn(
-                      'size-3 transition-transform duration-150',
-                      !isSqlExpanded && '-rotate-90',
-                    )}
-                  />
-                </span>
-                <span onClick={(event) => event.stopPropagation()}>
-                  <button
-                    type="button"
-                    onClick={handleCopySql}
-                    aria-label={isCopied ? t('common.copied') : t('cloud.copySql')}
-                    className={cn(
-                      'inline-flex items-center justify-center size-6 rounded-lg border border-border',
-                      'transition-colors duration-200',
-                      isCopied
-                        ? 'bg-success/15 text-success'
-                        : 'text-text-muted hover:text-text-secondary hover:bg-surface-hover',
-                    )}
-                  >
-                    <AnimatePresence mode="wait">
-                      {isCopied ? (
-                        <motion.span
-                          key="check"
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8, transition: SCALE_EXIT }}
-                          transition={SCALE_ENTRY}
-                          className="inline-flex"
-                        >
-                          <ClipboardCheck className="size-3.5" />
-                        </motion.span>
-                      ) : (
-                        <motion.span
-                          key="copy"
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8, transition: SCALE_EXIT }}
-                          transition={SCALE_ENTRY}
-                          className="inline-flex"
-                        >
-                          <ClipboardPlus className="size-3.5" />
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </button>
-                </span>
-              </div>
-              <div
-                className={cn(GRID_COLLAPSE, isSqlExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}
-              >
-                <div className="overflow-hidden">
-                  <pre className="cloud-sync-sql__body px-3 pb-3 pt-1 text-xs font-mono text-text-secondary leading-relaxed max-h-56 whitespace-pre-wrap break-words overflow-y-auto">
-                    {sqlSnippet}
-                  </pre>
-                </div>
-              </div>
-            </div>
+            <SqlCodeBlock
+              label={t('cloud.setupSqlLabel')}
+              copyLabel={t('cloud.copySql')}
+              content={sqlSnippet}
+            />
           </div>
           <div>
             <p className="text-sm font-semibold text-text-primary mb-1">
@@ -554,7 +469,7 @@ export function CloudSyncSetup({
 
 function Path({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-elevated text-xs font-mono text-text-primary border border-border">
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded-compact bg-elevated text-xs font-mono text-text-primary border border-border">
       {children}
     </span>
   )

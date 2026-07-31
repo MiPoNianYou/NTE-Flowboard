@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '../../utils/cn'
@@ -32,6 +32,7 @@ export function CollapsibleSection({
   onAnimationComplete,
   children,
 }: CollapsibleSectionProps) {
+  const contentId = useId()
   const [isInternalOpen, setIsInternalOpen] = useState(defaultOpen)
   const isControlled = controlledIsOpen !== undefined
   const isOpen = isControlled ? controlledIsOpen : isInternalOpen
@@ -44,6 +45,8 @@ export function CollapsibleSection({
       <motion.button
         type="button"
         onClick={handleToggle}
+        aria-expanded={isOpen}
+        aria-controls={contentId}
         initial={false}
         animate={{ opacity: headerOpacity ?? 1 }}
         transition={{ duration: 0.3 }}
@@ -56,12 +59,17 @@ export function CollapsibleSection({
           {count !== undefined && <span className="text-text-muted">({count})</span>}
         </span>
         {isOpen ? (
-          <ChevronUp className="size-4 text-text-muted" />
+          <ChevronUp className="size-4 text-text-muted" aria-hidden="true" />
         ) : (
-          <ChevronDown className="size-4 text-text-muted" />
+          <ChevronDown className="size-4 text-text-muted" aria-hidden="true" />
         )}
       </motion.button>
-      <div className={cn(GRID_COLLAPSE, isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+      <div
+        id={contentId}
+        aria-hidden={!isOpen}
+        inert={!isOpen}
+        className={cn(GRID_COLLAPSE, isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}
+      >
         <div className="overflow-hidden">
           <div>{children}</div>
         </div>

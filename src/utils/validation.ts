@@ -1,4 +1,4 @@
-import type { ChecklistData, ChecklistItem } from '../types'
+import type { ChecklistContentSnapshot, ChecklistData, ChecklistItem } from '../types'
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -23,7 +23,7 @@ function isChecklistItemArray(value: unknown): value is ChecklistItem[] {
   )
 }
 
-export function isChecklistData(value: unknown): value is ChecklistData {
+export function isChecklistContentSnapshot(value: unknown): value is ChecklistContentSnapshot {
   if (!isObject(value)) return false
   return (
     isChecklistItemArray(value.daily) &&
@@ -33,4 +33,8 @@ export function isChecklistData(value: unknown): value is ChecklistData {
     typeof value.lastWeeklyReset === 'string' &&
     typeof value.lastMonthlyReset === 'string'
   )
+}
+
+export function isChecklistData(value: unknown): value is ChecklistData {
+  return isChecklistContentSnapshot(value)
 }

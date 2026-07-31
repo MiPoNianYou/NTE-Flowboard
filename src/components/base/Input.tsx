@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, type ReactNode, forwardRef } from 'react'
+import { type InputHTMLAttributes, type ReactNode, forwardRef, useId } from 'react'
 import { cn } from '../../utils/cn'
 
 type InputSize = 'md' | 'sm'
@@ -12,33 +12,41 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const sizeStyles: Record<InputSize, string> = {
-  md: 'px-3 py-2 lg:px-4 text-sm',
+  md: 'px-3 py-2 lg:px-4 text-base sm:text-sm',
   sm: 'px-2 lg:px-3 py-0.5 lg:py-1 text-xs w-20 lg:w-24',
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, icon, suffix, inputSize = 'md', className, ...restProps }, ref) => {
+    const generatedId = useId()
+    const inputId = restProps.id ?? generatedId
+
     return (
       <div className={cn('input-group', inputSize === 'sm' && 'flex items-center gap-2')}>
-        {label && inputSize === 'md' && <label className="label">{label}</label>}
+        {label && inputSize === 'md' && (
+          <label className="label" htmlFor={inputId}>
+            {label}
+          </label>
+        )}
         <div
           className={cn(
             'relative flex items-center flex-1',
             suffix &&
-              'rounded-lg border border-border bg-surface transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary/30',
+              'rounded-control border border-border bg-surface transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary/30',
             suffix &&
               error &&
               'border-danger focus-within:border-danger focus-within:ring-danger/30',
           )}
         >
           <input
+            id={inputId}
             ref={ref}
             className={cn(
               'w-full outline-none text-text-primary placeholder-text-muted transition-[border-color,box-shadow] duration-200',
               sizeStyles[inputSize],
               suffix
                 ? 'bg-transparent border-none rounded-none'
-                : 'rounded-lg bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-offset-2 focus:ring-primary/30',
+                : 'rounded-control bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-offset-2 focus:ring-primary/30',
               !suffix && icon && 'pr-10',
               !suffix && error && 'border-danger focus:border-danger focus:ring-danger/30',
               className,

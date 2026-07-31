@@ -17,6 +17,7 @@ import { SPRING } from '../utils/motion'
 import { Button } from './base/Button'
 import { useTimedToggle } from '../hooks/useTimedToggle'
 import { useTranslation } from 'react-i18next'
+import type { RestoreDefaultsControls } from '../utils/checklistRestoreBackup'
 
 const SETTINGS_CLOSE = { duration: 0.48, ease: [0.42, 0, 0.58, 1] as const }
 const MOBILE_SHEET_HEIGHT = 'min(400px, calc(100dvh - env(safe-area-inset-top) - 12px))'
@@ -35,6 +36,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 interface SettingsPanelProps {
   data: ChecklistData
   onManualReset: (tab: TabType) => void
+  restoreDefaultsControls: RestoreDefaultsControls
   onImport: (data: ChecklistData) => void
   cloudSyncProps?: CloudSyncProps
 }
@@ -42,6 +44,7 @@ interface SettingsPanelProps {
 export function SettingsPanel({
   data,
   onManualReset,
+  restoreDefaultsControls,
   onImport,
   cloudSyncProps: rawCloudSyncProps,
 }: SettingsPanelProps) {
@@ -196,6 +199,7 @@ export function SettingsPanel({
   const layoutProps = useMemo(
     () => ({
       onManualReset,
+      restoreDefaultsControls,
       onExport: handleExport,
       onImportFile: handleImportFile,
       fileInputRef,
@@ -206,6 +210,7 @@ export function SettingsPanel({
     }),
     [
       onManualReset,
+      restoreDefaultsControls,
       handleExport,
       handleImportFile,
       isImportError,
@@ -226,9 +231,9 @@ export function SettingsPanel({
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex size-10 items-center justify-center justify-self-start rounded-full bg-elevated text-text-primary shadow-sm transition-[background-color,transform,opacity] duration-150 hover:bg-surface-hover active:scale-95 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-              aria-label={`返回${backLabel}`}
-              title={`返回${backLabel}`}
+              className="inline-flex size-10 items-center justify-center justify-self-start rounded-pill bg-elevated text-text-primary shadow-sm transition-[background-color,transform,opacity] duration-150 hover:bg-surface-hover active:scale-95 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              aria-label={t('settings.backTo', { name: backLabel })}
+              title={t('settings.backTo', { name: backLabel })}
             >
               <ChevronLeft className="size-5 stroke-[2]" aria-hidden="true" />
             </button>
@@ -242,7 +247,7 @@ export function SettingsPanel({
         </div>
       )
     },
-    [handleSheetDragStart],
+    [handleSheetDragStart, t],
   )
 
   return (
@@ -285,7 +290,7 @@ export function SettingsPanel({
                 handleClose()
               }
             }}
-            className={`settings-mobile-sheet md:hidden fixed bottom-0 left-0 right-0 z-[300] glass-strong rounded-t-2xl flex flex-col overflow-hidden transition-none ${
+            className={`settings-mobile-sheet md:hidden fixed bottom-0 left-0 right-0 z-[300] glass-strong rounded-t-panel flex flex-col overflow-hidden transition-none ${
               isOpen ? 'pointer-events-auto' : 'pointer-events-none'
             }`}
             style={{ height: MOBILE_SHEET_HEIGHT }}
@@ -300,7 +305,7 @@ export function SettingsPanel({
               className="flex justify-center pb-1 pt-3 flex-shrink-0 touch-none"
               onPointerDown={handleSheetDragStart}
             >
-              <div className="h-1.5 w-12 rounded-full bg-border-strong/50" aria-hidden="true" />
+              <div className="h-1.5 w-12 rounded-pill bg-border-strong/50" aria-hidden="true" />
             </div>
             <SettingsLayout
               key={`mobile-${settingsSession}`}
@@ -331,7 +336,7 @@ export function SettingsPanel({
               animate={isOpen ? { scale: 1, opacity: 1 } : { scale: 0.95, opacity: 0 }}
               transition={shouldReduceMotion ? REDUCED_MOTION : isOpen ? SPRING : SETTINGS_CLOSE}
               onAnimationComplete={handleDesktopAnimationComplete}
-              className={`relative glass-strong border border-border rounded-2xl w-full max-w-[680px] flex flex-col overflow-hidden shadow-glass ${
+              className={`relative glass-strong border border-border rounded-panel w-full max-w-[680px] flex flex-col overflow-hidden shadow-glass ${
                 isOpen ? 'pointer-events-auto' : 'pointer-events-none'
               }`}
               style={{ height: 'min(85dvh, 640px)' }}

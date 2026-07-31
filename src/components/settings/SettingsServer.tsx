@@ -95,6 +95,7 @@ export function SettingsServer({ onBack, isEmbedded, mobile = false }: SettingsS
                 key={region}
                 type="button"
                 onClick={() => updateSettings({ serverRegion: region })}
+                aria-pressed={isSelected}
                 initial={false}
                 animate={{
                   opacity: isSelected ? 1 : 0.6,
@@ -103,7 +104,7 @@ export function SettingsServer({ onBack, isEmbedded, mobile = false }: SettingsS
                 }}
                 transition={SPRING}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-3 text-left rounded-lg',
+                  'w-full flex items-center gap-3 px-3 py-3 text-left rounded-control',
                   isSelected
                     ? 'bg-primary-soft border border-primary/30'
                     : 'bg-surface border border-border',

@@ -137,13 +137,8 @@ export function classifySyncError(error: unknown): string {
   return i18n.t('sync.retry')
 }
 
-export type ValidateReason =
-  | 'network'
-  | 'auth'
-  | 'table_missing'
-  | 'table_schema'
-  | 'table_permission'
-  | 'unknown'
+type ValidateReason =
+  'network' | 'auth' | 'table_missing' | 'table_schema' | 'table_permission' | 'unknown'
 
 export type ValidateResult = { ok: true } | { ok: false; reason: ValidateReason; detail?: string }
 

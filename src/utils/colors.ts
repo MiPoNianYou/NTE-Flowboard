@@ -3,14 +3,6 @@ import a11yPlugin from 'colord/plugins/a11y'
 
 extend([a11yPlugin])
 
-export const PALETTE = {
-  primary: colord('#9080F0').toHex(),
-  success: colord('#14AD81').toHex(),
-  warning: colord('#E0A030').toHex(),
-  info: colord('#15A0B8').toHex(),
-  danger: colord('#E85252').toHex(),
-}
-
 export const TAG_HEX = [
   colord('#E85252').toHex(),
   colord('#E88030').toHex(),

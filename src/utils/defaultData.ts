@@ -184,13 +184,13 @@ const defaultEnglishMonthlyItems: ChecklistItem[] = [
   },
 ]
 
-export const DEFAULT_SETTINGS: BehaviorSettings = {
+const DEFAULT_SETTINGS: BehaviorSettings = {
   serverRegion: 'asia',
   isAutoMoveEnabled: true,
   shouldConfirmDelete: true,
 }
 
-export const DEFAULT_UI_PREFERENCES: UiPreferences = {
+const DEFAULT_UI_PREFERENCES: UiPreferences = {
   cloudPatchHidden: false,
 }
 

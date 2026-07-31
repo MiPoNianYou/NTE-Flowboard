@@ -1,7 +1,7 @@
 import type { ChecklistData, SyncStatus } from '../types'
 import * as syncPolicy from './syncPolicy'
 
-export type SyncCommand = 'none' | 'pull' | 'push' | 'import-remote' | 'schedule-push'
+type SyncCommand = 'none' | 'pull' | 'push' | 'import-remote' | 'schedule-push'
 
 export interface SyncCoordinationState {
   syncStatus: SyncStatus
@@ -71,11 +71,14 @@ export function coordinateSync(state: SyncCoordinationState, event: SyncEvent): 
         ...state,
         isPulling: false,
         syncStatus: 'connected',
-        lastSeenTime: event.updatedAt,
+        lastSeenTime:
+          !state.lastSeenTime || new Date(event.updatedAt) > new Date(state.lastSeenTime)
+            ? event.updatedAt
+            : state.lastSeenTime,
       }
       if (shouldImport)
         return {
-          state: { ...next, hasLocalChanges: false, shouldSkipNextPush: true },
+          state: next,
           command: 'import-remote',
           shouldResetRetries: true,
           importData: event.data,
@@ -94,7 +97,10 @@ export function coordinateSync(state: SyncCoordinationState, event: SyncEvent): 
           ...state,
           syncStatus: 'connected',
           hasLocalChanges: false,
-          lastSeenTime: event.updatedAt,
+          lastSeenTime:
+            !state.lastSeenTime || new Date(event.updatedAt) > new Date(state.lastSeenTime)
+              ? event.updatedAt
+              : state.lastSeenTime,
         },
         'none',
         true,

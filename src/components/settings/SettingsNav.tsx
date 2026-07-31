@@ -41,7 +41,7 @@ export function SettingsNav({
     <nav
       className={cn(
         isMobileEntry
-          ? 'settings-mobile-list flex flex-col overflow-hidden rounded-xl bg-surface'
+          ? 'settings-mobile-list flex h-full min-h-0 flex-col overflow-hidden rounded-card bg-surface'
           : orientation === 'vertical'
             ? 'flex flex-col gap-0.5'
             : 'flex flex-col',
@@ -55,12 +55,13 @@ export function SettingsNav({
             key={item.id}
             type="button"
             onClick={() => onTabChange(item.id)}
+            aria-current={isActive ? 'page' : undefined}
             data-settings-initial-focus={isMobileEntry && item.id === 'general' ? true : undefined}
             className={cn(
               isMobileEntry
-                ? 'settings-mobile-list-row group relative flex min-h-14 items-center gap-3 px-3 py-2.5 text-left text-text-primary hover:bg-surface-hover'
+                ? 'settings-mobile-list-row group relative flex min-h-14 flex-1 items-center gap-3 px-3 py-2.5 text-left text-text-primary hover:bg-surface-hover'
                 : cn(
-                    'group relative flex min-h-16 items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors duration-200',
+                    'group relative flex min-h-16 items-center gap-3 rounded-control px-3 py-3 text-left transition-colors duration-200',
                     isActive
                       ? 'md:bg-primary/5 md:text-primary text-text-secondary hover:text-text-primary hover:bg-surface-hover md:hover:bg-primary/5 md:hover:text-primary'
                       : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
@@ -69,7 +70,7 @@ export function SettingsNav({
           >
             <div
               className={cn(
-                'size-8 rounded-md flex items-center justify-center transition-colors duration-200',
+                'size-8 rounded-compact flex items-center justify-center transition-colors duration-200',
                 isMobileEntry
                   ? 'bg-elevated text-primary'
                   : isActive
@@ -87,7 +88,9 @@ export function SettingsNav({
                 !isMobileEntry && 'md:flex md:items-baseline md:gap-2',
               )}
             >
-              <span className="block text-sm font-medium leading-snug">{t(item.labelKey)}</span>
+              <span className="block text-[15px] sm:text-sm font-medium leading-snug">
+                {t(item.labelKey)}
+              </span>
               {labels?.[item.id] && (
                 <span
                   className={cn(

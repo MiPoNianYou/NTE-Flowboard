@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       return (
         <div className="min-h-[100dvh] flex items-center justify-center page-gradient">
-          <div className="text-center w-full max-w-[680px] max-h-[85dvh] glass-strong border border-border rounded-2xl p-6 shadow-glass flex flex-col overflow-auto">
+          <div className="text-center w-full max-w-[680px] max-h-[85dvh] glass-strong border border-border rounded-panel p-6 shadow-glass flex flex-col overflow-auto">
             <div className="flex flex-col items-center">
               <div className="flex justify-center mb-4">
                 <div className="w-32 h-32 overflow-hidden">
@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 {i18n.t('errorBoundary.description')}
               </p>
               <div className="max-w-lg mx-auto w-full mb-8">
-                <div className="flex items-center gap-3 text-left text-sm bg-danger/10 rounded-xl p-4 border border-danger/20">
+                <div className="flex items-center gap-3 text-left text-sm bg-danger/10 rounded-card p-4 border border-danger/20">
                   <AlertCircle className="text-danger shrink-0" size={18} />
                   <span className="block text-xs text-danger whitespace-pre-wrap break-words overflow-auto max-h-48 flex-1 m-0">
                     {this.state.error?.message ?? i18n.t('errorBoundary.unknown')}

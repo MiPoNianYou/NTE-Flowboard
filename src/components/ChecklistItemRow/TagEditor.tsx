@@ -183,7 +183,8 @@ export function TagEditor({
                     event.stopPropagation()
                     removeTag(tag)
                   }}
-                  className="hover:bg-danger/20 hover:text-danger rounded-full p-0.5 transition-colors duration-150"
+                  className="hover:bg-danger/20 hover:text-danger rounded-pill p-0.5 transition-colors duration-150"
+                  aria-label={t('tags.remove', { name: tag })}
                 >
                   <X className="size-[10px] lg:size-[12px]" />
                 </button>

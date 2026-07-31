@@ -1,21 +1,57 @@
 {
   "name": "nte-flowboard",
   "private": true,
-  "version": "2.4.0",
+  "version": "2.5.0",
   "type": "module",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "eslint src/ && tsc --noEmit && vite build",
+    "build": "npm run lint && npm run typecheck && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "format": "prettier --write src/",
-    "format:check": "prettier --check src/",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "format": "prettier --write src/ tests/ package.json tsconfig*.json eslint.config.js playwright.config.ts stryker.config.json vite.config.ts vitest.integration.config.ts .github/workflows/*.yml",
+    "format:check": "prettier --check src/ tests/ package.json tsconfig*.json eslint.config.js playwright.config.ts stryker.config.json vite.config.ts vitest.integration.config.ts .github/workflows/*.yml",
+    "check:dead-code": "knip",
+    "check:size": "size-limit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration:supabase": "vitest run --config vitest.integration.config.ts",
+    "test:mutation": "stryker run",
     "test:watch": "vitest",
     "test:browser": "playwright test"
   },
+  "knip": {
+    "ignore": [
+      "public/theme-bootstrap.js"
+    ]
+  },
+  "overrides": {
+    "qs": "6.15.3"
+  },
+  "size-limit": [
+    {
+      "name": "JavaScript (gzip)",
+      "path": "dist/assets/*.js",
+      "gzip": true,
+      "limit": "275 kB"
+    },
+    {
+      "name": "CSS (gzip)",
+      "path": "dist/assets/*.css",
+      "gzip": true,
+      "limit": "15 kB"
+    },
+    {
+      "name": "Primary image",
+      "path": "dist/assets/*.png",
+      "brotli": false,
+      "limit": "80 kB"
+    }
+  ],
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -25,25 +61,33 @@
     "i18next": "^26.3.6",
     "lucide-react": "^1.21.0",
     "motion": "^12.40.0",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-i18next": "^17.0.10",
-    "tailwind-merge": "3.4.0"
+    "tailwind-merge": "3.6.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
+    "@size-limit/file": "^13.0.3",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
     "@tailwindcss/vite": "^4.3.0",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
-    "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
+    "knip": "^6.30.0",
     "prettier": "^3.8.3",
+    "size-limit": "^13.0.3",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.0",

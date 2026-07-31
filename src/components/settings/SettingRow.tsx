@@ -21,7 +21,7 @@ export function SettingRow({
     <div className={cn('flex items-center justify-between py-1', className)}>
       <div className="flex items-center gap-3 flex-1 mr-3">
         {Icon && (
-          <div className="size-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0">
+          <div className="size-8 rounded-control bg-surface flex items-center justify-center flex-shrink-0">
             <Icon className="size-4 text-text-secondary" />
           </div>
         )}

@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { AlertTriangle, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { MS } from '../utils/constants'
 import { SPRING } from '../utils/motion'
 import { Button } from './base/Button'
 import { toastBus, type ToastPayload } from '../utils/toastBus'
 
 export function StorageToast() {
+  const { t } = useTranslation()
   const [toasts, setToasts] = useState<ToastPayload[]>([])
 
   const addToast = useCallback((toast: ToastPayload) => {
@@ -30,7 +32,7 @@ export function StorageToast() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={SPRING}
-            className="flex items-start gap-3 px-4 py-3 rounded-xl glass border border-danger/30"
+            className="flex items-start gap-3 px-4 py-3 rounded-card glass border border-danger/30"
           >
             <AlertTriangle size={16} className="text-danger mt-0.5 flex-shrink-0" />
             <p className="text-sm text-danger flex-1">{toast.message}</p>
@@ -40,6 +42,7 @@ export function StorageToast() {
                 setToasts((prev) => prev.filter((existingToast) => existingToast.id !== toast.id))
               }
               className="p-0 text-danger/60 hover:text-danger"
+              aria-label={t('common.closeNotification')}
             >
               <X size={14} />
             </Button>

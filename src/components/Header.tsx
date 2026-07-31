@@ -5,10 +5,12 @@ import { SettingsPanel } from './SettingsPanel'
 import { OfflineIndicator } from './OfflineIndicator'
 import ShinkuLogo from '../assets/shinku-logo.png'
 import { useTranslation } from 'react-i18next'
+import type { RestoreDefaultsControls } from '../utils/checklistRestoreBackup'
 
 interface HeaderProps {
   data: ChecklistData
   onManualReset: (tab: TabType) => void
+  restoreDefaultsControls: RestoreDefaultsControls
   onImport: (data: ChecklistData) => void
   cloudSyncProps?: CloudSyncProps
 }
@@ -16,6 +18,7 @@ interface HeaderProps {
 export const Header = memo(function Header({
   data,
   onManualReset,
+  restoreDefaultsControls,
   onImport,
   cloudSyncProps,
 }: HeaderProps) {
@@ -41,6 +44,7 @@ export const Header = memo(function Header({
         <SettingsPanel
           data={data}
           onManualReset={onManualReset}
+          restoreDefaultsControls={restoreDefaultsControls}
           onImport={onImport}
           cloudSyncProps={cloudSyncProps}
         />

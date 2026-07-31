@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ChecklistData, SyncStatus } from '../types'
+import type { ChecklistController } from '../utils/checklistController'
 import { MS } from '../utils/constants'
 import type { SupabaseConfig } from '../utils/supabase'
 import {
@@ -19,20 +20,16 @@ import {
 } from '../utils/supabase'
 import { toOrderedData } from '../utils/serialization'
 import * as syncPolicy from '../utils/syncPolicy'
-import {
-  coordinateSync,
-  type SyncEvent,
-  type SyncCoordinationState,
-} from '../utils/syncCoordinator'
 import { useVisibilityInterval } from './useVisibilityInterval'
 import { useRetryScheduler } from './useRetryScheduler'
 import { useCrossTabSync } from './useCrossTabSync'
 import { useTranslation } from 'react-i18next'
+import { createSyncSession, type SyncSession } from '../utils/syncSession'
 
 interface UseSupabaseSyncOptions {
   data: ChecklistData
   onDataImport: (data: ChecklistData) => void
-  externalDataVersion?: number
+  syncPort?: ChecklistController['syncPort']
 }
 
 interface UseSupabaseSyncReturn {
@@ -54,7 +51,7 @@ const RETRY_DELAYS = [MS.ERROR_RECOVERY, MS.ERROR_RECOVERY * 3, MS.ERROR_RECOVER
 export function useSupabaseSync({
   data,
   onDataImport,
-  externalDataVersion = 0,
+  syncPort,
 }: UseSupabaseSyncOptions): UseSupabaseSyncReturn {
   const { t } = useTranslation()
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
@@ -70,25 +67,10 @@ export function useSupabaseSync({
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pullSyncRef = useRef<PullSyncFn | null>(null)
   const pushSyncRef = useRef<PushSyncFn | null>(null)
+  const sessionRef = useRef<SyncSession | null>(null)
   const dataRef = useRef(data)
   const configRef = useRef<SupabaseConfig | null>(null)
   const onDataImportRef = useRef(onDataImport)
-  const lastExternalDataVersionRef = useRef(externalDataVersion)
-  const coordinationRef = useRef<SyncCoordinationState>({
-    syncStatus: loadSupabaseConfig() ? 'connecting' : 'disconnected',
-    isPulling: false,
-    hasLocalChanges: false,
-    shouldSkipNextPush: false,
-    lastSeenTime: loadLastSeenTime(),
-    isDataInitialized: false,
-  })
-
-  const coordinate = useCallback((event: SyncEvent) => {
-    const decision = coordinateSync(coordinationRef.current, event)
-    coordinationRef.current = decision.state
-    setSyncStatus(decision.state.syncStatus)
-    return decision
-  }, [])
   useEffect(() => {
     dataRef.current = data
   }, [data])
@@ -96,12 +78,6 @@ export function useSupabaseSync({
   useEffect(() => {
     onDataImportRef.current = onDataImport
   }, [onDataImport])
-
-  useEffect(() => {
-    if (externalDataVersion === lastExternalDataVersionRef.current) return
-    lastExternalDataVersionRef.current = externalDataVersion
-    coordinate({ kind: 'external-data-applied' })
-  }, [coordinate, externalDataVersion])
 
   const { scheduleRetry, resetAttempts } = useRetryScheduler({
     delays: RETRY_DELAYS,
@@ -112,60 +88,6 @@ export function useSupabaseSync({
     }, []),
   })
 
-  const pullSync = useCallback(
-    async (shouldForce = false, shouldSkipFirstImport = false): Promise<boolean> => {
-      const config = configRef.current
-      const coordination = coordinate({ kind: 'request-pull', force: shouldForce })
-      if (!config || coordination.command !== 'pull') return false
-
-      try {
-        const result = await pullData(config)
-        if (!result) {
-          const decision = coordinate({ kind: 'pull-empty' })
-          if (decision.shouldResetRetries) resetAttempts()
-          setSyncStatus('connected')
-          setSyncError(null)
-          return false
-        }
-
-        coordinationRef.current = {
-          ...coordinationRef.current,
-          lastSeenTime: loadLastSeenTime(),
-        }
-        const decision = coordinate({
-          kind: 'pull-succeeded',
-          data: result.data,
-          updatedAt: result.updatedAt,
-          skipFirstImport: shouldSkipFirstImport,
-          pushAfterPull: false,
-        })
-        const isImported = decision.command === 'import-remote'
-        if (isImported) {
-          if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
-          pushTimerRef.current = null
-          onDataImportRef.current({ ...result.data })
-        }
-
-        saveLastSeenTime(result.updatedAt)
-        saveLastSyncTime(new Date().toISOString())
-        setLastSyncTime(new Date().toISOString())
-        resetAttempts()
-        setSyncStatus('connected')
-        setSyncError(null)
-        return isImported
-      } catch (error) {
-        setSyncError(classifySyncError(error))
-        const decision = coordinate({ kind: 'pull-failed' })
-        if (decision.shouldRetry) scheduleRetry(decision.shouldRetry)
-        return false
-      } finally {
-        // Pull completion is represented by the coordination state.
-      }
-    },
-    [coordinate, resetAttempts, scheduleRetry],
-  )
-  pullSyncRef.current = pullSync
-
   const { broadcast } = useCrossTabSync({
     onRemoteUpdate: useCallback(() => {
       if (!configRef.current) return
@@ -173,33 +95,46 @@ export function useSupabaseSync({
     }, []),
   })
 
-  const pushSync = useCallback(
-    async (dataToPush: ChecklistData) => {
-      const config = configRef.current
-      if (!config) return
-      const coordination = coordinate({ kind: 'request-push' })
-      if (coordination.command !== 'push') return
-
-      const orderedData = toOrderedData(dataToPush)
-
-      try {
-        const updatedAt = await pushData(config, orderedData)
+  if (!sessionRef.current) {
+    sessionRef.current = createSyncSession({
+      config: null,
+      initialLastSeenTime: loadLastSeenTime(),
+      syncPort,
+      pullRemote: pullData,
+      pushRemote: (config, remoteData) => pushData(config, toOrderedData(remoteData)),
+      onDataImport: (remoteData) => onDataImportRef.current(remoteData),
+      onRemoteApplied: () => {
+        if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
+        pushTimerRef.current = null
+      },
+      onLastSeen: (updatedAt) => {
+        const syncedAt = new Date().toISOString()
         saveLastSeenTime(updatedAt)
-        saveLastSyncTime(new Date().toISOString())
-        setLastSyncTime(new Date().toISOString())
-        resetAttempts()
-        setSyncStatus('connected')
-        setSyncError(null)
-        coordinate({ kind: 'push-succeeded', updatedAt })
-        broadcast(updatedAt)
-      } catch (error) {
-        setSyncError(classifySyncError(error))
-        const decision = coordinate({ kind: 'push-failed' })
-        if (decision.shouldRetry) scheduleRetry(decision.shouldRetry)
-      }
+        saveLastSyncTime(syncedAt)
+        setLastSyncTime(syncedAt)
+      },
+      onStatus: setSyncStatus,
+      onError: (error) => setSyncError(classifySyncError(error)),
+      onClearError: () => setSyncError(null),
+      onRetry: scheduleRetry,
+      resetRetries: resetAttempts,
+      broadcast,
+    })
+  }
+  sessionRef.current.setSyncPort(syncPort)
+
+  const pullSync = useCallback(
+    async (shouldForce = false, shouldSkipFirstImport = false): Promise<boolean> => {
+      const result = await sessionRef.current?.pull(shouldForce, shouldSkipFirstImport)
+      return result?.imported ?? false
     },
-    [broadcast, coordinate, resetAttempts, scheduleRetry],
+    [],
   )
+  pullSyncRef.current = pullSync
+
+  const pushSync = useCallback(async (dataToPush: ChecklistData) => {
+    await sessionRef.current?.push(dataToPush)
+  }, [])
   pushSyncRef.current = pushSync
 
   useEffect(() => {
@@ -207,6 +142,7 @@ export function useSupabaseSync({
     if (!config) return
 
     configRef.current = config
+    sessionRef.current?.setConfig(config)
 
     const timer = setTimeout(() => {
       validateConfig(config.projectId, config.anonKey).then((valid) => {
@@ -217,6 +153,7 @@ export function useSupabaseSync({
           setSyncStatus('disconnected')
           setIsConfigured(false)
           configRef.current = null
+          sessionRef.current?.setConfig(null)
         }
       })
     }, 0)
@@ -252,7 +189,7 @@ export function useSupabaseSync({
   useEffect(() => {
     const handleOnline = () => {
       if (!configRef.current) return
-      if (coordinationRef.current.hasLocalChanges) {
+      if (sessionRef.current?.getState().hasLocalChanges) {
         void pushSync(dataRef.current)
         return
       }
@@ -267,8 +204,7 @@ export function useSupabaseSync({
   }, [pullSync, pushSync])
 
   useEffect(() => {
-    const coordination = coordinate({ kind: 'local-data-changed' })
-    if (coordination.command !== 'schedule-push' || !configRef.current) return
+    if (!sessionRef.current?.markLocalChange() || !configRef.current) return
 
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     pushTimerRef.current = setTimeout(() => {
@@ -278,7 +214,7 @@ export function useSupabaseSync({
     return () => {
       if (pushTimerRef.current) clearTimeout(pushTimerRef.current)
     }
-  }, [coordinate, data, pushSync])
+  }, [data, pushSync])
 
   const setupSupabase = useCallback(
     async (projectUrl: string, anonKey: string) => {
@@ -299,12 +235,15 @@ export function useSupabaseSync({
           setSyncError(base)
           setSyncStatus('disconnected')
           setIsConfigured(false)
+          configRef.current = null
+          sessionRef.current?.setConfig(null)
           return
         }
 
         const config: SupabaseConfig = { projectId: projectUrl, anonKey }
         saveSupabaseConfig(config)
         configRef.current = config
+        sessionRef.current?.setConfig(config)
         resetClient()
         setIsConfigured(true)
 
@@ -320,6 +259,8 @@ export function useSupabaseSync({
         setSyncError(classifySyncError(error))
         setSyncStatus('disconnected')
         setIsConfigured(false)
+        configRef.current = null
+        sessionRef.current?.setConfig(null)
       }
     },
     [pullSync, pushSync, t],
@@ -343,6 +284,7 @@ export function useSupabaseSync({
     clearSyncConfig()
     resetClient()
     configRef.current = null
+    sessionRef.current?.setConfig(null)
     setSyncStatus('disconnected')
     setIsConfigured(false)
     setLastSyncTime(null)

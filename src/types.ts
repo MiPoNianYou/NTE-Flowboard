@@ -43,22 +43,24 @@ export interface ChecklistData {
   uiPreferences: UiPreferences
 }
 
+export type ChecklistContentSnapshot = Pick<
+  ChecklistData,
+  ChecklistCycle | 'lastDailyReset' | 'lastWeeklyReset' | 'lastMonthlyReset'
+>
+
 export type ChecklistTransition =
   | { kind: 'add-item'; cycle: ChecklistCycle; item: ChecklistItem }
   | { kind: 'toggle-item'; cycle: ChecklistCycle; id: string }
+  | { kind: 'set-item-completed'; cycle: ChecklistCycle; id: string; isCompleted: boolean }
   | { kind: 'edit-item'; cycle: ChecklistCycle; id: string; text: string; tags: string[] }
   | { kind: 'remove-item'; cycle: ChecklistCycle; id: string }
   | { kind: 'set-item-hidden'; cycle: ChecklistCycle; id: string; isHidden: boolean }
   | { kind: 'reorder-item'; cycle: ChecklistCycle; activeId: string; overId: string }
   | { kind: 'manual-reset'; cycle: ChecklistCycle; now: Date }
   | { kind: 'apply-due-resets'; now: Date }
+  | { kind: 'restore-checklist-content'; snapshot: ChecklistContentSnapshot }
   | { kind: 'replace-data'; data: ChecklistData }
   | { kind: 'update-settings'; partial: Partial<BehaviorSettings> }
   | { kind: 'update-ui-preferences'; partial: Partial<UiPreferences> }
 
 export type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error'
-
-export type { CloudSyncProps } from './components/settings/CloudSyncSection'
-
-export type { SettingsPageBaseProps } from './components/settings/SettingsPage'
-export type { ItemActionProps } from './components/ChecklistItemRow/DesktopActions'

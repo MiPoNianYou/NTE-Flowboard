@@ -22,6 +22,11 @@ export function applyChecklistTransition(
         ...item,
         isCompleted: !item.isCompleted,
       }))
+    case 'set-item-completed':
+      return updateItem(data, transition.cycle, transition.id, (item) => {
+        if (item.isCompleted === transition.isCompleted) return item
+        return { ...item, isCompleted: transition.isCompleted }
+      })
     case 'edit-item':
       return updateItem(data, transition.cycle, transition.id, (item) => {
         if (item.text === transition.text && sameTags(item.tags, transition.tags)) return item
@@ -40,6 +45,8 @@ export function applyChecklistTransition(
       return resetCycle(data, transition.cycle, transition.now)
     case 'apply-due-resets':
       return applyDueResets(data, transition.now)
+    case 'restore-checklist-content':
+      return { ...data, ...transition.snapshot }
     case 'replace-data':
       return transition.data === data ? data : transition.data
     case 'update-settings':

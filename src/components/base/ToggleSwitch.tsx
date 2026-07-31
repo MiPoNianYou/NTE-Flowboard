@@ -3,17 +3,23 @@ import { cn } from '../../utils/cn'
 interface ToggleSwitchProps {
   checked: boolean
   onCheckedChange: (newValue: boolean) => void
+  'aria-label': string
 }
 
-export function ToggleSwitch({ checked, onCheckedChange }: ToggleSwitchProps) {
+export function ToggleSwitch({
+  checked,
+  onCheckedChange,
+  'aria-label': ariaLabel,
+}: ToggleSwitchProps) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'relative shrink-0 w-[42px] h-[24px] rounded-full cursor-pointer',
+        'relative shrink-0 w-[42px] h-[24px] rounded-pill cursor-pointer',
         'border border-border',
         'backdrop-blur-sm transition-colors duration-200',
         'focus:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]',
@@ -25,7 +31,7 @@ export function ToggleSwitch({ checked, onCheckedChange }: ToggleSwitchProps) {
       <span
         className={cn(
           'absolute w-[20px] h-[20px] left-[1px] top-[1px]',
-          'bg-white rounded-full shadow-sm',
+          'bg-white rounded-pill shadow-sm',
           'transition-transform duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]',
           checked && 'translate-x-[18px]',
         )}

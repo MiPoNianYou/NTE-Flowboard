@@ -1,11 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { DISPLAY_PREFERENCES_STORAGE_KEY } from '../i18n/displayPreferences'
 import {
-  getSystemTheme,
   readThemePreference,
-  resolveTheme,
   saveThemePreference,
-  THEME_PREFERENCE_STORAGE_KEY,
   type EffectiveTheme,
   type ThemePreference,
 } from '../theme/themePreferences'
@@ -34,10 +32,13 @@ function shouldUseThemeTransition(): boolean {
   return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 }
 
+function hasHoveredScaleCard(): boolean {
+  return Boolean(document.querySelector('[data-hover-scale-card]:hover'))
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themePreference, setThemePreferenceState] = useState(readThemePreference)
-  const [systemTheme, setSystemTheme] = useState(getSystemTheme)
-  const effectiveTheme = resolveTheme(themePreference, systemTheme)
+  const effectiveTheme = themePreference
 
   useEffect(() => {
     applyDocumentTheme(effectiveTheme)
@@ -45,25 +46,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [effectiveTheme, themePreference])
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)')
-    if (!mediaQuery) return
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      const nextSystemTheme: EffectiveTheme = event.matches ? 'dark' : 'light'
-      setSystemTheme(nextSystemTheme)
-      if (themePreference === 'system') applyDocumentTheme(nextSystemTheme)
-    }
-
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [themePreference])
-
-  useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
-      if (event.key !== THEME_PREFERENCE_STORAGE_KEY) return
+      if (event.key !== DISPLAY_PREFERENCES_STORAGE_KEY) return
       const nextPreference = readThemePreference()
-      const nextTheme = resolveTheme(nextPreference, getSystemTheme())
-      applyDocumentTheme(nextTheme)
+      applyDocumentTheme(nextPreference)
       setThemePreferenceState(nextPreference)
     }
 
@@ -76,13 +62,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (nextPreference === themePreference) return
 
       const commit = () => {
-        const nextTheme = resolveTheme(nextPreference, getSystemTheme())
-        applyDocumentTheme(nextTheme)
+        applyDocumentTheme(nextPreference)
         saveThemePreference(nextPreference)
         flushSync(() => setThemePreferenceState(nextPreference))
       }
 
-      if (typeof document.startViewTransition === 'function' && shouldUseThemeTransition()) {
+      if (
+        typeof document.startViewTransition === 'function' &&
+        shouldUseThemeTransition() &&
+        !hasHoveredScaleCard()
+      ) {
         document.startViewTransition(commit)
       } else {
         commit()

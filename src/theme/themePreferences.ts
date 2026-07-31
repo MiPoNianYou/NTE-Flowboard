@@ -1,26 +1,13 @@
-export const THEME_PREFERENCE_STORAGE_KEY = 'flowboard-theme-preference'
+import {
+  isThemePreference,
+  readDisplayPreferences,
+  updateDisplayPreferences,
+  type ThemePreference,
+} from '../i18n/displayPreferences'
 
-export type ThemePreference = 'system' | 'light' | 'dark'
-export type EffectiveTheme = Exclude<ThemePreference, 'system'>
+export type { ThemePreference }
 
-const LEGACY_INSTALL_KEYS = [
-  'flowboard-checklist',
-  'nte-checklist',
-  'flowboard-settings',
-  'flowboard-ui-preferences',
-] as const
-
-export function isThemePreference(value: unknown): value is ThemePreference {
-  return value === 'system' || value === 'light' || value === 'dark'
-}
-
-export function hasExistingInstallation(storage: Storage | null = getStorage()): boolean {
-  return storage ? LEGACY_INSTALL_KEYS.some((key) => storage.getItem(key) !== null) : false
-}
-
-export function getDefaultThemePreference(storage: Storage | null = getStorage()): ThemePreference {
-  return hasExistingInstallation(storage) ? 'dark' : 'system'
-}
+export type EffectiveTheme = ThemePreference
 
 export function parseThemePreference(
   value: string | null,
@@ -29,37 +16,10 @@ export function parseThemePreference(
   return isThemePreference(value) ? value : fallback
 }
 
-export function readThemePreference(storage: Storage | null = getStorage()): ThemePreference {
-  const fallback = getDefaultThemePreference(storage)
-  return storage
-    ? parseThemePreference(storage.getItem(THEME_PREFERENCE_STORAGE_KEY), fallback)
-    : fallback
+export function readThemePreference(storage?: Storage | null): ThemePreference {
+  return readDisplayPreferences(storage).theme
 }
 
-export function saveThemePreference(
-  preference: ThemePreference,
-  storage: Storage | null = getStorage(),
-): void {
-  storage?.setItem(THEME_PREFERENCE_STORAGE_KEY, preference)
-}
-
-export function getSystemTheme(): EffectiveTheme {
-  if (typeof window === 'undefined' || !window.matchMedia) return 'light'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-
-export function resolveTheme(
-  preference: ThemePreference,
-  systemTheme: EffectiveTheme = getSystemTheme(),
-): EffectiveTheme {
-  return preference === 'system' ? systemTheme : preference
-}
-
-function getStorage(): Storage | null {
-  if (typeof localStorage === 'undefined') return null
-  try {
-    return localStorage
-  } catch {
-    return null
-  }
+export function saveThemePreference(preference: ThemePreference, storage?: Storage | null): void {
+  updateDisplayPreferences({ theme: preference }, storage)
 }

@@ -1,28 +1,39 @@
 ;(function () {
-  var preferenceKey = 'flowboard-theme-preference'
-  var legacyKeys = [
-    'flowboard-checklist',
-    'nte-checklist',
-    'flowboard-settings',
-    'flowboard-ui-preferences',
-  ]
+  var displayPreferencesKey = 'flowboard-display-preferences'
+  var legacyThemeKey = 'flowboard-theme-preference'
 
-  function readPreference() {
+  function resolveEnvironmentTheme() {
     try {
-      var saved = window.localStorage.getItem(preferenceKey)
-      if (saved === 'system' || saved === 'light' || saved === 'dark') return saved
-      var isExistingInstallation = legacyKeys.some(function (key) {
-        return window.localStorage.getItem(key) !== null
-      })
-      return isExistingInstallation ? 'dark' : 'system'
+      if (!window.matchMedia) return 'dark'
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     } catch (_error) {
-      return 'system'
+      return 'dark'
     }
   }
 
-  var preference = readPreference()
-  var systemIsDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  var theme = preference === 'system' ? (systemIsDark ? 'dark' : 'light') : preference
+  function readTheme() {
+    try {
+      var rawPreferences = window.localStorage.getItem(displayPreferencesKey)
+      if (rawPreferences) {
+        try {
+          var preferences = JSON.parse(rawPreferences)
+          if (preferences && (preferences.theme === 'light' || preferences.theme === 'dark')) {
+            return preferences.theme
+          }
+        } catch (_error) {
+          // Fall through to the legacy preference or current environment.
+        }
+      }
+
+      var legacyTheme = window.localStorage.getItem(legacyThemeKey)
+      if (legacyTheme === 'light' || legacyTheme === 'dark') return legacyTheme
+      return resolveEnvironmentTheme()
+    } catch (_error) {
+      return resolveEnvironmentTheme()
+    }
+  }
+
+  var theme = readTheme()
   var root = document.documentElement
   root.setAttribute('data-theme', theme)
   root.style.colorScheme = theme

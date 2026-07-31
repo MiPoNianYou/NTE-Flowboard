@@ -2,6 +2,7 @@ import {
   memo,
   useState,
   useRef,
+  useId,
   useEffect,
   useCallback,
   useMemo,
@@ -65,6 +66,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
   const [editError, setEditError] = useState<string | null>(null)
   const [tagAddRequest, setTagAddRequest] = useState(0)
   const [isTagEditorBusy, setIsTagEditorBusy] = useState(false)
+  const mobileActionsId = useId()
   const rowRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<ResizeObserver | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -247,7 +249,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
     >
       <div
         className={cn(
-          'rounded-lg transition-colors duration-200',
+          'rounded-control transition-colors duration-200',
           editError
             ? 'border border-solid border-danger/30 bg-danger/5'
             : isEditing
@@ -291,7 +293,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <div className="flex flex-1 min-w-0 items-center rounded-lg px-2 transition-colors duration-200">
+                      <div className="flex flex-1 min-w-0 items-center rounded-control px-2 transition-colors duration-200">
                         <input
                           ref={inputRef}
                           type="text"
@@ -407,7 +409,6 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
               transition={FADE_IN}
             >
               <div
-                onClick={usesMobileActions ? () => setIsExpanded((prev) => !prev) : undefined}
                 className={cn(
                   'group flex items-center gap-3 px-3 py-2 lg:px-4 lg:py-3',
                   usesMobileActions && COMPACT_HEADER_CLASS,
@@ -439,7 +440,7 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                   }
                   aria-pressed={item.isCompleted}
                   className={cn(
-                    'flex-shrink-0 w-5 h-5 lg:w-[22px] lg:h-[22px] rounded-xl border flex items-center justify-center transition-colors duration-200',
+                    'flex-shrink-0 w-5 h-5 lg:w-[22px] lg:h-[22px] rounded-full border-[1.5px] flex items-center justify-center transition-colors duration-200',
                     item.isCompleted
                       ? 'bg-success border-success shadow-md'
                       : 'border-border-strong hover:border-primary',
@@ -457,9 +458,14 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                         exit={{ scale: 0, opacity: 0 }}
                         transition={suppressMountAnimation ? { duration: 0 } : SPRING}
                       >
-                        <Check size={12} className="text-[var(--color-text-on-accent)] lg:hidden" />
+                        <Check
+                          size={12}
+                          strokeWidth={3}
+                          className="text-[var(--color-text-on-accent)] lg:hidden"
+                        />
                         <Check
                           size={13}
+                          strokeWidth={3}
                           className="text-[var(--color-text-on-accent)] hidden lg:block"
                         />
                       </motion.div>
@@ -467,49 +473,88 @@ export const ChecklistItemRow = memo(function ChecklistItemRow({
                   </AnimatePresence>
                 </motion.button>
 
-                <span
-                  className={cn(
-                    'flex-1 text-sm min-w-0 completion-text',
-                    item.isCompleted
-                      ? 'line-through decoration-dashed decoration-success text-text-muted'
-                      : 'text-text-primary',
-                  )}
-                >
-                  {item.text}
-                </span>
+                {usesMobileActions ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded((prev) => !prev)}
+                    aria-label={t('item.actions', { name: item.text })}
+                    aria-expanded={isExpanded}
+                    aria-controls={mobileActionsId}
+                    className={cn(
+                      'flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-control text-left',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'flex-1 text-base sm:text-sm min-w-0 completion-text',
+                        item.isCompleted
+                          ? 'line-through decoration-dashed decoration-success text-text-muted'
+                          : 'text-text-primary',
+                      )}
+                    >
+                      {item.text}
+                    </span>
 
-                {tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 lg:gap-1 shrink-0">
-                    {tags.map((tag) => (
-                      <TagPill
-                        key={tag}
-                        tag={tag}
-                        suppressMountAnimation={suppressMountAnimation}
-                      />
-                    ))}
-                  </div>
+                    {tags.length > 0 && (
+                      <span className="flex flex-wrap gap-1 shrink-0">
+                        {tags.map((tag) => (
+                          <TagPill
+                            key={tag}
+                            tag={tag}
+                            suppressMountAnimation={suppressMountAnimation}
+                          />
+                        ))}
+                      </span>
+                    )}
+
+                    <ChevronRight
+                      size={15}
+                      aria-hidden="true"
+                      className={cn(
+                        'shrink-0 text-text-muted transition-transform duration-200',
+                        isExpanded && 'rotate-90',
+                      )}
+                    />
+                  </button>
+                ) : (
+                  <>
+                    <span
+                      className={cn(
+                        'flex-1 text-base sm:text-sm min-w-0 completion-text',
+                        item.isCompleted
+                          ? 'line-through decoration-dashed decoration-success text-text-muted'
+                          : 'text-text-primary',
+                      )}
+                    >
+                      {item.text}
+                    </span>
+
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 shrink-0">
+                        {tags.map((tag) => (
+                          <TagPill
+                            key={tag}
+                            tag={tag}
+                            suppressMountAnimation={suppressMountAnimation}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    <DesktopActions
+                      onEdit={beginEdit}
+                      onHide={() => onHide(tab, item.id)}
+                      onDelete={handleDeleteClick}
+                      isPending={isPending(item.id)}
+                    />
+                  </>
                 )}
-
-                {!usesMobileActions && (
-                  <DesktopActions
-                    onEdit={beginEdit}
-                    onHide={() => onHide(tab, item.id)}
-                    onDelete={handleDeleteClick}
-                    isPending={isPending(item.id)}
-                  />
-                )}
-
-                <ChevronRight
-                  size={15}
-                  className={cn(
-                    'shrink-0 text-text-muted transition-transform duration-200 lg:hidden',
-                    isExpanded && 'rotate-90',
-                  )}
-                />
               </div>
 
               {usesMobileActions && (
                 <MobileActions
+                  id={mobileActionsId}
                   onEdit={beginEdit}
                   onHide={() => onHide(tab, item.id)}
                   onDelete={handleDeleteClick}

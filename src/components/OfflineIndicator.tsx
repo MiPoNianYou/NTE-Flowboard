@@ -27,12 +27,14 @@ export function OfflineIndicator() {
   }, [])
 
   useEffect(() => {
-    if (prevIsOffline.current && !isOffline) {
+    const wasOffline = prevIsOffline.current
+    prevIsOffline.current = isOffline
+
+    if (wasOffline && !isOffline) {
       setIsReconnecting(true)
       const timer = setTimeout(() => setIsReconnecting(false), 2000)
       return () => clearTimeout(timer)
     }
-    prevIsOffline.current = isOffline
   }, [isOffline])
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export function OfflineIndicator() {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0, transition: { delay: 0.8, ...SPRING } }}
           transition={SPRING}
-          className="shrink-0 w-fit overflow-hidden whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium flex items-center gap-2"
+          className="shrink-0 w-fit overflow-hidden whitespace-nowrap px-4 py-1.5 rounded-pill text-sm font-medium flex items-center gap-2"
           style={{
             background: 'var(--color-glass)',
             border: '1px solid var(--color-glass-border)',

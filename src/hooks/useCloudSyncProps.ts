@@ -2,19 +2,20 @@ import { useMemo } from 'react'
 import type { CloudSyncProps } from '../components/settings/CloudSyncSection'
 import { useSupabaseSync } from './useSupabaseSync'
 import type { ChecklistData } from '../types'
+import type { ChecklistController } from '../utils/checklistController'
 
 interface UseCloudSyncPropsOptions {
   data: ChecklistData
   onDataImport: (data: ChecklistData) => void
-  externalDataVersion: number
+  syncPort?: ChecklistController['syncPort']
 }
 
 export function useCloudSyncProps({
   data,
   onDataImport,
-  externalDataVersion,
+  syncPort,
 }: UseCloudSyncPropsOptions): CloudSyncProps {
-  const sync = useSupabaseSync({ data, onDataImport, externalDataVersion })
+  const sync = useSupabaseSync({ data, onDataImport, syncPort })
 
   return useMemo(
     () => ({

@@ -53,7 +53,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
       animate={{ height: containerHeight }}
       transition={MORPH}
       style={{ position: 'relative', overflow: 'hidden' }}
-      className="bg-surface rounded-2xl border border-border shadow-card"
+      className="bg-surface rounded-panel border border-border shadow-card"
     >
       <motion.div
         initial={false}
@@ -61,6 +61,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
         transition={MORPH}
         style={isFormOpen ? { position: 'absolute', top: 0, left: 0, width: '100%' } : {}}
         aria-hidden={isFormOpen}
+        inert={isFormOpen}
         className={isFormOpen ? 'pointer-events-none' : ''}
       >
         <button type="button" className="w-full cursor-pointer" onClick={() => setIsFormOpen(true)}>
@@ -79,6 +80,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
         transition={MORPH}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%' }}
         aria-hidden={!isFormOpen}
+        inert={!isFormOpen}
         className={isFormOpen ? '' : 'pointer-events-none'}
       >
         <form
@@ -102,7 +104,7 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
             }}
             tabIndex={isFormOpen ? 0 : -1}
             placeholder={t('addItem.placeholder')}
-            className="w-full px-3 py-2 bg-transparent text-sm text-text-primary outline-none placeholder-text-muted border-b border-border"
+            className="w-full px-3 py-2 bg-transparent text-base sm:text-sm text-text-primary outline-none placeholder-text-muted border-b border-border"
           />
           <div className="flex items-center flex-wrap gap-1.5 px-3 py-2 border-b border-border">
             <TagInput

@@ -1,4 +1,5 @@
 import { useMemo, useEffect } from 'react'
+import { MotionConfig } from 'motion/react'
 import { useChecklist } from './hooks/useChecklist'
 import { useCloudSyncProps } from './hooks/useCloudSyncProps'
 import { useTabManagement } from './hooks/useTabManagement'
@@ -18,6 +19,7 @@ import { ErrorBoundary } from './components/base/ErrorBoundary'
 import { StorageToast } from './components/StorageToast'
 import { Badge } from './components/base/Badge'
 import { useTranslation } from 'react-i18next'
+import type { RestoreDefaultsControls } from './utils/checklistRestoreBackup'
 
 function AppContent() {
   const { t } = useTranslation()
@@ -27,7 +29,6 @@ function AppContent() {
 
   const {
     data,
-    externalDataVersion,
     settings,
     updateSettings,
     uiPreferences,
@@ -40,7 +41,12 @@ function AppContent() {
     showItem,
     reorderItem,
     manualReset,
+    restoreDefaultChecklists,
+    undoRestoreDefaultChecklists,
+    hasRestoreBackup,
+    hasChangesSinceRestore,
     importFullData,
+    syncPort: checklistSyncPort,
   } = useChecklist()
 
   useEffect(() => {
@@ -51,8 +57,22 @@ function AppContent() {
   const cloudSyncProps = useCloudSyncProps({
     data,
     onDataImport: importFullData,
-    externalDataVersion,
+    syncPort: checklistSyncPort,
   })
+  const restoreDefaultsControls = useMemo<RestoreDefaultsControls>(
+    () => ({
+      onRestoreDefaults: restoreDefaultChecklists,
+      onUndoRestoreDefaults: undoRestoreDefaultChecklists,
+      hasRestoreBackup,
+      hasChangesSinceRestore,
+    }),
+    [
+      hasChangesSinceRestore,
+      hasRestoreBackup,
+      restoreDefaultChecklists,
+      undoRestoreDefaultChecklists,
+    ],
+  )
 
   const { setActiveTab, activeTab, direction } = useTabManagement()
   const isMobile = useIsMobile()
@@ -75,6 +95,29 @@ function AppContent() {
     serverRegion: settings.serverRegion,
   })
 
+  const checklistPanelProps = {
+    visibleItems,
+    activeTab,
+    direction,
+    isAutoMoveEnabled: settings.isAutoMoveEnabled,
+    onToggle: toggleItem,
+    onEdit: editItem,
+    onDelete: removeItem,
+    onHide: hideItem,
+    onReorder: reorderItem,
+    shouldConfirmDelete: settings.shouldConfirmDelete,
+  }
+  const hiddenSectionProps = {
+    hiddenItems,
+    activeTab,
+    direction,
+    onShowItem: showItem,
+    onDelete: removeItem,
+    shouldConfirmDelete: settings.shouldConfirmDelete,
+    isOpen: isHiddenSectionOpen,
+    onToggle: () => setIsHiddenSectionOpen(!isHiddenSectionOpen),
+  }
+
   return (
     <SettingsContext.Provider
       value={{ settings, updateSettings, uiPreferences, updateUiPreferences }}
@@ -86,6 +129,7 @@ function AppContent() {
           <Header
             data={data}
             onManualReset={manualReset}
+            restoreDefaultsControls={restoreDefaultsControls}
             onImport={importFullData}
             cloudSyncProps={cloudSyncProps}
           />
@@ -101,28 +145,8 @@ function AppContent() {
                 nextResetLabel={nextResetLabel}
               />
               <AddItemForm tab={activeTab} onAdd={addItem} />
-              <ChecklistPanel
-                visibleItems={visibleItems}
-                activeTab={activeTab}
-                direction={direction}
-                isAutoMoveEnabled={settings.isAutoMoveEnabled}
-                onToggle={toggleItem}
-                onEdit={editItem}
-                onDelete={removeItem}
-                onHide={hideItem}
-                onReorder={reorderItem}
-                shouldConfirmDelete={settings.shouldConfirmDelete}
-              />
-              <HiddenSection
-                hiddenItems={hiddenItems}
-                activeTab={activeTab}
-                direction={direction}
-                onShowItem={showItem}
-                onDelete={removeItem}
-                shouldConfirmDelete={settings.shouldConfirmDelete}
-                isOpen={isHiddenSectionOpen}
-                onToggle={() => setIsHiddenSectionOpen(!isHiddenSectionOpen)}
-              />
+              <ChecklistPanel {...checklistPanelProps} />
+              <HiddenSection {...hiddenSectionProps} />
             </div>
           ) : (
             <div className="flex flex-row gap-6 items-start lg:gap-8">
@@ -136,29 +160,11 @@ function AppContent() {
                   isAllDone={isAllDone}
                   nextResetLabel={nextResetLabel}
                 />
-                <HiddenSection
-                  hiddenItems={hiddenItems}
-                  activeTab={activeTab}
-                  direction={direction}
-                  onShowItem={showItem}
-                  onDelete={removeItem}
-                  shouldConfirmDelete={settings.shouldConfirmDelete}
-                  isOpen={isHiddenSectionOpen}
-                  onToggle={() => setIsHiddenSectionOpen(!isHiddenSectionOpen)}
-                />
+                <HiddenSection {...hiddenSectionProps} />
               </div>
               <div className="flex-1 sticky top-8 lg:top-10 min-w-0">
                 <ChecklistPanel
-                  visibleItems={visibleItems}
-                  activeTab={activeTab}
-                  direction={direction}
-                  isAutoMoveEnabled={settings.isAutoMoveEnabled}
-                  onToggle={toggleItem}
-                  onEdit={editItem}
-                  onDelete={removeItem}
-                  onHide={hideItem}
-                  onReorder={reorderItem}
-                  shouldConfirmDelete={settings.shouldConfirmDelete}
+                  {...checklistPanelProps}
                   emptyAction={<Badge variant="primary">{t('checklist.emptyAction')}</Badge>}
                 />
               </div>
@@ -172,8 +178,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
+    <MotionConfig reducedMotion="user">
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
+    </MotionConfig>
   )
 }

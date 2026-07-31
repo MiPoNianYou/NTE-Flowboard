@@ -3,15 +3,17 @@ import i18n from '../i18n'
 import {
   DISPLAY_PREFERENCES_STORAGE_KEY,
   readDisplayPreferences,
-  resolveLocale,
-  saveDisplayPreferences,
+  updateDisplayPreferences,
   type DisplayPreferences,
   type LanguagePreference,
   type SupportedLocale,
   type TimeFormat,
 } from '../i18n/displayPreferences'
 
-interface DisplayPreferencesContextValue extends DisplayPreferences {
+interface DisplayPreferencesContextValue extends Pick<
+  DisplayPreferences,
+  'language' | 'timeFormat'
+> {
   locale: SupportedLocale
   setLanguage: (language: LanguagePreference) => void
   setTimeFormat: (timeFormat: TimeFormat) => void
@@ -28,21 +30,21 @@ function applyDocumentLocale(locale: SupportedLocale): void {
 
 export function DisplayPreferencesProvider({ children }: { children: React.ReactNode }) {
   const [preferences, setPreferences] = useState(readDisplayPreferences)
-  const locale = resolveLocale(preferences.language)
+  const locale = preferences.language
 
-  const updatePreferences = useCallback((next: DisplayPreferences) => {
+  const updatePreferences = useCallback((changes: Partial<DisplayPreferences>) => {
+    const next = updateDisplayPreferences(changes)
     setPreferences(next)
-    saveDisplayPreferences(next)
   }, [])
 
   const setLanguage = useCallback(
-    (language: LanguagePreference) => updatePreferences({ ...preferences, language }),
-    [preferences, updatePreferences],
+    (language: LanguagePreference) => updatePreferences({ language }),
+    [updatePreferences],
   )
 
   const setTimeFormat = useCallback(
-    (timeFormat: TimeFormat) => updatePreferences({ ...preferences, timeFormat }),
-    [preferences, updatePreferences],
+    (timeFormat: TimeFormat) => updatePreferences({ timeFormat }),
+    [updatePreferences],
   )
 
   useEffect(() => {
@@ -55,21 +57,19 @@ export function DisplayPreferencesProvider({ children }: { children: React.React
       if (event.key !== DISPLAY_PREFERENCES_STORAGE_KEY) return
       setPreferences(readDisplayPreferences())
     }
-    const handleLanguageChange = () => {
-      if (preferences.language === 'system') setPreferences(readDisplayPreferences())
-    }
-
     window.addEventListener('storage', handleStorage)
-    window.addEventListener('languagechange', handleLanguageChange)
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('languagechange', handleLanguageChange)
-    }
-  }, [preferences.language])
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   const value = useMemo(
-    () => ({ ...preferences, locale, setLanguage, setTimeFormat }),
-    [locale, preferences, setLanguage, setTimeFormat],
+    () => ({
+      language: preferences.language,
+      timeFormat: preferences.timeFormat,
+      locale,
+      setLanguage,
+      setTimeFormat,
+    }),
+    [locale, preferences.language, preferences.timeFormat, setLanguage, setTimeFormat],
   )
 
   return (

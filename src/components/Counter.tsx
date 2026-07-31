@@ -37,13 +37,13 @@ function NumberDigit({ motionValue, digit, height, unit }: NumberDigitProps) {
   return <motion.span style={{ ...baseStyle, y: yOffset }}>{digit}</motion.span>
 }
 
-export function snapToInt(rawValue: number): number {
+function snapToInt(rawValue: number): number {
   const nearest = Math.round(rawValue)
   const tolerance = 1e-9 * Math.max(1, Math.abs(rawValue))
   return Math.abs(rawValue - nearest) < tolerance ? nearest : rawValue
 }
 
-export function getRoundedDigit(value: number, place: number): number {
+function getRoundedDigit(value: number, place: number): number {
   const scaled = value / place
   return Math.floor(snapToInt(scaled))
 }

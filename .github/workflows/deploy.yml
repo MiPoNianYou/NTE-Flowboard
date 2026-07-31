@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -35,13 +35,13 @@ jobs:
         run: npm run format:check
 
       - name: Test
-        run: npm test
+        run: npm run test:coverage
 
       - name: Install browser for UI tests
         run: npx playwright install --with-deps chromium chromium-headless-shell
 
       - name: Test browser behavior
-        run: npm run test:browser
+        run: npm run test:browser -- --project=chromium
 
       - name: Build
         run: npm run build

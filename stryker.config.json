@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vite.config.ts",
+    "related": true
+  },
+  "mutate": [
+    "src/utils/checklistTransitions.ts",
+    "src/utils/dataMigration.ts",
+    "src/utils/serialization.ts",
+    "src/utils/syncPolicy.ts",
+    "src/utils/validation.ts"
+  ],
+  "testFiles": [
+    "tests/utils/checklistTransitions.test.ts",
+    "tests/utils/dataMigration.test.ts",
+    "tests/utils/serialization.test.ts",
+    "tests/utils/syncPolicy.test.ts",
+    "tests/utils/validation.test.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "concurrency": 4,
+  "reporters": ["clear-text", "progress", "html"],
+  "incremental": true,
+  "thresholds": {
+    "high": 90,
+    "low": 85,
+    "break": 80
+  }
+}
