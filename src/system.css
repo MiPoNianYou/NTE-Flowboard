@@ -435,15 +435,16 @@ body {
   border-radius: var(--radius-control);
   background: var(--color-danger);
   border-color: var(--color-danger);
-  color: var(--color-text-on-accent);
+  color: #ffffff;
   gap: 8px;
 }
 .danger-confirm-button.expanded .sign svg {
-  color: var(--color-text-on-accent);
+  color: #ffffff;
 }
 .danger-confirm-button.expanded .text {
   opacity: 1;
   max-width: 84px;
+  color: #ffffff;
 }
 .danger-confirm-button:active {
   opacity: 0.9;

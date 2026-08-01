@@ -181,6 +181,7 @@ describe('CloudSyncSection', () => {
       render(<CloudSyncSection {...mockConfiguredProps} />)
 
       expect(screen.getByText('已连接')).toBeInTheDocument()
+      expect(screen.getByText('云端数据已是最新')).toBeInTheDocument()
       expect(screen.getByText(/上次同步/)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '手动同步' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '断开连接' })).toBeInTheDocument()
@@ -227,11 +228,13 @@ describe('CloudSyncSection', () => {
     })
 
     it.each([
-      ['syncing', '同步中'],
-      ['error', '出错了'],
-    ] as const)('should render %s status', (syncStatus, label) => {
+      ['connecting', '连接中', '正在连接云端服务'],
+      ['syncing', '同步中', '正在更新云端数据'],
+      ['error', '出错了', '云同步遇到问题'],
+    ] as const)('should render %s status', (syncStatus, label, summary) => {
       render(<CloudSyncSection {...mockConfiguredProps} syncStatus={syncStatus} />)
       expect(screen.getByText(label)).toBeInTheDocument()
+      expect(screen.getByText(summary)).toBeInTheDocument()
     })
 
     it('should expose the patch SQL as a native disclosure button', () => {

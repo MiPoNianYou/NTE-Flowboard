@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const DISPLAY_PREFERENCES_STORAGE_KEY = 'flowboard-display-preferences'
 const LEGACY_THEME_STORAGE_KEY = 'flowboard-theme-preference'
+const CLOUD_CONFIG_STORAGE_KEY = 'flowboard-cloud-config'
 
 async function openFreshPage(page: Page, colorScheme: 'light' | 'dark') {
   await page.emulateMedia({ colorScheme, reducedMotion: 'no-preference' })
@@ -43,6 +44,23 @@ async function openFreshPage(page: Page, colorScheme: 'light' | 'dark') {
 async function openSettings(page: Page) {
   await page.getByRole('button', { name: /^(?:打开设置|Open settings)$/ }).click()
   return page.locator('[role="dialog"]:visible')
+}
+
+async function openConfiguredCloudSettings(page: Page, colorScheme: 'light' | 'dark') {
+  await page.addInitScript((configKey) => {
+    localStorage.setItem(
+      configKey,
+      JSON.stringify({ projectId: 'e2e', anonKey: 'e2e-publishable-key' }),
+    )
+  }, CLOUD_CONFIG_STORAGE_KEY)
+  await page.route('https://e2e.supabase.co/rest/v1/rpc/pull_sync*', (route) =>
+    route.fulfill({ contentType: 'application/json', body: '[]' }),
+  )
+  await openFreshPage(page, colorScheme)
+  const dialog = await openSettings(page)
+  await dialog.getByRole('button', { name: /^云同步/ }).click()
+  await expect(dialog.getByRole('button', { name: '断开连接' })).toBeVisible()
+  return dialog
 }
 
 async function expectWithinViewport(locator: Locator, width: number) {
@@ -179,6 +197,23 @@ test('keeps a hovered card scaled while changing the theme', async ({ page }) =>
     await card.evaluate((element) => Number.parseFloat(getComputedStyle(element).scale)),
   ).toBeCloseTo(1.03, 2)
 })
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`keeps expanded disconnect foregrounds white in ${colorScheme} theme`, async ({ page }) => {
+    const dialog = await openConfiguredCloudSettings(page, colorScheme)
+    const disconnectButton = dialog.getByRole('button', { name: '断开连接' })
+
+    await disconnectButton.click()
+
+    await expect(disconnectButton).toHaveClass(/expanded/)
+    await expect(disconnectButton).toHaveCSS('color', 'rgb(255, 255, 255)')
+    await expect(disconnectButton.locator('.sign svg')).toHaveCSS('color', 'rgb(255, 255, 255)')
+    await expect(disconnectButton.locator('.danger-confirm-text')).toHaveCSS(
+      'color',
+      'rgb(255, 255, 255)',
+    )
+  })
+}
 
 for (const width of [320, 765, 1440]) {
   test(`keeps the appearance control within the viewport at ${width}px`, async ({

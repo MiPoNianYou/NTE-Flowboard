@@ -14,10 +14,10 @@ export const SERVER_REGIONS: Record<ServerRegion, { label: string; description: 
 }
 
 const defaultDailyItems: ChecklistItem[] = [
-  { id: 'd1', text: '纳库佩达之池', isCompleted: false, isHidden: false, order: 1, tags: ['地图'] },
-  { id: 'd2', text: '魔女之家占卜', isCompleted: false, isHidden: false, order: 2, tags: ['地图'] },
-  { id: 'd3', text: '福荫树木祈愿', isCompleted: false, isHidden: false, order: 3, tags: ['地图'] },
-  { id: 'd4', text: '领一咖舍收益', isCompleted: false, isHidden: false, order: 4, tags: ['大亨'] },
+  { id: 'd4', text: '领一咖舍收益', isCompleted: false, isHidden: false, order: 1, tags: ['大亨'] },
+  { id: 'd1', text: '纳库佩达之池', isCompleted: false, isHidden: false, order: 2, tags: ['地图'] },
+  { id: 'd2', text: '魔女之家占卜', isCompleted: false, isHidden: false, order: 3, tags: ['地图'] },
+  { id: 'd3', text: '福荫树木祈愿', isCompleted: false, isHidden: false, order: 4, tags: ['地图'] },
   { id: 'd5', text: '赠送角色礼物', isCompleted: false, isHidden: false, order: 5, tags: ['羁遇'] },
   { id: 'd6', text: '角色都市偕游', isCompleted: false, isHidden: false, order: 6, tags: ['羁遇'] },
   { id: 'd7', text: '消耗本性像素', isCompleted: false, isHidden: false, order: 7, tags: ['材料'] },
@@ -41,11 +41,19 @@ const defaultMonthlyItems: ChecklistItem[] = [
 
 const defaultEnglishDailyItems: ChecklistItem[] = [
   {
+    id: 'd4',
+    text: 'Collect operating revenue from The Cafe by Origen',
+    isCompleted: false,
+    isHidden: false,
+    order: 1,
+    tags: ['City Tycoon'],
+  },
+  {
     id: 'd1',
     text: "Make a wish at Nacupeda's Pond",
     isCompleted: false,
     isHidden: false,
-    order: 1,
+    order: 2,
     tags: ['Map'],
   },
   {
@@ -53,7 +61,7 @@ const defaultEnglishDailyItems: ChecklistItem[] = [
     text: "Make a divination at The Witch's House",
     isCompleted: false,
     isHidden: false,
-    order: 2,
+    order: 3,
     tags: ['Map'],
   },
   {
@@ -61,16 +69,8 @@ const defaultEnglishDailyItems: ChecklistItem[] = [
     text: 'Pray at Fortune Shades',
     isCompleted: false,
     isHidden: false,
-    order: 3,
-    tags: ['Map'],
-  },
-  {
-    id: 'd4',
-    text: 'Collect operating revenue from The Cafe by Origen',
-    isCompleted: false,
-    isHidden: false,
     order: 4,
-    tags: ['City Tycoon'],
+    tags: ['Map'],
   },
   {
     id: 'd5',
