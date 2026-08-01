@@ -92,16 +92,6 @@ npm run dev
 | `npm run format:check`              | 检查格式                          |
 | `npm run build`                     | 运行 lint、类型检查并生成生产构建 |
 
-提交前请按 CI 的顺序运行：
-
-```bash
-npm run format:check
-npm run test
-npm run build
-```
-
-要让 CI 在合并前真正阻止回归，还需在 GitHub 的 `main` 分支 Ruleset 中将 `quality`、`browser (chromium)`、`browser (firefox)` 和 `browser (webkit)` 配置为 Required status checks。工作流文件本身不会自动开启合并保护。
-
 真实 Supabase 集成测试默认跳过写入。请使用独立测试项目，并在当前终端设置环境变量后显式启用：
 
 ```powershell

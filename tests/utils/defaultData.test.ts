@@ -3,25 +3,28 @@ import { createDefaultChecklistData } from '../../src/utils/defaultData'
 describe('localized default data', () => {
   it('creates simplified Chinese presets for zh-CN', () => {
     const data = createDefaultChecklistData('zh-CN')
-    expect(data.daily[0].text).toBe('纳库佩达之池')
-    expect(data.daily[0].tags).toEqual(['地图'])
+    expect(data.daily[0]).toMatchObject({
+      text: '领一咖舍收益',
+      order: 1,
+      tags: ['大亨'],
+    })
   })
 
   it('creates English presets for en-US', () => {
     const data = createDefaultChecklistData('en-US')
-    expect(data.daily[0].text).toBe("Make a wish at Nacupeda's Pond")
-    expect(data.daily[0].tags).toEqual(['Map'])
+    expect(data.daily[0]).toMatchObject({
+      text: 'Collect operating revenue from The Cafe by Origen',
+      order: 1,
+      tags: ['City Tycoon'],
+    })
   })
 
   it('uses verified NTE terminology in English presets', () => {
     const data = createDefaultChecklistData('en-US')
 
-    expect(data.daily[1].text).toBe("Make a divination at The Witch's House")
-    expect(data.daily[2].text).toBe('Pray at Fortune Shades')
-    expect(data.daily[3]).toMatchObject({
-      text: 'Collect operating revenue from The Cafe by Origen',
-      tags: ['City Tycoon'],
-    })
+    expect(data.daily[1].text).toBe("Make a wish at Nacupeda's Pond")
+    expect(data.daily[2].text).toBe("Make a divination at The Witch's House")
+    expect(data.daily[3].text).toBe('Pray at Fortune Shades')
     expect(data.daily[4].text).toBe('Gift a Companion Character')
     expect(data.daily[5].text).toContain('City Hangout')
     expect(data.daily[6].text).toBe('Spend Character Pixels')

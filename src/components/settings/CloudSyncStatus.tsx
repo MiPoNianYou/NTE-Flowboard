@@ -2,7 +2,16 @@ import { useState, useEffect, useId, useRef } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
-import { Cloud, LogOut, AlertCircle, ChevronDown, EyeOff } from 'lucide-react'
+import {
+  AlertCircle,
+  ChevronDown,
+  CloudAlert,
+  CloudCheck,
+  CloudOff,
+  EyeOff,
+  LogOut,
+  RefreshCw,
+} from 'lucide-react'
 import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { APPLE_EASE } from '../../utils/motion'
@@ -62,6 +71,53 @@ function formatSyncTime(
     }).format(date)
   } catch {
     return t('common.unknown')
+  }
+}
+
+function getSyncPresentation(syncStatus: SyncStatus, isSyncing: boolean, t: TFunction) {
+  if (isSyncing || syncStatus === 'syncing') {
+    return {
+      statusText: t('cloud.statusSyncing'),
+      summaryText: t('cloud.syncingSummary'),
+      Icon: RefreshCw,
+      tone: 'info' as const,
+      isPending: true,
+    }
+  }
+
+  switch (syncStatus) {
+    case 'connecting':
+      return {
+        statusText: t('cloud.connecting'),
+        summaryText: t('cloud.connectingSummary'),
+        Icon: RefreshCw,
+        tone: 'info' as const,
+        isPending: true,
+      }
+    case 'connected':
+      return {
+        statusText: t('cloud.statusConnected'),
+        summaryText: t('cloud.dataUpToDate'),
+        Icon: CloudCheck,
+        tone: 'primary' as const,
+        isPending: false,
+      }
+    case 'error':
+      return {
+        statusText: t('cloud.statusError'),
+        summaryText: t('cloud.errorSummary'),
+        Icon: CloudAlert,
+        tone: 'danger' as const,
+        isPending: false,
+      }
+    default:
+      return {
+        statusText: t('cloud.statusDisconnected'),
+        summaryText: t('cloud.disconnectedSummary'),
+        Icon: CloudOff,
+        tone: 'muted' as const,
+        isPending: false,
+      }
   }
 }
 
@@ -136,8 +192,6 @@ export function CloudSyncStatus({
     }
   }
 
-  const isLoading = isSyncing || syncStatus === 'syncing'
-
   const handleManualSync = async () => {
     setIsSyncing(true)
     const start = Date.now()
@@ -176,68 +230,55 @@ export function CloudSyncStatus({
     }
   }
 
-  const statusText = (() => {
-    if (syncStatus === 'syncing' || isSyncing) return t('cloud.statusSyncing')
-    switch (syncStatus) {
-      case 'connected':
-        return t('cloud.statusConnected')
-      case 'error':
-        return t('cloud.statusError')
-      default:
-        return t('cloud.statusDisconnected')
-    }
-  })()
+  const syncPresentation = getSyncPresentation(syncStatus, isSyncing, t)
+  const StatusIcon = syncPresentation.Icon
 
   return (
     <div className="space-y-4">
       <Card
         variant="surface"
         disableHoverScale={mobile}
-        className={cn('flex flex-col items-center px-4 py-5', mobile && 'mobile-settings-surface')}
+        className={cn('overflow-hidden', mobile && 'mobile-settings-surface')}
       >
-        <div className="flex flex-col items-center">
+        <div className="flex items-center gap-4 px-5 py-5">
           <div
             className={cn(
-              'relative size-10 rounded-pill flex items-center justify-center',
-              isLoading && 'bg-info/15',
-              !isLoading && syncStatus === 'connected' && 'bg-success/15',
-              !isLoading && syncStatus === 'error' && 'bg-danger/15',
-              !isLoading && syncStatus === 'disconnected' && 'bg-text-muted/15',
+              'flex size-12 flex-shrink-0 items-center justify-center rounded-control',
+              syncPresentation.tone === 'info' && 'bg-info/15 text-info',
+              syncPresentation.tone === 'primary' && 'bg-primary/15 text-primary',
+              syncPresentation.tone === 'danger' && 'bg-danger/15 text-danger',
+              syncPresentation.tone === 'muted' && 'bg-text-muted/15 text-text-muted',
             )}
           >
-            {isLoading ? (
-              <span className="size-3.5 rounded-pill bg-info animate-ripple" />
-            ) : (
-              <span
-                className={cn(
-                  'size-3.5 rounded-pill',
-                  syncStatus === 'connected' && 'bg-success animate-breathe',
-                  syncStatus === 'error' && 'bg-danger animate-blink',
-                  syncStatus === 'disconnected' && 'bg-text-muted',
-                )}
-              />
-            )}
+            <StatusIcon
+              className={cn('size-5', syncPresentation.isPending && 'animate-spin')}
+              aria-hidden="true"
+            />
           </div>
-          <p className="text-sm text-text-secondary mt-3">
+          <div className="min-w-0 flex-1">
             <span
               className={cn(
-                'font-medium',
-                isLoading && 'text-info',
-                !isLoading && syncStatus === 'connected' && 'text-success',
-                !isLoading && syncStatus === 'error' && 'text-danger',
-                !isLoading && syncStatus === 'disconnected' && 'text-text-secondary',
+                'inline-flex rounded-pill px-2 py-0.5 text-xs font-medium',
+                syncPresentation.tone === 'info' && 'bg-info/15 text-info',
+                syncPresentation.tone === 'primary' && 'bg-primary/15 text-primary',
+                syncPresentation.tone === 'danger' && 'bg-danger/15 text-danger',
+                syncPresentation.tone === 'muted' && 'bg-text-muted/15 text-text-secondary',
               )}
             >
-              {statusText}
+              {syncPresentation.statusText}
             </span>
-            <span className="mx-1.5 opacity-40">·</span>
-            {t('cloud.lastSync', {
-              time: formatSyncTime(lastSyncTime, locale, timeFormat, t),
-            })}
-          </p>
+            <p className="mt-2 text-base font-semibold text-text-primary">
+              {syncPresentation.summaryText}
+            </p>
+            <p className="mt-1 text-xs text-text-secondary">
+              {t('cloud.lastSync', {
+                time: formatSyncTime(lastSyncTime, locale, timeFormat, t),
+              })}
+            </p>
+          </div>
         </div>
         <AnimatePresence initial={false}>
-          {syncError && !isSyncing && (
+          {syncError && !syncPresentation.isPending && (
             <motion.div
               key="sync-error"
               initial={{ height: 0, opacity: 0 }}
@@ -256,7 +297,7 @@ export function CloudSyncStatus({
               }}
               className="w-full overflow-hidden"
             >
-              <div className="pt-3">
+              <div className="px-5 pb-4">
                 <StatusMessage
                   tone="danger"
                   mode="callout"
@@ -269,7 +310,7 @@ export function CloudSyncStatus({
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="flex gap-2 w-full mt-6">
+        <div className="flex w-full gap-2 border-t border-border p-3">
           <Button
             variant="primary-soft"
             onClick={handleManualSync}
@@ -277,7 +318,7 @@ export function CloudSyncStatus({
             isLoading={isSyncing}
             className="flex-1 justify-center"
           >
-            <Cloud className="size-[15px]" /> {t('cloud.manualSync')}
+            <RefreshCw className="size-[15px]" /> {t('cloud.manualSync')}
           </Button>
           <button
             className={cn(

@@ -148,7 +148,9 @@ describe('useChecklist', () => {
     expect(restoreResult).toBe('success')
     expect(result.current.hasRestoreBackup).toBe(true)
     expect(result.current.hasChangesSinceRestore).toBe(false)
-    expect(result.current.data.daily[0].text).toBe("Make a wish at Nacupeda's Pond")
+    expect(result.current.data.daily[0].text).toBe(
+      'Collect operating revenue from The Cafe by Origen',
+    )
     expect(result.current.data.weekly[0].text).toBe('Complete the weekly Anomaly Pilgrimage')
     expect(result.current.data.monthly[0].text).toBe('Lost Exchange')
     expect(result.current.settings).toEqual({
