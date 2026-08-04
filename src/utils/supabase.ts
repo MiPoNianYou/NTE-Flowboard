@@ -15,6 +15,14 @@ const CONFIG_KEY = 'flowboard-cloud-config'
 const LAST_SYNC_KEY = 'flowboard-cloud-last-sync'
 const LAST_SEEN_KEY = 'flowboard-cloud-last-seen'
 
+function migrateLegacyCloudKey(legacyKey: string, currentKey: string): void {
+  if (localStorage.getItem(currentKey) !== null) return
+  const legacy = localStorage.getItem(legacyKey)
+  if (legacy === null) return
+  localStorage.setItem(currentKey, legacy)
+  localStorage.removeItem(legacyKey)
+}
+
 function buildSupabaseUrl(projectUrlOrId: string): string {
   const value = projectUrlOrId.trim()
 
@@ -26,6 +34,7 @@ function buildSupabaseUrl(projectUrlOrId: string): string {
 }
 
 export function loadSupabaseConfig(): SupabaseConfig | null {
+  migrateLegacyCloudKey('nte-supabase-config', CONFIG_KEY)
   const raw = localStorage.getItem(CONFIG_KEY)
   if (!raw) return null
 
@@ -55,6 +64,7 @@ export function clearSyncConfig(): void {
 }
 
 export function loadLastSyncTime(): string | null {
+  migrateLegacyCloudKey('nte-supabase-last-sync', LAST_SYNC_KEY)
   return localStorage.getItem(LAST_SYNC_KEY)
 }
 
@@ -63,6 +73,7 @@ export function saveLastSyncTime(isoString: string): void {
 }
 
 export function loadLastSeenTime(): string | null {
+  migrateLegacyCloudKey('nte-supabase-last-seen', LAST_SEEN_KEY)
   return localStorage.getItem(LAST_SEEN_KEY)
 }
 

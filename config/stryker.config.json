@@ -1,8 +1,8 @@
 {
-  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "$schema": "../node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "vitest",
   "vitest": {
-    "configFile": "vite.config.ts",
+    "configFile": "config/vite.config.ts",
     "related": true
   },
   "mutate": [
@@ -23,6 +23,10 @@
   "concurrency": 4,
   "reporters": ["clear-text", "progress", "html"],
   "incremental": true,
+  "incrementalFile": ".artifacts/mutation/stryker-incremental.json",
+  "htmlReporter": {
+    "fileName": ".artifacts/mutation/mutation.html"
+  },
   "thresholds": {
     "high": 90,
     "low": 85,

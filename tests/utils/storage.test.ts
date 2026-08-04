@@ -1,12 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  resetItems,
-  loadData,
-  saveData,
-  saveDataImmediate,
-  createChecklistStorageAdapter,
-} from '../../src/utils/storage'
-import type { ChecklistData, ChecklistItem } from '../../src/types'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ChecklistData } from '../../src/types'
+import { createChecklistStorageAdapter, EMPTY_CHECKLIST_REVISION } from '../../src/utils/storage'
 
 function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistData {
   return {
@@ -20,104 +14,78 @@ function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistDat
     monthly: [],
     settings: { serverRegion: 'asia', isAutoMoveEnabled: true, shouldConfirmDelete: true },
     uiPreferences: { cloudPatchHidden: false },
-    lastDailyReset: new Date().toISOString(),
-    lastWeeklyReset: new Date().toISOString(),
-    lastMonthlyReset: new Date().toISOString(),
+    lastDailyReset: '2026-08-04T00:00:00.000Z',
+    lastWeeklyReset: '2026-08-04T00:00:00.000Z',
+    lastMonthlyReset: '2026-08-04T00:00:00.000Z',
     ...overrides,
   }
 }
 
-describe('resetItems', () => {
-  it('clears completion while preserving every other item field', () => {
-    const items: ChecklistItem[] = [
-      { id: 'ri1', text: 'A', isCompleted: true, isHidden: false, order: 1, tags: [] },
-      { id: 'ri2', text: 'B', isCompleted: true, isHidden: true, order: 2, tags: ['tag'] },
-    ]
-
-    expect(resetItems(items)).toEqual([
-      { ...items[0], isCompleted: false },
-      { ...items[1], isCompleted: false },
-    ])
-  })
-
-  it('supports an empty checklist', () => {
-    expect(resetItems([])).toEqual([])
-  })
-
-  it('preserves references for items that are already incomplete', () => {
-    const incomplete: ChecklistItem = {
-      id: 'ri3',
-      text: 'Already reset',
-      isCompleted: false,
-      isHidden: false,
-      order: 1,
-      tags: [],
-    }
-
-    expect(resetItems([incomplete])[0]).toBe(incomplete)
-  })
-})
-
-const mockLocalStorage = (() => {
-  let store: Record<string, string> = {}
+function createStorage() {
+  let values = new Map<string, string>()
   return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key]
-    }),
+    getItem: vi.fn((key: string) => values.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => values.set(key, value)),
+    removeItem: vi.fn((key: string) => values.delete(key)),
     clear: vi.fn(() => {
-      store = {}
+      values = new Map()
     }),
-  }
-})()
+  } as unknown as Storage
+}
 
-beforeEach(() => {
-  vi.stubGlobal('localStorage', mockLocalStorage)
-  mockLocalStorage.clear()
-  vi.clearAllMocks()
-})
+function createAdapter(storage: Storage, writerId = 'writer') {
+  return createChecklistStorageAdapter({
+    storage,
+    createDefaultData: () => makeChecklistData(),
+    createWriterId: () => writerId,
+  })
+}
 
-afterEach(() => {
-  vi.restoreAllMocks()
-  vi.useRealTimers()
-})
+describe('createChecklistStorageAdapter', () => {
+  let storage: Storage
 
-describe('loadData', () => {
-  it('returns independent defaults when storage is empty', () => {
-    const data = loadData()
-
-    expect(data.daily.length).toBeGreaterThan(0)
-    expect(data.weekly.length).toBeGreaterThan(0)
-    expect(data.settings.serverRegion).toBe('asia')
+  beforeEach(() => {
+    storage = createStorage()
   })
 
-  it('loads a valid saved checklist', () => {
-    const customData = makeChecklistData()
-    mockLocalStorage.setItem('flowboard-checklist', JSON.stringify(customData))
-    mockLocalStorage.setItem.mockClear()
+  afterEach(() => vi.restoreAllMocks())
 
-    expect(loadData()).toEqual(customData)
-    expect(mockLocalStorage.setItem).not.toHaveBeenCalled()
+  it('returns an explicit synchronous default result for empty storage', () => {
+    const result = createAdapter(storage).load()
+
+    expect(result).toEqual({
+      status: 'defaulted',
+      snapshot: { data: makeChecklistData(), revision: EMPTY_CHECKLIST_REVISION },
+      error: null,
+    })
   })
 
-  it('falls back to defaults for corrupted or invalid saved data', () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  it('loads a valid enveloped checklist without rewriting it', () => {
+    const input = makeChecklistData({ daily: [] })
+    storage.setItem('flowboard-checklist', JSON.stringify({ data: input, revision: '4:other' }))
+    vi.mocked(storage.setItem).mockClear()
 
-    for (const raw of ['{invalid json', JSON.stringify({ foo: 'bar' })]) {
-      mockLocalStorage.setItem('flowboard-checklist', raw)
+    const result = createAdapter(storage).load()
 
-      expect(loadData().daily.length).toBeGreaterThan(0)
-      expect(mockLocalStorage.getItem('flowboard-corrupted-backup')).toBe(raw)
-    }
-
-    expect(consoleError).toHaveBeenCalled()
+    expect(result.status).toBe('loaded')
+    expect(result.snapshot.data).toEqual(input)
+    expect(result.snapshot.revision).toBe('4:other')
+    expect(storage.setItem).not.toHaveBeenCalled()
   })
 
-  it('migrates legacy checklist and standalone behavior settings together', () => {
-    mockLocalStorage.setItem(
+  it('backs up invalid data and reports recovery without emitting UI effects', () => {
+    storage.setItem('flowboard-checklist', '{invalid json')
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('recovered')
+    expect(result.error).toBe('invalid-checklist')
+    expect(storage.getItem('flowboard-corrupted-backup')).toBe('{invalid json')
+    expect(result.snapshot.data).toEqual(makeChecklistData())
+  })
+
+  it('migrates legacy checklist data and checklist-owned standalone settings', () => {
+    storage.setItem(
       'nte-checklist-data',
       JSON.stringify({
         daily: [{ text: 'Legacy daily', completed: true, order: 4 }],
@@ -129,101 +97,82 @@ describe('loadData', () => {
         lastCustomReset: '2026-07-01T00:00:00.000Z',
       }),
     )
-    mockLocalStorage.setItem('nte-auto-move-completed', 'false')
-    mockLocalStorage.setItem('nte-confirm-delete', 'false')
+    storage.setItem('nte-auto-move-completed', 'false')
+    storage.setItem('nte-confirm-delete', 'false')
 
-    const migrated = loadData()
+    const result = createAdapter(storage).load()
 
-    expect(migrated.daily).toEqual([
+    expect(result.status).toBe('migrated')
+    expect(result.snapshot.data.daily).toEqual([
       expect.objectContaining({ text: 'Legacy daily', isCompleted: true, order: 1 }),
     ])
-    expect(migrated.settings).toEqual({
+    expect(result.snapshot.data.settings).toEqual({
       serverRegion: 'america',
       isAutoMoveEnabled: false,
       shouldConfirmDelete: false,
     })
-    expect(mockLocalStorage.getItem('nte-checklist-data')).toBeNull()
-    expect(mockLocalStorage.getItem('flowboard-setting-auto-move')).toBeNull()
-    expect(mockLocalStorage.getItem('flowboard-setting-confirm-delete')).toBeNull()
-  })
-})
-
-describe('saveData', () => {
-  it('writes immediately when requested', () => {
-    saveDataImmediate(makeChecklistData())
-
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('flowboard-checklist', expect.any(String))
+    expect(storage.getItem('nte-checklist-data')).toBeNull()
   })
 
-  it('coalesces consecutive writes into one delayed save', () => {
-    vi.useFakeTimers()
-    const data = makeChecklistData()
-
-    saveData(data)
-    saveData(data)
-    saveData(data)
-
-    expect(mockLocalStorage.setItem).not.toHaveBeenCalled()
-    vi.runAllTimers()
-    expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('createChecklistStorageAdapter', () => {
-  it('reads a valid unversioned envelope as a legacy snapshot', async () => {
+  it('upgrades a valid unversioned checklist into the current envelope', () => {
     const input = makeChecklistData()
-    mockLocalStorage.setItem('flowboard-checklist', JSON.stringify({ data: input }))
+    storage.setItem('flowboard-checklist', JSON.stringify(input))
 
-    const loaded = await createChecklistStorageAdapter().read()
+    const result = createAdapter(storage).load()
 
-    expect(loaded).toEqual({
+    expect(result.status).toBe('migrated')
+    expect(result.snapshot.data).toEqual(input)
+    expect(result.snapshot.revision).not.toBe(EMPTY_CHECKLIST_REVISION)
+    expect(JSON.parse(storage.getItem('flowboard-checklist')!)).toEqual({
       data: input,
-      revision: { counter: 0, writerId: '' },
+      revision: result.snapshot.revision,
     })
   })
 
-  it('round-trips an enveloped checklist snapshot', async () => {
-    const adapter = createChecklistStorageAdapter()
-    const input = makeChecklistData()
+  it('round-trips snapshots and advances opaque revisions across adapter instances', () => {
+    const first = createAdapter(storage, 'first')
+    const second = createAdapter(storage, 'second')
+    const firstSaved = first.save(makeChecklistData(), EMPTY_CHECKLIST_REVISION)
+    const secondSaved = second.save(makeChecklistData({ daily: [] }), EMPTY_CHECKLIST_REVISION)
 
-    const saved = await adapter.save(input, { counter: 0, writerId: '' })
-    const loaded = await adapter.read()
-
-    expect(saved.data).toEqual(input)
-    expect(loaded).toEqual(saved)
-    expect(loadData()).toEqual(input)
+    expect(first.isNewer(secondSaved.revision, firstSaved.revision)).toBe(true)
+    expect(first.load().snapshot).toEqual(secondSaved)
+    expect(typeof secondSaved.revision).toBe('string')
   })
 
-  it('increments from the latest stored revision across adapter instances', async () => {
-    const firstAdapter = createChecklistStorageAdapter()
-    const secondAdapter = createChecklistStorageAdapter()
-    const firstSave = await firstAdapter.save(makeChecklistData(), { counter: 0, writerId: '' })
-    const secondData = makeChecklistData({ daily: [] })
-
-    const secondSave = await secondAdapter.save(secondData, { counter: 0, writerId: '' })
-
-    expect(firstSave.revision.counter).toBe(1)
-    expect(secondSave.revision.counter).toBe(2)
-    expect(await firstAdapter.read()).toEqual(secondSave)
-  })
-
-  it('publishes external revisions until the subscription is removed', () => {
-    const adapter = createChecklistStorageAdapter()
+  it('publishes complete external snapshots until unsubscribed', () => {
+    const adapter = createAdapter(storage)
     const listener = vi.fn()
     const unsubscribe = adapter.subscribe(listener)
     const externalSnapshot = {
       data: makeChecklistData({ daily: [] }),
-      revision: { counter: 7, writerId: 'other-tab' },
+      revision: '7:other-tab',
     }
-    mockLocalStorage.setItem('flowboard-checklist', JSON.stringify(externalSnapshot))
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: 'flowboard-checklist',
+        newValue: JSON.stringify(externalSnapshot),
+      }),
+    )
 
-    window.dispatchEvent(new StorageEvent('storage', { key: 'flowboard-checklist' }))
-
-    expect(listener).toHaveBeenCalledOnce()
-    expect(listener).toHaveBeenCalledWith(externalSnapshot.revision)
-
+    expect(listener).toHaveBeenCalledWith(externalSnapshot)
     unsubscribe()
-    window.dispatchEvent(new StorageEvent('storage', { key: 'flowboard-checklist' }))
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: 'flowboard-checklist',
+        newValue: JSON.stringify(externalSnapshot),
+      }),
+    )
     expect(listener).toHaveBeenCalledOnce()
+  })
+
+  it('reports unavailable storage through the load result', () => {
+    const result = createChecklistStorageAdapter({
+      storage: null,
+      createDefaultData: () => makeChecklistData(),
+    }).load()
+
+    expect(result.status).toBe('recovered')
+    expect(result.error).toBe('storage-read-failed')
   })
 })

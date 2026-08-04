@@ -34,6 +34,7 @@ export function TagInput({ tags, onChange, onCompositionChange, compactFocus }: 
     if (result.kind === 'added') {
       tagsRef.current = result.tags
       onChange(result.tags)
+      if (result.tags.length >= TAG_COLLECTION_LIMIT) setIsInputVisible(false)
     }
     setInputValue('')
   }
@@ -70,48 +71,57 @@ export function TagInput({ tags, onChange, onCompositionChange, compactFocus }: 
           </AnimatePresence>
         </div>
       )}
-      {isInputVisible ? (
-        <Input
-          type="text"
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          onKeyDown={handleKeyDown}
-          onCompositionStart={() => {
-            onCompositionStart()
-            onCompositionChange?.(true)
-          }}
-          onCompositionEnd={() => {
-            onCompositionEnd()
-            onCompositionChange?.(false)
-          }}
-          onBlur={() => {
-            if (isComposingRef.current) return
-            if (inputValue.trim()) addTag(inputValue)
-            setIsInputVisible(false)
-          }}
-          autoFocus
-          placeholder={t('tags.namePlaceholder')}
-          inputSize="sm"
-          disabled={isAtLimit}
-          className={cn(
-            compactFocus &&
-              'rounded-md border-border bg-transparent focus:border-primary focus:ring-1 focus:ring-primary/30 focus:ring-offset-0',
-          )}
-        />
-      ) : (
-        <Button
-          variant="secondary"
-          type="button"
-          onClick={() => setIsInputVisible(true)}
-          disabled={isAtLimit}
-          className="self-start px-1.5 lg:px-2 py-0.5 lg:py-1 text-xs justify-center"
-        >
-          <Plus className="size-[10px] lg:size-[12px]" /> {t('tags.label')}
-          <span className="text-text-muted ml-0.5">
-            {tags.length}/{TAG_COLLECTION_LIMIT}
-          </span>
-        </Button>
-      )}
+      <div className="h-8 w-24 shrink-0 self-start">
+        {isInputVisible ? (
+          <Input
+            type="text"
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={() => {
+              onCompositionStart()
+              onCompositionChange?.(true)
+            }}
+            onCompositionEnd={() => {
+              onCompositionEnd()
+              onCompositionChange?.(false)
+            }}
+            onBlur={() => {
+              if (isComposingRef.current) return
+              if (inputValue.trim()) addTag(inputValue)
+              setIsInputVisible(false)
+            }}
+            autoFocus
+            placeholder={t('tags.namePlaceholder')}
+            inputSize="sm"
+            disabled={isAtLimit}
+            className={cn(
+              'h-8 w-full px-2 py-0.5 [border-width:1.5px] rounded-control',
+              compactFocus &&
+                'border-border bg-transparent focus:border-primary focus:ring-1 focus:ring-primary/30 focus:ring-offset-0',
+            )}
+          />
+        ) : (
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={() => setIsInputVisible(true)}
+            disabled={isAtLimit}
+            className="h-full w-full min-h-0 px-2 py-0.5 gap-1 rounded-control border-primary/25 bg-primary/5 text-xs sm:text-xs leading-none justify-center hover:bg-primary/10"
+          >
+            {isAtLimit ? (
+              t('tags.limitReached')
+            ) : (
+              <>
+                <Plus className="size-[10px] lg:size-[12px]" /> {t('tags.label')}
+                <span className="text-text-muted ml-0.5">
+                  {tags.length}/{TAG_COLLECTION_LIMIT}
+                </span>
+              </>
+            )}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

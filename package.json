@@ -1,32 +1,40 @@
 {
   "name": "nte-flowboard",
   "private": true,
-  "version": "2.5.1",
+  "version": "2.6.0",
   "type": "module",
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "npm run lint && npm run typecheck && vite build",
-    "preview": "vite preview",
+    "dev": "vite --config config/vite.config.ts",
+    "build": "npm run lint && npm run typecheck && vite build --config config/vite.config.ts",
+    "preview": "vite preview --config config/vite.config.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
-    "format": "prettier --write src/ tests/ package.json tsconfig*.json eslint.config.js playwright.config.ts stryker.config.json vite.config.ts vitest.integration.config.ts .github/workflows/*.yml",
-    "format:check": "prettier --check src/ tests/ package.json tsconfig*.json eslint.config.js playwright.config.ts stryker.config.json vite.config.ts vitest.integration.config.ts .github/workflows/*.yml",
+    "format": "prettier --write src/ tests/ config/ scripts/ package.json tsconfig*.json eslint.config.js .github/workflows/*.yml",
+    "format:check": "prettier --check src/ tests/ config/ scripts/ package.json tsconfig*.json eslint.config.js .github/workflows/*.yml",
     "check:dead-code": "knip",
     "check:size": "size-limit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:integration:supabase": "vitest run --config vitest.integration.config.ts",
-    "test:mutation": "stryker run",
-    "test:watch": "vitest",
-    "test:browser": "playwright test"
+    "test": "vitest run --config config/vite.config.ts",
+    "test:coverage": "vitest run --coverage --config config/vite.config.ts",
+    "test:integration:supabase": "vitest run --config config/vitest.integration.config.ts",
+    "test:mutation": "stryker run config/stryker.config.json",
+    "test:watch": "vitest --config config/vite.config.ts",
+    "test:browser": "playwright test --config config/playwright.config.ts",
+    "clean": "node scripts/clean.mjs"
   },
   "knip": {
+    "entry": [
+      "supabase/functions/*/index.ts"
+    ],
+    "ignoreDependencies": [
+      "npm"
+    ],
     "ignore": [
-      "public/theme-bootstrap.js"
+      "public/theme-bootstrap.js",
+      "public/notification-sw.js"
     ]
   },
   "overrides": {

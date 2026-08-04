@@ -45,6 +45,11 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_NOTIFICATION_ENABLED: ${{ vars.VITE_NOTIFICATION_ENABLED }}
+          VITE_NOTIFICATION_SUPABASE_URL: ${{ vars.VITE_NOTIFICATION_SUPABASE_URL }}
+          VITE_NOTIFICATION_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_NOTIFICATION_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_NOTIFICATION_VAPID_PUBLIC_KEY: ${{ vars.VITE_NOTIFICATION_VAPID_PUBLIC_KEY }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4

@@ -100,7 +100,7 @@ export function SettingsGeneral({ onBack, isEmbedded }: SettingsGeneralProps) {
                     className={cn(
                       'min-w-[72px] inline-flex items-center justify-center gap-1 rounded-compact px-2 py-1 text-[13px] sm:text-xs transition-colors duration-150',
                       themePreference === value
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary text-[var(--color-text-on-accent)]'
                         : 'text-text-secondary hover:text-text-primary',
                     )}
                   >
@@ -130,7 +130,7 @@ export function SettingsGeneral({ onBack, isEmbedded }: SettingsGeneralProps) {
                     className={cn(
                       'min-w-[72px] inline-flex items-center justify-center rounded-compact px-2 py-1 text-[13px] sm:text-xs transition-colors duration-150',
                       language === value
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary text-[var(--color-text-on-accent)]'
                         : 'text-text-secondary hover:text-text-primary',
                     )}
                   >
@@ -159,7 +159,7 @@ export function SettingsGeneral({ onBack, isEmbedded }: SettingsGeneralProps) {
                     className={cn(
                       'min-w-[58px] rounded-compact px-2 py-1 text-[13px] sm:text-xs transition-colors duration-150',
                       timeFormat === format
-                        ? 'bg-primary text-white'
+                        ? 'bg-primary text-[var(--color-text-on-accent)]'
                         : 'text-text-secondary hover:text-text-primary',
                     )}
                   >

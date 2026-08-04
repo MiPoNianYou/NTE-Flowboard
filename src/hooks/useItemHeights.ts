@@ -9,6 +9,13 @@ const SAVE_DEBOUNCE = 500
 function loadCache(): Map<TabType, HeightMap> {
   const maps = new Map<TabType, HeightMap>()
   try {
+    if (localStorage.getItem(STORAGE_KEY) === null) {
+      const legacy = localStorage.getItem('nte-item-heights')
+      if (legacy !== null) {
+        localStorage.setItem(STORAGE_KEY, legacy)
+        localStorage.removeItem('nte-item-heights')
+      }
+    }
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)

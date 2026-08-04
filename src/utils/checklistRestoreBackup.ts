@@ -1,24 +1,48 @@
 import type { ChecklistContentSnapshot, ChecklistData } from '../types'
+import type { ChecklistRevision } from './storage'
 import { isChecklistContentSnapshot } from './validation'
 
 export const RESTORE_BACKUP_STORAGE_KEY = 'flowboard-restore-backup'
 
-export interface ChecklistRestoreBackup {
-  version: 1
+export interface ChecklistRestoreSession {
+  version: 2
+  id: string
   createdAt: string
   before: ChecklistContentSnapshot
   restored: ChecklistContentSnapshot
+  checklistRevision: ChecklistRevision | null
 }
 
-export type RestoreDefaultsResult = 'success' | 'backup-failed' | 'persistence-failed'
+export interface ChecklistRestoreState {
+  sessionId: string | null
+  hasRestoreBackup: boolean
+  hasChangesSinceRestore: boolean
+}
+
+export type RestoreDefaultsResult = 'success' | 'backup-failed' | 'persistence-failed' | 'conflict'
 export type UndoRestoreResult =
-  'success' | 'backup-missing' | 'persistence-failed' | 'cleanup-failed'
+  | 'success'
+  | 'backup-missing'
+  | 'changes-detected'
+  | 'persistence-failed'
+  | 'cleanup-failed'
+  | 'conflict'
+export type DiscardRestoreResult = 'success' | 'backup-missing' | 'cleanup-failed' | 'conflict'
 
 export interface RestoreDefaultsControls {
   onRestoreDefaults: () => Promise<RestoreDefaultsResult>
-  onUndoRestoreDefaults: () => Promise<UndoRestoreResult>
+  onUndoRestoreDefaults: (overwrite?: boolean) => Promise<UndoRestoreResult>
   hasRestoreBackup: boolean
   hasChangesSinceRestore: boolean
+}
+
+export type RestoreSessionClearResult = 'success' | 'missing' | 'conflict' | 'failed'
+
+export interface ChecklistRestoreSessionStore {
+  load: () => ChecklistRestoreSession | null
+  save: (session: ChecklistRestoreSession, expectedSessionId: string | null) => boolean
+  clear: (expectedSessionId: string) => RestoreSessionClearResult
+  subscribe: (listener: () => void) => () => void
 }
 
 function getStorage(): Storage | null {
@@ -30,15 +54,51 @@ function getStorage(): Storage | null {
   }
 }
 
-function isRestoreBackup(value: unknown): value is ChecklistRestoreBackup {
-  if (typeof value !== 'object' || value === null) return false
-  const backup = value as Partial<ChecklistRestoreBackup>
-  return (
-    backup.version === 1 &&
-    typeof backup.createdAt === 'string' &&
-    isChecklistContentSnapshot(backup.before) &&
-    isChecklistContentSnapshot(backup.restored)
-  )
+function isRevision(value: unknown): value is ChecklistRevision {
+  return typeof value === 'string' && /^\d+:/.test(value)
+}
+
+function parseRestoreSession(raw: string | null): ChecklistRestoreSession | null {
+  if (!raw) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return null
+    const session = parsed as {
+      version?: unknown
+      id?: unknown
+      createdAt?: unknown
+      before?: unknown
+      restored?: unknown
+      checklistRevision?: unknown
+    }
+    if (
+      typeof session.createdAt !== 'string' ||
+      !isChecklistContentSnapshot(session.before) ||
+      !isChecklistContentSnapshot(session.restored)
+    ) {
+      return null
+    }
+    if (
+      session.version === 2 &&
+      typeof session.id === 'string' &&
+      (session.checklistRevision === null || isRevision(session.checklistRevision))
+    ) {
+      return session as ChecklistRestoreSession
+    }
+    if (session.version === 1) {
+      return {
+        version: 2,
+        id: `legacy:${session.createdAt}`,
+        createdAt: session.createdAt,
+        before: session.before,
+        restored: session.restored,
+        checklistRevision: null,
+      }
+    }
+  } catch {
+    return null
+  }
+  return null
 }
 
 export function captureChecklistContent(data: ChecklistData): ChecklistContentSnapshot {
@@ -52,53 +112,67 @@ export function captureChecklistContent(data: ChecklistData): ChecklistContentSn
   })
 }
 
-export function createRestoreBackup(
+export function createRestoreSession(
   before: ChecklistData,
   restored: ChecklistContentSnapshot,
   createdAt: Date,
-): ChecklistRestoreBackup {
+  checklistRevision: ChecklistRevision,
+): ChecklistRestoreSession {
   return {
-    version: 1,
+    version: 2,
+    id: `${createdAt.getTime().toString(36)}-${Math.random().toString(36).slice(2)}`,
     createdAt: createdAt.toISOString(),
     before: captureChecklistContent(before),
     restored: structuredClone(restored),
+    checklistRevision,
   }
 }
 
-export function loadRestoreBackup(
+export function createChecklistRestoreSessionStore(
   storage: Storage | null = getStorage(),
-): ChecklistRestoreBackup | null {
-  if (!storage) return null
-  try {
-    const raw = storage.getItem(RESTORE_BACKUP_STORAGE_KEY)
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    return isRestoreBackup(parsed) ? parsed : null
-  } catch {
-    return null
+): ChecklistRestoreSessionStore {
+  const load = () => {
+    if (!storage) return null
+    try {
+      return parseRestoreSession(storage.getItem(RESTORE_BACKUP_STORAGE_KEY))
+    } catch {
+      return null
+    }
   }
-}
 
-export function saveRestoreBackup(
-  backup: ChecklistRestoreBackup,
-  storage: Storage | null = getStorage(),
-): boolean {
-  if (!storage) return false
-  try {
-    storage.setItem(RESTORE_BACKUP_STORAGE_KEY, JSON.stringify(backup))
-    return true
-  } catch {
-    return false
-  }
-}
-
-export function clearRestoreBackup(storage: Storage | null = getStorage()): boolean {
-  if (!storage) return false
-  try {
-    storage.removeItem(RESTORE_BACKUP_STORAGE_KEY)
-    return true
-  } catch {
-    return false
+  return {
+    load,
+    save: (session, expectedSessionId) => {
+      if (!storage) return false
+      try {
+        const current = load()
+        if ((current?.id ?? null) !== expectedSessionId) return false
+        storage.setItem(RESTORE_BACKUP_STORAGE_KEY, JSON.stringify(session))
+        return load()?.id === session.id
+      } catch {
+        return false
+      }
+    },
+    clear: (expectedSessionId) => {
+      if (!storage) return 'failed'
+      try {
+        const current = load()
+        if (!current) return 'missing'
+        if (current.id !== expectedSessionId) return 'conflict'
+        storage.removeItem(RESTORE_BACKUP_STORAGE_KEY)
+        return load() ? 'failed' : 'success'
+      } catch {
+        return 'failed'
+      }
+    },
+    subscribe: (listener) => {
+      if (typeof window === 'undefined') return () => undefined
+      const handleStorage = (event: StorageEvent) => {
+        if (event.key === RESTORE_BACKUP_STORAGE_KEY) listener()
+      }
+      window.addEventListener('storage', handleStorage)
+      return () => window.removeEventListener('storage', handleStorage)
+    },
   }
 }
 

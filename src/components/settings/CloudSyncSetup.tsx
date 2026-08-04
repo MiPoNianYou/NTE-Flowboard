@@ -9,6 +9,7 @@ import { Button } from '../base/Button'
 import { Input } from '../base/Input'
 import { Card } from '../base/Card'
 import { SqlCodeBlock } from './SqlCodeBlock'
+import type { CloudSynchronizationCommandResult } from '../../utils/cloudSynchronization'
 
 function ConnectButtonLabel({ children }: { children: ReactNode }) {
   return (
@@ -86,25 +87,22 @@ ALTER PUBLICATION supabase_realtime ADD TABLE sync_data;`
 }
 
 interface CloudSyncSetupProps {
-  syncError: string | null
-  onSetupSupabase: (projectUrl: string, anonKey: string) => Promise<void>
+  onSetupSupabase: (
+    projectUrl: string,
+    anonKey: string,
+  ) => Promise<CloudSynchronizationCommandResult>
   mobile?: boolean
 }
 
 type ButtonPhase = 'idle' | 'loading' | 'error'
 
-export function CloudSyncSetup({
-  syncError,
-  onSetupSupabase,
-  mobile = false,
-}: CloudSyncSetupProps) {
+export function CloudSyncSetup({ onSetupSupabase, mobile = false }: CloudSyncSetupProps) {
   const { t } = useTranslation()
   const sqlSnippet = useMemo(() => buildSqlSnippet(t), [t])
   const [projectUrlInput, setProjectUrlInput] = useState('')
   const [anonKeyInput, setAnonKeyInput] = useState('')
   const [isAnonKeyVisible, setIsAnonKeyVisible] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
   const [isSetupGuideExpanded, setIsSetupGuideExpanded] = useState(false)
   const setupGuideContentId = useId()
   const [buttonPhase, setButtonPhase] = useState<ButtonPhase>('idle')
@@ -112,33 +110,12 @@ export function CloudSyncSetup({
   const [isMarqueeNeeded, setIsMarqueeNeeded] = useState(false)
   const [marqueeDistance, setMarqueeDistance] = useState(0)
   const [shouldStartMarquee, setShouldStartMarquee] = useState(false)
-  const awaitingRequestResultRef = useRef(false)
-  const hasClearedErrorSinceRequestRef = useRef(false)
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const marqueeStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const marqueeViewportRef = useRef<HTMLSpanElement | null>(null)
   const marqueeTrackRef = useRef<HTMLSpanElement | null>(null)
 
-  useEffect(() => {
-    const errorMessage = syncError || localError
-
-    if (awaitingRequestResultRef.current) {
-      if (!errorMessage) {
-        hasClearedErrorSinceRequestRef.current = true
-        if (!isConnecting) {
-          awaitingRequestResultRef.current = false
-          setButtonPhase('idle')
-        }
-        return
-      }
-
-      if (!hasClearedErrorSinceRequestRef.current) {
-        return
-      }
-    }
-
-    if (!errorMessage) return
-
+  const showSetupError = (errorMessage: string) => {
     if (feedbackTimerRef.current) {
       clearTimeout(feedbackTimerRef.current)
       feedbackTimerRef.current = null
@@ -146,23 +123,12 @@ export function CloudSyncSetup({
 
     setButtonErrorMessage(errorMessage)
     setButtonPhase('error')
-    awaitingRequestResultRef.current = false
-
-    if (isConnecting) return
-
     feedbackTimerRef.current = setTimeout(() => {
       setButtonErrorMessage(null)
       setButtonPhase('idle')
       feedbackTimerRef.current = null
     }, 2000)
-
-    return () => {
-      if (feedbackTimerRef.current) {
-        clearTimeout(feedbackTimerRef.current)
-        feedbackTimerRef.current = null
-      }
-    }
-  }, [isConnecting, localError, syncError])
+  }
 
   const clearButtonFeedback = () => {
     if (feedbackTimerRef.current) {
@@ -178,8 +144,6 @@ export function CloudSyncSetup({
     setIsMarqueeNeeded(false)
     setMarqueeDistance(0)
     setShouldStartMarquee(false)
-    awaitingRequestResultRef.current = false
-    hasClearedErrorSinceRequestRef.current = false
   }
 
   useEffect(() => {
@@ -237,17 +201,18 @@ export function CloudSyncSetup({
   const handleSetup = async () => {
     if (buttonPhase !== 'idle' || !projectUrlInput.trim() || !anonKeyInput.trim()) return
     clearButtonFeedback()
-    awaitingRequestResultRef.current = true
-    hasClearedErrorSinceRequestRef.current = false
     setIsConnecting(true)
     setButtonPhase('loading')
-    setLocalError(null)
     const start = Date.now()
     try {
-      await onSetupSupabase(projectUrlInput.trim(), anonKeyInput.trim())
-      setButtonPhase('idle')
+      const result = await onSetupSupabase(projectUrlInput.trim(), anonKeyInput.trim())
+      if (result.ok) {
+        setButtonPhase('idle')
+      } else {
+        showSetupError(result.error)
+      }
     } catch {
-      setLocalError(t('sync.setupUnknown'))
+      showSetupError(t('sync.setupUnknown'))
     } finally {
       const elapsed = Date.now() - start
       if (elapsed < 500) await new Promise((resolve) => setTimeout(resolve, 500 - elapsed))
@@ -310,7 +275,6 @@ export function CloudSyncSetup({
           variant={buttonPhase === 'error' ? 'danger-soft' : 'primary'}
           className={cn(
             'mt-3 w-full justify-center hover:brightness-100 hover:shadow-md',
-            buttonPhase !== 'error' && 'supabase-connect-button',
             buttonPhase === 'error' &&
               'cursor-not-allowed hover:bg-danger/10 hover:text-danger hover:brightness-100',
           )}

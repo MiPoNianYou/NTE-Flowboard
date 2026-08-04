@@ -12,6 +12,7 @@ describe('SettingsNav', () => {
         activeTab="cloud"
         onTabChange={mockOnTabChange}
         labels={{ server: '亚太服', cloud: '已连接' }}
+        showNotifications
       />,
     )
 
@@ -30,6 +31,23 @@ describe('SettingsNav', () => {
     expect(mockOnTabChange).toHaveBeenCalledWith('server')
   })
 
+  it('places notifications between cloud sync and data management', () => {
+    render(<SettingsNav activeTab="general" onTabChange={mockOnTabChange} showNotifications />)
+
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      '通用',
+      '服务器设置',
+      '云同步',
+      '通知',
+      '数据管理',
+    ])
+  })
+
+  it('hides the notification destination until the backend is configured', () => {
+    render(<SettingsNav activeTab="general" onTabChange={mockOnTabChange} />)
+    expect(screen.queryByText('通知')).not.toBeInTheDocument()
+  })
+
   it('should render the mobile entry page without marking a destination current', () => {
     render(<SettingsNav activeTab={null} onTabChange={mockOnTabChange} showDisclosure />)
 
@@ -37,6 +55,6 @@ describe('SettingsNav', () => {
     screen
       .getAllByRole('button')
       .forEach((button) => expect(button).not.toHaveAttribute('aria-current'))
-    expect(document.querySelectorAll('.lucide-chevron-right')).toHaveLength(NAV_ITEMS.length)
+    expect(document.querySelectorAll('.lucide-chevron-right')).toHaveLength(NAV_ITEMS.length - 1)
   })
 })

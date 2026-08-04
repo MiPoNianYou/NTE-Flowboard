@@ -1,36 +1,71 @@
-import { describe, expect, it, vi } from 'vitest'
-import type { ChecklistContentSnapshot, ChecklistData } from '../../src/types'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ChecklistContentSnapshot } from '../../src/types'
 import {
   RESTORE_BACKUP_STORAGE_KEY,
   captureChecklistContent,
-  clearRestoreBackup,
-  createRestoreBackup,
+  createChecklistRestoreSessionStore,
+  createRestoreSession,
   hasChecklistContentChanged,
-  loadRestoreBackup,
-  saveRestoreBackup,
 } from '../../src/utils/checklistRestoreBackup'
 import { createDefaultChecklistData } from '../../src/utils/defaultData'
+import type { ChecklistRevision } from '../../src/utils/storage'
 
-function createData(): ChecklistData {
-  return createDefaultChecklistData('zh-CN')
+const revision = '3:test' as ChecklistRevision
+
+function createSession() {
+  const data = createDefaultChecklistData('zh-CN')
+  const restored: ChecklistContentSnapshot = {
+    ...captureChecklistContent(data),
+    daily: [],
+  }
+  return createRestoreSession(data, restored, new Date('2026-07-29T12:00:00.000Z'), revision)
 }
 
-describe('checklist restore backup', () => {
-  it('round-trips one durable backup without storing settings', () => {
-    const data = createData()
-    const restored: ChecklistContentSnapshot = {
-      ...captureChecklistContent(data),
-      daily: [],
-    }
-    const backup = createRestoreBackup(data, restored, new Date('2026-07-29T12:00:00.000Z'))
+describe('checklist restore session store', () => {
+  beforeEach(() => localStorage.clear())
 
-    expect(saveRestoreBackup(backup)).toBe(true)
-    expect(loadRestoreBackup()).toEqual(backup)
+  it('conditionally creates and clears one durable session without storing settings', () => {
+    const store = createChecklistRestoreSessionStore()
+    const session = createSession()
+
+    expect(store.save(session, null)).toBe(true)
+    expect(store.load()).toEqual(session)
     expect(localStorage.getItem(RESTORE_BACKUP_STORAGE_KEY)).not.toContain('serverRegion')
+    expect(store.clear(session.id)).toBe('success')
+    expect(store.load()).toBeNull()
+  })
+
+  it('rejects writes and deletes made against a stale session id', () => {
+    const store = createChecklistRestoreSessionStore()
+    const session = createSession()
+    expect(store.save(session, null)).toBe(true)
+
+    expect(store.save({ ...session, id: 'replacement' }, 'stale')).toBe(false)
+    expect(store.clear('stale')).toBe('conflict')
+    expect(store.load()).toEqual(session)
+  })
+
+  it('loads a version 1 backup as a compatible restore session', () => {
+    const session = createSession()
+    localStorage.setItem(
+      RESTORE_BACKUP_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        createdAt: session.createdAt,
+        before: session.before,
+        restored: session.restored,
+      }),
+    )
+
+    expect(createChecklistRestoreSessionStore().load()).toEqual({
+      ...session,
+      id: `legacy:${session.createdAt}`,
+      checklistRevision: null,
+    })
   })
 
   it('detects checklist changes but ignores settings changes', () => {
-    const data = createData()
+    const data = createDefaultChecklistData('zh-CN')
     const expected = captureChecklistContent(data)
 
     expect(
@@ -42,14 +77,9 @@ describe('checklist restore backup', () => {
     expect(hasChecklistContentChanged({ ...data, daily: [] }, expected)).toBe(true)
   })
 
-  it('returns failure without mutating when storage writes or deletes fail', () => {
-    const data = createData()
-    const backup = createRestoreBackup(
-      data,
-      captureChecklistContent(data),
-      new Date('2026-07-29T12:00:00.000Z'),
-    )
+  it('reports storage failures and ignores malformed sessions', () => {
     const failingStorage = {
+      getItem: vi.fn(() => null),
       setItem: vi.fn(() => {
         throw new Error('quota exceeded')
       }),
@@ -57,13 +87,10 @@ describe('checklist restore backup', () => {
         throw new Error('blocked')
       }),
     } as unknown as Storage
+    const failingStore = createChecklistRestoreSessionStore(failingStorage)
 
-    expect(saveRestoreBackup(backup, failingStorage)).toBe(false)
-    expect(clearRestoreBackup(failingStorage)).toBe(false)
-  })
-
-  it('ignores malformed stored backups', () => {
-    localStorage.setItem(RESTORE_BACKUP_STORAGE_KEY, JSON.stringify({ version: 1 }))
-    expect(loadRestoreBackup()).toBeNull()
+    expect(failingStore.save(createSession(), null)).toBe(false)
+    localStorage.setItem(RESTORE_BACKUP_STORAGE_KEY, JSON.stringify({ version: 2 }))
+    expect(createChecklistRestoreSessionStore().load()).toBeNull()
   })
 })

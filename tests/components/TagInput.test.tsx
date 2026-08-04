@@ -43,9 +43,34 @@ describe('TagInput', () => {
   })
 
   it('should show and enforce the shared collection limit', () => {
-    render(<TagInput tags={['a', 'b', 'c', 'd', 'e']} onChange={vi.fn()} />)
-    expect(screen.getByText('5/5')).toBeInTheDocument()
-    const button = screen.getByText('标签').closest('button')!
-    expect(button).toBeDisabled()
+    const onChange = vi.fn()
+    const tags = ['a', 'b', 'c', 'd', 'e']
+    const { rerender } = render(<TagInput tags={tags} onChange={onChange} />)
+
+    expect(screen.queryByText('5/5')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '标签已满' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '删除标签「e」' }))
+    expect(onChange).toHaveBeenCalledWith(['a', 'b', 'c', 'd'])
+    rerender(<TagInput tags={['a', 'b', 'c', 'd']} onChange={onChange} />)
+
+    expect(screen.getByRole('button', { name: '标签4/5' })).toBeEnabled()
+  })
+
+  it('should leave input mode after adding the final allowed tag', () => {
+    const onChange = vi.fn()
+    const initialTags = ['a', 'b', 'c', 'd']
+    const { rerender } = render(<TagInput tags={initialTags} onChange={onChange} />)
+
+    fireEvent.click(screen.getByText('标签'))
+    const input = screen.getByPlaceholderText('标签名')
+    fireEvent.change(input, { target: { value: 'e' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenCalledWith([...initialTags, 'e'])
+
+    rerender(<TagInput tags={[...initialTags, 'e']} onChange={onChange} />)
+
+    expect(screen.queryByPlaceholderText('标签名')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '标签已满' })).toBeDisabled()
   })
 })

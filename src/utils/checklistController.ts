@@ -9,22 +9,39 @@ import type {
 } from '../types'
 import { applyChecklistTransition } from './checklistTransitions'
 import {
-  type ChecklistRevision,
   type ChecklistStorageAdapter,
   type StoredChecklistSnapshot,
-  compareChecklistRevisions,
+  EMPTY_CHECKLIST_REVISION,
 } from './storage'
+import {
+  createRestoreSession,
+  hasChecklistContentChanged,
+  type ChecklistRestoreSession,
+  type ChecklistRestoreSessionStore,
+  type ChecklistRestoreState,
+  type DiscardRestoreResult,
+  type RestoreDefaultsResult,
+  type UndoRestoreResult,
+} from './checklistRestoreBackup'
 
 type PersistenceStatus = 'saved' | 'pending' | 'error'
 
-interface ExternalSnapshotResult {
+interface ChecklistSynchronizationResult {
   outcome: 'applied' | 'ignored' | 'merged'
   skippedOperations: number
+}
+
+export interface ChecklistSynchronizationPort {
+  applyRemoteSnapshot: (data: ChecklistData) => Promise<ChecklistSynchronizationResult>
+  captureSnapshot: () => { data: ChecklistData; operationVersion: number }
+  acknowledgeOperationsThrough: (operationVersion: number) => void
 }
 
 export interface ChecklistControllerOptions {
   initialData: ChecklistData
   adapter: ChecklistStorageAdapter
+  restoreStore?: ChecklistRestoreSessionStore
+  createDefaultContent?: (now: Date) => ChecklistContentSnapshot
   now?: () => Date
   onConflict?: (skippedOperations: number) => void
 }
@@ -38,11 +55,8 @@ export interface ChecklistController {
   flushNow: () => void
   getPersistenceStatus: () => PersistenceStatus
   getPersistenceError: () => string | null
-  syncPort: {
-    applyExternalSnapshot: (snapshot: StoredChecklistSnapshot) => Promise<ExternalSnapshotResult>
-    captureSnapshot: () => { data: ChecklistData; operationVersion: number }
-    acknowledgeOperationsThrough: (operationVersion: number) => void
-  }
+  getRestoreState: () => ChecklistRestoreState
+  syncPort: ChecklistSynchronizationPort
   updateSettings: (partial: Partial<BehaviorSettings>) => void
   updateUiPreferences: (partial: Partial<UiPreferences>) => void
   toggleItem: (tab: TabType, id: string) => void
@@ -53,20 +67,15 @@ export interface ChecklistController {
   reorderItem: (tab: TabType, activeId: string, overId: string) => void
   manualReset: (tab: TabType, now: Date) => void
   applyDueResets: (now: Date) => void
-  restoreChecklistContent: (snapshot: ChecklistContentSnapshot) => void
+  restoreDefaults: () => Promise<RestoreDefaultsResult>
+  undoRestore: (overwrite?: boolean) => Promise<UndoRestoreResult>
+  discardRestore: () => DiscardRestoreResult
   replaceData: (data: ChecklistData) => void
 }
-
-const EMPTY_REVISION: ChecklistRevision = { counter: 0, writerId: '' }
 
 interface PendingOperation {
   version: number
   transition: ChecklistTransition
-}
-
-interface PendingExternalSnapshot {
-  snapshot: StoredChecklistSnapshot
-  shouldPersist: boolean
 }
 
 function operationTargetsMissing(data: ChecklistData, transition: ChecklistTransition): boolean {
@@ -124,26 +133,54 @@ function replayOperations(data: ChecklistData, operations: PendingOperation[]) {
 export function createChecklistController({
   initialData,
   adapter,
+  restoreStore,
+  createDefaultContent,
   now = () => new Date(),
   onConflict,
 }: ChecklistControllerOptions): ChecklistController {
   let data = initialData
-  let revision = EMPTY_REVISION
+  let revision = EMPTY_CHECKLIST_REVISION
   let persistenceStatus: PersistenceStatus = 'saved'
   let persistenceError: string | null = null
   let stopped = false
   let started = false
   let lifecycleVersion = 0
-  let hydrating = true
   let needsPersist = false
   let operationVersion = 0
-  let savePromise: Promise<void> | null = null
-  let pendingExternal: PendingExternalSnapshot | null = null
   let pendingOperations: PendingOperation[] = []
   let unsubscribe: (() => void) | null = null
+  let unsubscribeRestore: (() => void) | null = null
+  let restoreSession: ChecklistRestoreSession | null = null
+  let restoreState: ChecklistRestoreState = {
+    sessionId: null,
+    hasRestoreBackup: false,
+    hasChangesSinceRestore: false,
+  }
   const listeners = new Set<() => void>()
 
   const notify = () => listeners.forEach((listener) => listener())
+
+  const refreshRestoreState = () => {
+    const next: ChecklistRestoreState = {
+      sessionId: restoreSession?.id ?? null,
+      hasRestoreBackup: restoreSession !== null,
+      hasChangesSinceRestore: restoreSession
+        ? hasChecklistContentChanged(data, restoreSession.restored) &&
+          hasChecklistContentChanged(data, restoreSession.before)
+        : false,
+    }
+    const changed =
+      next.sessionId !== restoreState.sessionId ||
+      next.hasRestoreBackup !== restoreState.hasRestoreBackup ||
+      next.hasChangesSinceRestore !== restoreState.hasChangesSinceRestore
+    restoreState = changed ? next : restoreState
+    return changed
+  }
+
+  const setRestoreSession = (session: ChecklistRestoreSession | null) => {
+    restoreSession = session
+    if (refreshRestoreState()) notify()
+  }
 
   const setPersistence = (status: PersistenceStatus, error: string | null = null) => {
     persistenceStatus = status
@@ -152,26 +189,20 @@ export function createChecklistController({
   }
 
   const persist = async (snapshot: ChecklistData = data): Promise<void> => {
-    if (stopped) return
-    if (hydrating) return
+    if (stopped || !started) return
     setPersistence('pending', null)
-    const task = adapter
-      .save(snapshot, revision)
-      .then((saved) => {
-        if (stopped) return
-        revision = saved.revision
-        if (data === snapshot) {
-          needsPersist = false
-          setPersistence('saved', null)
-        } else setPersistence('pending', null)
-      })
-      .catch((error: unknown) => {
-        if (stopped) return
-        setPersistence('error', error instanceof Error ? error.message : String(error))
-      })
-    savePromise = task
-    await task
-    if (savePromise === task) savePromise = null
+    try {
+      const saved = adapter.save(snapshot, revision)
+      if (stopped) return
+      revision = saved.revision
+      if (data === snapshot) {
+        needsPersist = false
+        setPersistence('saved', null)
+      } else setPersistence('pending', null)
+    } catch (error: unknown) {
+      if (stopped) return
+      setPersistence('error', error instanceof Error ? error.message : String(error))
+    }
     if (!stopped && data !== snapshot && persistenceStatus !== 'error') await persist(data)
   }
 
@@ -188,6 +219,7 @@ export function createChecklistController({
       pendingOperations.push({ version: operationVersion, transition })
     }
     needsPersist = true
+    refreshRestoreState()
     notify()
     schedulePersist()
   }
@@ -195,19 +227,9 @@ export function createChecklistController({
   const mergeExternal = async (
     snapshot: StoredChecklistSnapshot,
     shouldPersist: boolean,
-  ): Promise<ExternalSnapshotResult> => {
-    if (compareChecklistRevisions(snapshot.revision, revision) <= 0)
+  ): Promise<ChecklistSynchronizationResult> => {
+    if (!adapter.isNewer(snapshot.revision, revision))
       return { outcome: 'ignored', skippedOperations: 0 }
-    if (hydrating) {
-      if (
-        !pendingExternal ||
-        compareChecklistRevisions(snapshot.revision, pendingExternal.snapshot.revision) > 0
-      ) {
-        pendingExternal = { snapshot, shouldPersist }
-      }
-      return { outcome: 'ignored', skippedOperations: 0 }
-    }
-
     const operations = pendingOperations
     const { merged, changed, retainedOperations, skippedOperations } = replayOperations(
       snapshot.data,
@@ -216,6 +238,7 @@ export function createChecklistController({
     pendingOperations = retainedOperations
     revision = snapshot.revision
     data = merged
+    refreshRestoreState()
     notify()
     if (skippedOperations > 0) onConflict?.(skippedOperations)
     const didMerge = changed
@@ -226,14 +249,145 @@ export function createChecklistController({
     }
   }
 
+  const mergeRemote = async (
+    remoteData: ChecklistData,
+  ): Promise<ChecklistSynchronizationResult> => {
+    if (stopped) return { outcome: 'ignored', skippedOperations: 0 }
+
+    const { merged, changed, retainedOperations, skippedOperations } = replayOperations(
+      remoteData,
+      pendingOperations,
+    )
+    pendingOperations = retainedOperations
+    data = merged
+    needsPersist = true
+    refreshRestoreState()
+    notify()
+    if (skippedOperations > 0) onConflict?.(skippedOperations)
+    await persist(data)
+    return {
+      outcome: changed ? 'merged' : 'applied',
+      skippedOperations,
+    }
+  }
+
   const subscribeToExternalChanges = () => {
     if (unsubscribe) return
-    unsubscribe = adapter.subscribe((externalRevision) => {
-      if (stopped || compareChecklistRevisions(externalRevision, revision) <= 0) return
-      void adapter.read().then((snapshot) => {
-        if (!stopped && snapshot) void mergeExternal(snapshot, false)
-      })
+    unsubscribe = adapter.subscribe((snapshot) => {
+      if (stopped || !adapter.isNewer(snapshot.revision, revision)) return
+      void mergeExternal(snapshot, false)
     })
+  }
+
+  const subscribeToRestoreChanges = () => {
+    if (!restoreStore || unsubscribeRestore) return
+    unsubscribeRestore = restoreStore.subscribe(() => {
+      if (!stopped) setRestoreSession(restoreStore.load())
+    })
+  }
+
+  const synchronizeStoredChecklist = async () => {
+    const snapshot = adapter.load().snapshot
+    if (adapter.isNewer(snapshot.revision, revision)) {
+      await mergeExternal(snapshot, false)
+    }
+  }
+
+  const validateRestoreSession = (stored: ChecklistRestoreSession | null) => {
+    if ((restoreSession?.id ?? null) === (stored?.id ?? null)) return true
+    setRestoreSession(stored)
+    return false
+  }
+
+  const restoreDefaults = async (): Promise<RestoreDefaultsResult> => {
+    if (!restoreStore || !createDefaultContent) return 'backup-failed'
+    await synchronizeStoredChecklist()
+
+    const stored = restoreStore.load()
+    if (!validateRestoreSession(stored)) return 'conflict'
+    const timestamp = now()
+    const restored = createDefaultContent(timestamp)
+    const session = stored
+      ? { ...stored, restored: structuredClone(restored), checklistRevision: revision }
+      : createRestoreSession(data, restored, timestamp, revision)
+    if (!restoreStore.save(session, stored?.id ?? null)) {
+      setRestoreSession(restoreStore.load())
+      return 'backup-failed'
+    }
+
+    setRestoreSession(session)
+    apply({ kind: 'restore-checklist-content', snapshot: session.restored })
+    await controller.flush()
+    if (persistenceStatus !== 'saved') return 'persistence-failed'
+
+    const persistedSession = { ...session, checklistRevision: revision }
+    if (!restoreStore.save(persistedSession, session.id)) {
+      setRestoreSession(restoreStore.load())
+      return 'persistence-failed'
+    }
+    setRestoreSession(persistedSession)
+    return 'success'
+  }
+
+  const undoRestore = async (overwrite = false): Promise<UndoRestoreResult> => {
+    if (!restoreStore) return 'backup-missing'
+    await synchronizeStoredChecklist()
+
+    const session = restoreStore.load()
+    if (!session) {
+      setRestoreSession(null)
+      return 'backup-missing'
+    }
+    if (!validateRestoreSession(session)) return 'conflict'
+    if (session.checklistRevision && adapter.isNewer(session.checklistRevision, revision)) {
+      return 'conflict'
+    }
+
+    const isAlreadyUndone = !hasChecklistContentChanged(data, session.before)
+    const hasPostRestoreChanges =
+      hasChecklistContentChanged(data, session.restored) && !isAlreadyUndone
+    if (hasPostRestoreChanges && !overwrite) return 'changes-detected'
+    if (restoreStore.load()?.id !== session.id) {
+      setRestoreSession(restoreStore.load())
+      return 'conflict'
+    }
+
+    if (!isAlreadyUndone) {
+      apply({ kind: 'restore-checklist-content', snapshot: session.before })
+      await controller.flush()
+      if (persistenceStatus !== 'saved') return 'persistence-failed'
+    }
+
+    const cleared = restoreStore.clear(session.id)
+    if (cleared === 'conflict' || cleared === 'missing') {
+      setRestoreSession(restoreStore.load())
+      return 'conflict'
+    }
+    if (cleared === 'failed') return 'cleanup-failed'
+    setRestoreSession(null)
+    return 'success'
+  }
+
+  const discardRestore = (): DiscardRestoreResult => {
+    if (!restoreStore) return 'backup-missing'
+    const session = restoreStore.load()
+    if (!session) {
+      setRestoreSession(null)
+      return 'backup-missing'
+    }
+    if (!validateRestoreSession(session)) return 'conflict'
+    const cleared = restoreStore.clear(session.id)
+    if (cleared === 'conflict') {
+      setRestoreSession(restoreStore.load())
+      return 'conflict'
+    }
+    if (cleared === 'missing') {
+      setRestoreSession(null)
+      return 'backup-missing'
+    }
+    if (cleared === 'failed') return 'cleanup-failed'
+    setRestoreSession(null)
+    return 'success'
   }
 
   const controller: ChecklistController = {
@@ -247,12 +401,13 @@ export function createChecklistController({
       stopped = false
       const version = ++lifecycleVersion
       started = true
-      hydrating = true
       subscribeToExternalChanges()
+      subscribeToRestoreChanges()
+      setRestoreSession(restoreStore?.load() ?? null)
       try {
-        const snapshot = await adapter.read()
+        const snapshot = adapter.load().snapshot
         if (stopped || version !== lifecycleVersion) return
-        if (snapshot && compareChecklistRevisions(snapshot.revision, revision) > 0) {
+        if (adapter.isNewer(snapshot.revision, revision)) {
           revision = snapshot.revision
           const operations = pendingOperations
           const { merged, retainedOperations, skippedOperations } = replayOperations(
@@ -262,6 +417,7 @@ export function createChecklistController({
           pendingOperations = retainedOperations
           data = merged
           needsPersist = merged !== snapshot.data
+          refreshRestoreState()
           if (skippedOperations > 0) onConflict?.(skippedOperations)
           notify()
         }
@@ -270,13 +426,7 @@ export function createChecklistController({
           setPersistence('error', error instanceof Error ? error.message : String(error))
       } finally {
         if (version === lifecycleVersion) {
-          hydrating = false
           if (!stopped && (needsPersist || persistenceStatus !== 'saved')) await persist(data)
-          if (pendingExternal && !stopped) {
-            const next = pendingExternal
-            pendingExternal = null
-            await mergeExternal(next.snapshot, next.shouldPersist)
-          }
         }
       }
     },
@@ -284,24 +434,24 @@ export function createChecklistController({
       stopped = true
       started = false
       lifecycleVersion += 1
-      hydrating = false
-      pendingExternal = null
       listeners.clear()
       unsubscribe?.()
       unsubscribe = null
+      unsubscribeRestore?.()
+      unsubscribeRestore = null
     },
     flush: async () => {
       if (stopped) return
-      if (savePromise) await savePromise
       if (!stopped && persistenceStatus !== 'saved') await persist(data)
     },
     flushNow: () => {
-      if (!stopped) adapter.flushNow(data, revision)
+      if (!stopped) adapter.flush(data, revision)
     },
     getPersistenceStatus: () => persistenceStatus,
     getPersistenceError: () => persistenceError,
+    getRestoreState: () => restoreState,
     syncPort: {
-      applyExternalSnapshot: (snapshot) => mergeExternal(snapshot, true),
+      applyRemoteSnapshot: mergeRemote,
       captureSnapshot: () => ({ data, operationVersion }),
       acknowledgeOperationsThrough: (acknowledgedVersion) => {
         pendingOperations = pendingOperations.filter(
@@ -326,7 +476,9 @@ export function createChecklistController({
     manualReset: (tab, timestamp = now()) =>
       apply({ kind: 'manual-reset', cycle: tab, now: timestamp }),
     applyDueResets: (timestamp = now()) => apply({ kind: 'apply-due-resets', now: timestamp }),
-    restoreChecklistContent: (snapshot) => apply({ kind: 'restore-checklist-content', snapshot }),
+    restoreDefaults,
+    undoRestore,
+    discardRestore,
     replaceData: (nextData) => {
       apply({ kind: 'replace-data', data: nextData })
     },

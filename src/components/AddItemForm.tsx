@@ -104,9 +104,9 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
             }}
             tabIndex={isFormOpen ? 0 : -1}
             placeholder={t('addItem.placeholder')}
-            className="w-full px-3 py-2 bg-transparent text-base sm:text-sm text-text-primary outline-none placeholder-text-muted border-b border-border"
+            className="h-10 w-full px-3 py-0 bg-transparent text-base sm:text-sm text-text-primary outline-none placeholder-text-muted border-b border-border"
           />
-          <div className="flex items-center flex-wrap gap-1.5 px-3 py-2 border-b border-border">
+          <div className="flex min-h-10 items-center flex-wrap gap-1.5 px-3 py-1 border-b border-border">
             <TagInput
               tags={tags}
               onChange={setTags}
@@ -114,11 +114,16 @@ export function AddItemForm({ tab, onAdd }: AddItemFormProps) {
               compactFocus
             />
           </div>
-          <div className="flex gap-2 p-3">
-            <Button type="submit" disabled={!text.trim()} className="flex-1">
+          <div className="flex h-12 items-center gap-2 px-3 py-2">
+            <Button type="submit" disabled={!text.trim()} className="h-9 flex-1 px-3 py-0">
               {t('common.add')}
             </Button>
-            <Button type="button" variant="tertiary" onClick={handleClose}>
+            <Button
+              type="button"
+              variant="tertiary"
+              onClick={handleClose}
+              className="h-9 px-3 py-0"
+            >
               {t('common.cancel')}
             </Button>
           </div>

@@ -58,6 +58,13 @@ function normalizeAssignment(value: unknown): StoredAssignment | null {
 function loadMap(): Map<string, StoredAssignment> {
   if (cachedMap) return cachedMap
   try {
+    if (localStorage.getItem(STORAGE_KEY) === null) {
+      const legacy = localStorage.getItem('tag-color-map')
+      if (legacy !== null) {
+        localStorage.setItem(STORAGE_KEY, legacy)
+        localStorage.removeItem('tag-color-map')
+      }
+    }
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed: unknown = JSON.parse(raw)

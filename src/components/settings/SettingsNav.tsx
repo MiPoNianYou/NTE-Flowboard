@@ -1,8 +1,16 @@
-import { Settings2, Globe, Cloud, Database, ChevronRight, type LucideIcon } from 'lucide-react'
+import {
+  Settings2,
+  Globe,
+  Cloud,
+  Database,
+  ChevronRight,
+  Bell,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { useTranslation } from 'react-i18next'
 
-export type SubPage = 'general' | 'server' | 'cloud' | 'data'
+export type SubPage = 'general' | 'server' | 'notifications' | 'cloud' | 'data'
 
 interface NavItem {
   id: SubPage
@@ -14,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'general', icon: Settings2, labelKey: 'settings.nav.general' },
   { id: 'server', icon: Globe, labelKey: 'settings.nav.server' },
   { id: 'cloud', icon: Cloud, labelKey: 'settings.nav.cloud' },
+  { id: 'notifications', icon: Bell, labelKey: 'settings.nav.notifications' },
   { id: 'data', icon: Database, labelKey: 'settings.nav.data' },
 ]
 
@@ -24,6 +33,7 @@ interface SettingsNavProps {
   orientation?: 'vertical' | 'horizontal'
   showDisclosure?: boolean
   className?: string
+  showNotifications?: boolean
 }
 
 export function SettingsNav({
@@ -33,6 +43,7 @@ export function SettingsNav({
   orientation = 'vertical',
   showDisclosure = false,
   className,
+  showNotifications = false,
 }: SettingsNavProps) {
   const { t } = useTranslation()
   const isMobileEntry = showDisclosure
@@ -48,7 +59,7 @@ export function SettingsNav({
         className,
       )}
     >
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => showNotifications || item.id !== 'notifications').map((item) => {
         const isActive = activeTab === item.id
         return (
           <button

@@ -1,10 +1,11 @@
 import { createRef, type ReactNode } from 'react'
-import { fireEvent, render as renderBase, screen, within } from '@testing-library/react'
+import { fireEvent, render as renderBase, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { SettingsLayout } from '../../../src/components/settings/SettingsLayout'
 import type { CloudSyncProps } from '../../../src/components/settings/CloudSyncSection'
 import { DisplayPreferencesProvider } from '../../../src/context/DisplayPreferencesContext'
 import { ThemeProvider } from '../../../src/context/ThemeContext'
+import type { NotificationSettingsProps } from '../../../src/types'
 
 function render(ui: ReactNode) {
   return renderBase(
@@ -38,6 +39,21 @@ const unconfiguredCloudSyncProps = {
   syncStatus: 'disconnected' as const,
   isConfigured: false,
 }
+
+const enabledNotificationProps = {
+  status: 'enabled',
+  preferences: { beforeResetEnabled: true, resetEnabled: true, leadHours: 6 },
+  error: null,
+  testCountdownSeconds: 0,
+  isTestSending: false,
+  lastTestSucceeded: false,
+  testFailed: false,
+  updatePreferences: vi.fn(),
+  enable: vi.fn(),
+  disable: vi.fn(),
+  refresh: vi.fn(),
+  sendTest: vi.fn(),
+} satisfies NotificationSettingsProps
 
 function renderMobileLayout(
   reduceMotion = false,
@@ -169,5 +185,37 @@ describe('mobile focused field scrolling', () => {
 
     expect(scrollBy).toHaveBeenCalledWith({ top: 46 })
     vi.unstubAllGlobals()
+  })
+
+  it('uses a compact notification status in the English sidebar', async () => {
+    render(
+      <SettingsLayout
+        onManualReset={vi.fn()}
+        restoreDefaultsControls={{
+          onRestoreDefaults: async () => 'success',
+          onUndoRestoreDefaults: async () => 'success',
+          hasRestoreBackup: false,
+          hasChangesSinceRestore: false,
+        }}
+        onExport={vi.fn()}
+        onImportFile={vi.fn()}
+        fileInputRef={createRef<HTMLInputElement>()}
+        isImportError={false}
+        isImportSuccess={false}
+        isExportSuccess={false}
+        cloudSyncProps={configuredCloudSyncProps}
+        notificationProps={enabledNotificationProps}
+        reduceMotion
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: '英文' })[0])
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Enabled').length).toBeGreaterThan(0)
+    })
+    expect(screen.queryByText('System notifications are enabled')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chinese' })[0])
   })
 })

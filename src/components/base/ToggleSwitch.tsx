@@ -4,12 +4,14 @@ interface ToggleSwitchProps {
   checked: boolean
   onCheckedChange: (newValue: boolean) => void
   'aria-label': string
+  disabled?: boolean
 }
 
 export function ToggleSwitch({
   checked,
   onCheckedChange,
   'aria-label': ariaLabel,
+  disabled = false,
 }: ToggleSwitchProps) {
   return (
     <button
@@ -18,6 +20,7 @@ export function ToggleSwitch({
       aria-checked={checked}
       aria-label={ariaLabel}
       onClick={() => onCheckedChange(!checked)}
+      disabled={disabled}
       className={cn(
         'relative shrink-0 w-[42px] h-[24px] rounded-pill cursor-pointer',
         'border border-border',
@@ -26,6 +29,7 @@ export function ToggleSwitch({
         checked
           ? 'bg-primary shadow-[0_0_12px_var(--color-primary-glow)]'
           : 'bg-surface hover:bg-surface-hover',
+        disabled && 'cursor-not-allowed opacity-50 pointer-events-none',
       )}
     >
       <span

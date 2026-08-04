@@ -6,6 +6,7 @@ interface SettingRowProps {
   icon?: LucideIcon
   label: string
   description?: string
+  descriptionClassName?: string
   trailing: ReactNode
   className?: string
 }
@@ -14,6 +15,7 @@ export function SettingRow({
   icon: Icon,
   label,
   description,
+  descriptionClassName,
   trailing,
   className,
 }: SettingRowProps) {
@@ -27,7 +29,11 @@ export function SettingRow({
         )}
         <div className="flex-1">
           <p className="text-footnote text-text-primary font-medium">{label}</p>
-          {description && <p className="text-xs text-text-secondary mt-0.5">{description}</p>}
+          {description && (
+            <p className={cn('text-xs text-text-secondary mt-0.5', descriptionClassName)}>
+              {description}
+            </p>
+          )}
         </div>
       </div>
       {trailing}

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" role="img" aria-labelledby="title desc">
   <title id="title">NTE Flowboard 的周期清单</title>
-  <desc id="desc">每日、每周和每月清单分别按时重置；进度会跟着当前清单更新，重置后开始新一轮。</desc>
+  <desc id="desc">每日、每周和每月清单按时重置；勾选事项后进度立即更新，重置后从零开始</desc>
   <defs>
     <linearGradient id="ring-background" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#0a0c14"/>
@@ -27,8 +27,8 @@
   <rect width="1200" height="470" rx="26" fill="url(#ring-blue)"/>
 
   <g id="heading" transform="translate(58 55)" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif">
-    <text fill="#fffffff2" font-size="32" font-weight="700" letter-spacing="-.7">每日、每周、每月，分别按时重置</text>
-    <text y="31" fill="#ffffffa6" font-size="17">进度会跟着当前清单更新，重置后开始新一轮。</text>
+    <text fill="#fffffff2" font-size="32" font-weight="700" letter-spacing="-.7">每日、每周和每月清单按时重置</text>
+    <text y="31" fill="#ffffffa6" font-size="17">勾选事项后进度立即更新，重置后从零开始</text>
   </g>
   <path d="M58 100H1142" stroke="#ffffff14"/>
 
@@ -70,7 +70,7 @@
     <circle cx="720" cy="288" r="24" fill="#15a0b83d" stroke="#78cedb" stroke-width="1.5"/>
     <circle cx="720" cy="288" r="10.5" fill="none" stroke="#c3f5fa" stroke-width="2.8" stroke-dasharray="22 44" transform="rotate(-90 720 288)"/>
     <text x="754" y="283" fill="#fffffff2" font-size="16" font-weight="700">完成进度</text>
-    <text x="754" y="303" fill="#ffffffa6" font-size="13">随清单即时更新</text>
+    <text x="754" y="303" fill="#ffffffa6" font-size="13">勾选后立即更新</text>
   </g>
 
   <g id="stage-reset" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif">
@@ -85,7 +85,7 @@
   <g id="stage-new-round" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif">
     <circle cx="480" cy="288" r="24" fill="#14ad813d" stroke="#68d0ab" stroke-width="1.5"/>
     <path d="M470 288h20M480 278v20M474 282l12 12M486 282l-12 12" fill="none" stroke="#c0f5de" stroke-width="1.8" stroke-linecap="round"/>
-    <text x="446.25" y="283" text-anchor="end" fill="#fffffff2" font-size="16" font-weight="700">新的一轮</text>
-    <text x="446.25" y="303" text-anchor="end" fill="#ffffffa6" font-size="13">回到 0 / 6</text>
+    <text x="446.25" y="283" text-anchor="end" fill="#fffffff2" font-size="16" font-weight="700">开始新一轮</text>
+    <text x="446.25" y="303" text-anchor="end" fill="#ffffffa6" font-size="13">进度回到 0 / 6</text>
   </g>
 </svg>

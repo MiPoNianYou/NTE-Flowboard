@@ -25,8 +25,8 @@ const mockNotConfiguredProps = {
   lastSyncTime: null,
   syncError: null,
   isConfigured: false,
-  onSetupSupabase: vi.fn(),
-  onTriggerSync: vi.fn(),
+  onSetupSupabase: vi.fn(async () => ({ ok: true as const })),
+  onTriggerSync: vi.fn(async () => ({ ok: true as const })),
   onTeardownSupabase: vi.fn(),
   onClearSyncError: vi.fn(),
 }
@@ -36,8 +36,8 @@ const mockConfiguredProps = {
   lastSyncTime: new Date().toISOString(),
   syncError: null,
   isConfigured: true,
-  onSetupSupabase: vi.fn(),
-  onTriggerSync: vi.fn(),
+  onSetupSupabase: vi.fn(async () => ({ ok: true as const })),
+  onTriggerSync: vi.fn(async () => ({ ok: true as const })),
   onTeardownSupabase: vi.fn(),
   onClearSyncError: vi.fn(),
 }
@@ -77,7 +77,7 @@ describe('CloudSyncSection', () => {
     })
 
     it('should submit trimmed Supabase credentials', async () => {
-      const onSetupSupabase = vi.fn().mockResolvedValue(undefined)
+      const onSetupSupabase = vi.fn().mockResolvedValue({ ok: true })
       render(<CloudSyncSection {...mockNotConfiguredProps} onSetupSupabase={onSetupSupabase} />)
 
       fireEvent.change(screen.getByLabelText('Project URL'), {
@@ -153,9 +153,19 @@ describe('CloudSyncSection', () => {
       expect(keyInput.type).toBe('text')
     })
 
-    it('should show error when syncError present', () => {
-      render(<CloudSyncSection {...mockNotConfiguredProps} syncError="连接失败" />)
-      expect(screen.getByText('连接失败')).toBeInTheDocument()
+    it('should show the error returned by the setup command', async () => {
+      const onSetupSupabase = vi.fn().mockResolvedValue({ ok: false, error: '连接失败' })
+      render(<CloudSyncSection {...mockNotConfiguredProps} onSetupSupabase={onSetupSupabase} />)
+
+      fireEvent.change(screen.getByLabelText('Project URL'), {
+        target: { value: 'https://project.supabase.co' },
+      })
+      fireEvent.change(screen.getByLabelText('Publishable Key'), {
+        target: { value: 'sb_publishable_key' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: '连接 Supabase' }))
+
+      expect(await screen.findByText('连接失败')).toBeInTheDocument()
     })
   })
 
@@ -228,9 +238,9 @@ describe('CloudSyncSection', () => {
     })
 
     it.each([
-      ['connecting', '连接中', '正在连接云端服务'],
+      ['connecting', '连接中', '正在连接 Supabase'],
       ['syncing', '同步中', '正在更新云端数据'],
-      ['error', '出错了', '云同步遇到问题'],
+      ['error', '同步出错', '云同步出错'],
     ] as const)('should render %s status', (syncStatus, label, summary) => {
       render(<CloudSyncSection {...mockConfiguredProps} syncStatus={syncStatus} />)
       expect(screen.getByText(label)).toBeInTheDocument()

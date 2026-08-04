@@ -10,19 +10,20 @@ import {
   type ReactNode,
 } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import type { TabType } from '../../types'
+import type { NotificationSettingsProps, TabType } from '../../types'
 import type { CloudSyncProps } from './CloudSyncSection'
 import { SettingsNav, type SubPage } from './SettingsNav'
 import { SettingsGeneral } from './SettingsGeneral'
 import { SettingsServer } from './SettingsServer'
 import { SettingsData } from './SettingsData'
+import { SettingsNotifications } from './SettingsNotifications'
 import { CloudSyncSection } from './CloudSyncSection'
 import { PAGE } from '../../utils/motion'
 import { useSettings } from '../../context/SettingsContext'
 import { useTranslation } from 'react-i18next'
 import type { RestoreDefaultsControls } from '../../utils/checklistRestoreBackup'
 
-const TAB_ORDER: SubPage[] = ['general', 'server', 'cloud', 'data']
+const TAB_ORDER: SubPage[] = ['general', 'server', 'cloud', 'notifications', 'data']
 const REDUCED_MOTION = { duration: 0 }
 const MOBILE_PAGE_TRANSITION_MS = 260
 const MOBILE_PAGE_TRANSITION = {
@@ -83,6 +84,7 @@ interface SettingsLayoutProps {
   isImportSuccess: boolean
   isExportSuccess: boolean
   cloudSyncProps?: CloudSyncProps
+  notificationProps?: NotificationSettingsProps
   reduceMotion?: boolean
   renderHeader?: (header: MobileSettingsHeader) => ReactNode
 }
@@ -102,6 +104,7 @@ export function SettingsLayout({
   isImportSuccess,
   isExportSuccess,
   cloudSyncProps,
+  notificationProps,
   reduceMotion = false,
   renderHeader,
 }: SettingsLayoutProps) {
@@ -144,9 +147,12 @@ export function SettingsLayout({
       cloud: cloudSyncProps?.isConfigured
         ? t('settings.status.connected')
         : t('settings.status.notConfigured'),
+      notifications: notificationProps
+        ? t(`notifications.navStatus.${notificationProps.status}`)
+        : undefined,
       data: undefined,
     }),
-    [settings.serverRegion, cloudSyncProps?.isConfigured, t],
+    [settings.serverRegion, cloudSyncProps?.isConfigured, notificationProps, t],
   )
 
   const handleDesktopTabChange = useCallback(
@@ -208,6 +214,10 @@ export function SettingsLayout({
         return <SettingsGeneral isEmbedded />
       case 'server':
         return <SettingsServer isEmbedded />
+      case 'notifications':
+        return notificationProps ? (
+          <SettingsNotifications notification={notificationProps} isEmbedded />
+        ) : null
       case 'cloud':
         return cloudSyncProps ? (
           <div className="space-y-4">
@@ -217,7 +227,7 @@ export function SettingsLayout({
       case 'data':
         return <SettingsData {...settingsDataProps} isEmbedded />
     }
-  }, [desktopTab, cloudSyncProps, settingsDataProps])
+  }, [desktopTab, cloudSyncProps, notificationProps, settingsDataProps])
 
   const renderMobileContent = useMemo(() => {
     if (mobileRoute.kind === 'navigation') {
@@ -227,6 +237,7 @@ export function SettingsLayout({
           onTabChange={(tab) => navigateMobile({ kind: 'tab', tab }, 1)}
           labels={sidebarLabels}
           showDisclosure
+          showNotifications={Boolean(notificationProps)}
         />
       )
     }
@@ -236,12 +247,23 @@ export function SettingsLayout({
         return <SettingsGeneral isEmbedded />
       case 'server':
         return <SettingsServer isEmbedded mobile />
+      case 'notifications':
+        return notificationProps ? (
+          <SettingsNotifications notification={notificationProps} isEmbedded />
+        ) : null
       case 'cloud':
         return cloudSyncProps ? <CloudSyncSection {...cloudSyncProps} mobile /> : null
       case 'data':
         return <SettingsData {...settingsDataProps} isEmbedded mobile />
     }
-  }, [mobileRoute, sidebarLabels, navigateMobile, cloudSyncProps, settingsDataProps])
+  }, [
+    mobileRoute,
+    sidebarLabels,
+    navigateMobile,
+    cloudSyncProps,
+    notificationProps,
+    settingsDataProps,
+  ])
 
   const mobileHeader = useMemo<MobileSettingsHeader>(() => {
     if (mobileRoute.kind === 'navigation') return { title: t('settings.title') }
@@ -333,6 +355,7 @@ export function SettingsLayout({
             onTabChange={handleDesktopTabChange}
             labels={sidebarLabels}
             orientation="vertical"
+            showNotifications={Boolean(notificationProps)}
           />
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">

@@ -2,14 +2,18 @@ import { useEffect, memo } from 'react'
 import type { SyncStatus } from '../../types'
 import { CloudSyncSetup } from './CloudSyncSetup'
 import { CloudSyncStatus } from './CloudSyncStatus'
+import type { CloudSynchronizationCommandResult } from '../../utils/cloudSynchronization'
 
 export interface CloudSyncProps {
   syncStatus: SyncStatus
   lastSyncTime: string | null
   syncError: string | null
   isConfigured: boolean
-  onSetupSupabase: (projectUrl: string, anonKey: string) => Promise<void>
-  onTriggerSync: () => Promise<void>
+  onSetupSupabase: (
+    projectUrl: string,
+    anonKey: string,
+  ) => Promise<CloudSynchronizationCommandResult>
+  onTriggerSync: () => Promise<CloudSynchronizationCommandResult>
   onTeardownSupabase: () => void
   onClearSyncError?: () => void
   mobile?: boolean
@@ -33,9 +37,7 @@ export const CloudSyncSection = memo(function CloudSyncSection({
   }, [onClearSyncError])
 
   if (!isConfigured) {
-    return (
-      <CloudSyncSetup syncError={syncError} onSetupSupabase={onSetupSupabase} mobile={mobile} />
-    )
+    return <CloudSyncSetup onSetupSupabase={onSetupSupabase} mobile={mobile} />
   }
 
   return (

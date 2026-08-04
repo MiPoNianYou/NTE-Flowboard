@@ -5,7 +5,7 @@
 <h1 align="center">NTE Flowboard</h1>
 
 <p align="center">
-  用于追踪《NTE》每日、每周和每月重置事项的本地优先清单看板。
+  一块本地优先的《NTE》周期清单，记录每日、每周和每月事项
 </p>
 
 <p align="center">
@@ -23,14 +23,14 @@
 </p>
 
 <p align="center">
-  <img src="./src/assets/readme/hero.svg" width="100%" alt="NTE Flowboard：显示每日任务、进度和每日、每周、每月重置时间的本地优先看板。" />
+  <img src="./src/assets/readme/hero.svg" width="100%" alt="NTE Flowboard：显示每日任务、进度和每日、每周、每月重置时间的本地优先清单" />
 </p>
 
-> 选好服务器，按清单完成这一轮；到重置时间，下一轮会自动开始。
+> 选择服务器后照着清单完成事项；到达重置时间，系统会自动开始下一轮
 
-## 一眼看清本轮要做什么
+## 每轮清单与进度
 
-NTE Flowboard 将常见的周期事项分为每日、每周和每月三份清单。你可以添加自定义任务、编辑标签、拖拽排序或暂时隐藏任务；完成后的任务也能自动移到列表末尾。进度环会显示这一轮已完成的数量。
+NTE Flowboard 把周期事项分成每日、每周和每月三份清单；你可以添加自己的任务、编辑标签、拖拽排序或暂时隐藏任务；完成的任务可自动移到清单末尾，进度环会显示本轮已完成的数量
 
 | 周期 | 默认追踪内容                                     | 重置时点        |
 | ---- | ------------------------------------------------ | --------------- |
@@ -39,31 +39,31 @@ NTE Flowboard 将常见的周期事项分为每日、每周和每月三份清单
 | 每月 | 集市迷迭、大亨猎人、玩法异境等商店兑换           | 每月 1 日 05:00 |
 
 <p align="center">
-  <img src="./src/assets/readme/cycle-flow.svg" width="100%" alt="本轮清单、完成进度、自动重置和新一轮的循环示意图。" />
+  <img src="./src/assets/readme/cycle-flow.svg" width="100%" alt="本轮清单、完成进度、自动重置和新一轮的循环示意图" />
 </p>
 
 ## 按服务器时间自动重置
 
-- 可选择亚太服、美服或欧服；美服和欧服会自动处理夏令时。
-- 每日 05:00、每周一 05:00 和每月 1 日 05:00，分别重置对应清单。
-- 离线也能用。多个浏览器标签页会通过本地存储保持一致。
+- 可选择亚太服、美服或欧服；美服和欧服会自动处理夏令时
+- 每日 05:00、每周一 05:00 和每月 1 日 05:00，分别重置对应清单
+- 离线也能用；多个浏览器标签页会通过本地存储保持一致
 
 ## 数据默认留在你的浏览器里
 
-清单和偏好默认保存在浏览器的 `localStorage` 中，不需要账户，也不依赖网络。首次加载时会自动迁移旧版 `nte-checklist-data` 数据。
+清单和偏好默认保存在浏览器的 `localStorage` 中，不需要账户，也不依赖网络；首次加载时会自动迁移旧版 `nte-checklist-data` 数据
 
 ## 可选云端同步
 
-跨设备使用时，在设置中填写自己的 Supabase Project URL 与 Publishable Key：
+需要跨设备使用时，在设置中填写你的 Supabase Project URL 与 Publishable Key：
 
 ```text
 本地变更  →  upsert_sync  →  Supabase
 Supabase  →  pull_sync     →  本地状态
 ```
 
-Project URL 与 Publishable Key 只保存在当前浏览器。Publishable Key 是前端公开凭据；实际的数据访问权限由 Supabase 的 Row Level Security (RLS) 控制。旧项目的 Anon Key 也可继续使用。
+Project URL 与 Publishable Key 只保存在当前浏览器；Publishable Key 是前端公开凭据，数据访问权限由 Supabase 的 Row Level Security (RLS) 控制；旧项目仍可使用 Anon Key
 
-> 配置同步前，请先在 Supabase 项目中启用并验证 RLS。RLS 配置错误时，持有项目公开凭据的人可能读取或写入同步数据。
+> 配置同步前，请先在 Supabase 项目中启用并验证 RLS；RLS 配置错误时，持有项目公开凭据的人可能读取或写入同步数据
 
 ## 快速开始
 
@@ -92,7 +92,7 @@ npm run dev
 | `npm run format:check`              | 检查格式                          |
 | `npm run build`                     | 运行 lint、类型检查并生成生产构建 |
 
-真实 Supabase 集成测试默认跳过写入。请使用独立测试项目，并在当前终端设置环境变量后显式启用：
+真实 Supabase 集成测试默认跳过写入；请使用独立测试项目，并在当前终端设置环境变量后显式启用：
 
 ```powershell
 $env:SUPABASE_TEST_URL='https://your-project.supabase.co'
@@ -101,7 +101,7 @@ $env:SUPABASE_TEST_ALLOW_WRITE='true'
 npm run test:integration:supabase
 ```
 
-测试会临时替换固定的 `NTE Flowboard` 云端记录，验证 RPC 与 Realtime 后恢复原 JSON；恢复操作会刷新该记录的 `updated_at`。
+测试会临时替换名为 `NTE Flowboard` 的云端记录；完成 RPC 与 Realtime 验证后，测试会恢复原 JSON；恢复操作会刷新该记录的 `updated_at`
 
 <details>
 <summary>项目结构</summary>
@@ -130,6 +130,6 @@ React 19 · TypeScript · Vite 8 · Tailwind CSS 4 · Motion · dnd-kit · Supab
 
 ## 发布
 
-推送到 `main` 后，GitHub Actions 会依次检查格式、运行测试、构建并部署到 GitHub Pages。
+推送到 `main` 后，GitHub Actions 会依次检查格式、运行测试、构建并部署到 GitHub Pages
 
 <p align="center"><sub>MIT License</sub></p>

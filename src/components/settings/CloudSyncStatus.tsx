@@ -21,6 +21,7 @@ import { Button } from '../base/Button'
 import { Card } from '../base/Card'
 import { StatusMessage } from '../base/StatusMessage'
 import { SqlCodeBlock } from './SqlCodeBlock'
+import type { CloudSynchronizationCommandResult } from '../../utils/cloudSynchronization'
 
 const UPDATED_AT_PATCH_SQL = `CREATE OR REPLACE FUNCTION set_sync_updated_at()
 RETURNS TRIGGER
@@ -41,7 +42,7 @@ interface CloudSyncStatusProps {
   syncStatus: SyncStatus
   lastSyncTime: string | null
   syncError: string | null
-  onTriggerSync: () => Promise<void>
+  onTriggerSync: () => Promise<CloudSynchronizationCommandResult>
   onTeardownSupabase: () => void
   mobile?: boolean
 }

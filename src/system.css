@@ -38,7 +38,7 @@
   --color-text-primary: #fffffff2;
   --color-text-secondary: #ffffffa6;
   --color-text-muted: #ffffff8a;
-  --color-text-on-accent: #16181f;
+  --color-text-on-accent: #ffffff;
 
   --color-primary: #9080f0;
   --color-primary-hover: #a090f4;
@@ -175,11 +175,6 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-/* The Supabase setup action keeps white text in both color schemes. */
-.supabase-connect-button {
-  color: #ffffff;
-}
-
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) .cloud-sync-sql {
     background-color: var(--color-background-subtle);
@@ -218,7 +213,7 @@
   --color-text-primary: #fffffff2;
   --color-text-secondary: #ffffffa6;
   --color-text-muted: #ffffff8a;
-  --color-text-on-accent: #16181f;
+  --color-text-on-accent: #ffffff;
 
   --color-primary: #9080f0;
   --color-primary-hover: #a090f4;
@@ -253,10 +248,6 @@
   --selection-bg: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
-:root[data-theme='dark'] [data-restore-defaults-confirming='true'] {
-  color: #ffffff;
-}
-
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
@@ -277,7 +268,7 @@
     --color-text-primary: #fffffff2;
     --color-text-secondary: #ffffffa6;
     --color-text-muted: #ffffff8a;
-    --color-text-on-accent: #16181f;
+    --color-text-on-accent: #ffffff;
     --color-primary: #9080f0;
     --color-primary-hover: #a090f4;
     --color-primary-pressed: #7060d0;
@@ -435,16 +426,16 @@ body {
   border-radius: var(--radius-control);
   background: var(--color-danger);
   border-color: var(--color-danger);
-  color: #ffffff;
+  color: var(--color-text-on-accent);
   gap: 8px;
 }
 .danger-confirm-button.expanded .sign svg {
-  color: #ffffff;
+  color: var(--color-text-on-accent);
 }
 .danger-confirm-button.expanded .text {
   opacity: 1;
   max-width: 84px;
-  color: #ffffff;
+  color: var(--color-text-on-accent);
 }
 .danger-confirm-button:active {
   opacity: 0.9;

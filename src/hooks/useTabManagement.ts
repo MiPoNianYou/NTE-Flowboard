@@ -6,6 +6,13 @@ export type TabDirection = 'down' | 'up'
 
 export function useTabManagement() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (localStorage.getItem('flowboard-active-tab') === null) {
+      const legacy = localStorage.getItem('nte-tab')
+      if (legacy !== null) {
+        localStorage.setItem('flowboard-active-tab', legacy)
+        localStorage.removeItem('nte-tab')
+      }
+    }
     const saved = localStorage.getItem('flowboard-active-tab')
     return saved === 'daily' || saved === 'weekly' || saved === 'monthly'
       ? (saved as TabType)

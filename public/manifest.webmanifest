@@ -1,0 +1,9 @@
+{
+  "name": "NTE Flowboard",
+  "short_name": "Flowboard",
+  "start_url": "/NTE-Flowboard/",
+  "scope": "/NTE-Flowboard/",
+  "display": "standalone",
+  "background_color": "#111419",
+  "theme_color": "#177b63"
+}

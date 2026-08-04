@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import type { TabType, ChecklistData } from '../types'
+import type { TabType, ChecklistData, NotificationSettingsProps } from '../types'
 import type { CloudSyncProps } from './settings/CloudSyncSection'
 import { SettingsPanel } from './SettingsPanel'
 import { OfflineIndicator } from './OfflineIndicator'
@@ -13,6 +13,7 @@ interface HeaderProps {
   restoreDefaultsControls: RestoreDefaultsControls
   onImport: (data: ChecklistData) => void
   cloudSyncProps?: CloudSyncProps
+  notificationProps?: NotificationSettingsProps
 }
 
 export const Header = memo(function Header({
@@ -21,6 +22,7 @@ export const Header = memo(function Header({
   restoreDefaultsControls,
   onImport,
   cloudSyncProps,
+  notificationProps,
 }: HeaderProps) {
   const { t } = useTranslation()
   return (
@@ -47,6 +49,7 @@ export const Header = memo(function Header({
           restoreDefaultsControls={restoreDefaultsControls}
           onImport={onImport}
           cloudSyncProps={cloudSyncProps}
+          notificationProps={notificationProps}
         />
       </div>
     </div>

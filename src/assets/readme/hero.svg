@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
   <title id="title">NTE Flowboard</title>
-  <desc id="desc">NTE Flowboard 的产品 Hero：以真实应用的深色玻璃界面风格呈现每日、每周、每月任务与自动重置。</desc>
+  <desc id="desc">NTE Flowboard 深色界面预览，显示每日、每周和每月任务及自动重置时间</desc>
   <defs>
     <linearGradient id="page" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#0a0c14"/>
@@ -36,8 +36,8 @@
     </g>
 
     <text x="0" y="116" fill="#fffffff2" font-size="40" font-weight="700" letter-spacing="-1.55">异环周期任务，</text>
-    <text x="0" y="164" fill="#fffffff2" font-size="40" font-weight="700" letter-spacing="-1.55">一处管理</text>
-    <text x="1" y="205" fill="#ffffffa6" font-size="16">异环的任务追踪看板，支持云同步；按服务器时间自动重置进度</text>
+    <text x="0" y="164" fill="#fffffff2" font-size="40" font-weight="700" letter-spacing="-1.55">按清单完成</text>
+    <text x="1" y="205" fill="#ffffffa6" font-size="16">按服务器时间重置每日、每周和每月进度；可选云同步</text>
 
     <g transform="translate(0 238)">
       <g>

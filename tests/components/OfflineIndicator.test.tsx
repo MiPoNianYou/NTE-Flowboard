@@ -34,10 +34,10 @@ describe('OfflineIndicator', () => {
     expect(screen.getByText('离线模式，云同步暂不可用')).toBeInTheDocument()
 
     act(() => window.dispatchEvent(new Event('online')))
-    expect(screen.getByText('网络恢复，云同步重新连接')).toBeInTheDocument()
+    expect(screen.getByText('网络已恢复，正在重新连接云同步')).toBeInTheDocument()
     expect(screen.getByTestId('wifi')).toBeInTheDocument()
 
     act(() => vi.advanceTimersByTime(2000))
-    expect(screen.queryByText('网络恢复，云同步重新连接')).not.toBeInTheDocument()
+    expect(screen.queryByText('网络已恢复，正在重新连接云同步')).not.toBeInTheDocument()
   })
 })

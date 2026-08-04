@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["vite/client", "vitest/globals", "node"]
   },
-  "include": ["tests", "vitest.integration.config.ts"]
+  "include": ["tests", "config/vitest.integration.config.ts"]
 }

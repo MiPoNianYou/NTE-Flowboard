@@ -95,7 +95,6 @@ describe('SettingsData', () => {
     const confirmButton = screen.getByText('确认恢复所有默认清单？').closest('button')!
     expect(confirmButton).toHaveClass('bg-danger')
     expect(confirmButton).not.toHaveClass('bg-danger/10')
-    expect(confirmButton).toHaveAttribute('data-restore-defaults-confirming', 'true')
     expect(mockDataProps.restoreDefaultsControls.onRestoreDefaults).not.toHaveBeenCalled()
 
     fireEvent.click(confirmButton)
@@ -124,7 +123,7 @@ describe('SettingsData', () => {
     fireEvent.click(screen.getByText('确认恢复所有默认清单？').closest('button')!)
 
     expect(onRestoreDefaults).toHaveBeenCalledOnce()
-    expect(await screen.findByText('无法创建备份，未恢复默认清单。')).toBeInTheDocument()
+    expect(await screen.findByText('无法创建备份，未恢复默认清单')).toBeInTheDocument()
     expect(screen.queryByText('默认清单已恢复')).not.toBeInTheDocument()
   })
 
@@ -146,14 +145,14 @@ describe('SettingsData', () => {
     fireEvent.click(screen.getByText('确认恢复所有默认清单？').closest('button')!)
 
     expect(
-      await screen.findByText('恢复结果未能安全保存，撤销备份已保留。请重试。'),
+      await screen.findByText('恢复后的清单无法保存；撤销备份仍在，请重试'),
     ).toBeInTheDocument()
     expect(document.querySelector('[data-restore-defaults-action]')).toBeInTheDocument()
   })
 
   it('should show the cloud overwrite warning only when cloud sync is configured', () => {
     const { rerender } = render(<SettingsData {...mockDataProps} isEmbedded />)
-    expect(screen.queryByText('云端数据也会被覆盖，并同步到其他设备。')).not.toBeInTheDocument()
+    expect(screen.queryByText('云端数据也会被覆盖，并同步到其他设备')).not.toBeInTheDocument()
 
     rerender(<SettingsData {...mockDataProps} isCloudConfigured isEmbedded />)
     expect(screen.getByText(/云端数据也会被覆盖/)).toBeInTheDocument()
@@ -219,9 +218,7 @@ describe('SettingsData', () => {
     fireEvent.click(screen.getByRole('button', { name: '恢复默认清单' }))
     fireEvent.click(document.querySelector<HTMLButtonElement>('[data-undo-restore-action]')!)
 
-    expect(
-      await screen.findByText('撤销结果未能安全保存，备份已保留。请重试。'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('撤销后的清单无法保存；备份仍在，请重试')).toBeInTheDocument()
     expect(document.querySelector('[data-undo-restore-action]')).toBeInTheDocument()
   })
 
@@ -232,6 +229,6 @@ describe('SettingsData', () => {
 
   it('should show import success state when isImportSuccess is true', () => {
     render(<SettingsData {...mockDataProps} isImportSuccess={true} isEmbedded />)
-    expect(screen.getByText('导入成功')).toBeInTheDocument()
+    expect(screen.getByText('导入完成')).toBeInTheDocument()
   })
 })

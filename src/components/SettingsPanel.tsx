@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { motion, useDragControls, useReducedMotion } from 'motion/react'
 import { ChevronLeft, Settings } from 'lucide-react'
-import type { ChecklistData, TabType } from '../types'
+import type { ChecklistData, NotificationSettingsProps, TabType } from '../types'
 import type { CloudSyncProps } from './settings/CloudSyncSection'
 import { exportData, importData } from '../utils/serialization'
 import { SettingsLayout, type MobileSettingsHeader } from './settings/SettingsLayout'
@@ -39,6 +39,7 @@ interface SettingsPanelProps {
   restoreDefaultsControls: RestoreDefaultsControls
   onImport: (data: ChecklistData) => void
   cloudSyncProps?: CloudSyncProps
+  notificationProps?: NotificationSettingsProps
 }
 
 export function SettingsPanel({
@@ -47,6 +48,7 @@ export function SettingsPanel({
   restoreDefaultsControls,
   onImport,
   cloudSyncProps: rawCloudSyncProps,
+  notificationProps,
 }: SettingsPanelProps) {
   const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
@@ -207,6 +209,7 @@ export function SettingsPanel({
       isImportSuccess: isImportSuccess,
       isExportSuccess: isExportSuccess,
       cloudSyncProps: rawCloudSyncProps,
+      notificationProps,
     }),
     [
       onManualReset,
@@ -217,6 +220,7 @@ export function SettingsPanel({
       isImportSuccess,
       isExportSuccess,
       rawCloudSyncProps,
+      notificationProps,
     ],
   )
 

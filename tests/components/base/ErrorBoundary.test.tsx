@@ -16,7 +16,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     )
 
-    expect(screen.getByRole('heading', { name: '出现了一些问题' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '页面出错了' })).toBeInTheDocument()
     expect(screen.getByText('Test crash')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '刷新页面' })).toBeInTheDocument()
     expect(consoleError).toHaveBeenCalled()

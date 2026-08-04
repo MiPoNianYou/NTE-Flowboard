@@ -1,6 +1,5 @@
 import type { ChecklistCycle, ChecklistData, ChecklistItem, ChecklistTransition } from '../types'
 import { getResetSchedule, isResetDue } from './resetCalendar'
-import { resetItems } from './storage'
 
 const CYCLES: ChecklistCycle[] = ['daily', 'weekly', 'monthly']
 
@@ -116,6 +115,16 @@ function resetCycle(data: ChecklistData, cycle: ChecklistCycle, now: Date): Chec
   if (!itemsChanged && data[timestampKey] === nextTimestamp) return data
 
   return { ...data, [cycle]: nextItems, [timestampKey]: nextTimestamp }
+}
+
+function resetItems(items: ChecklistItem[]): ChecklistItem[] {
+  let changed = false
+  const reset = items.map((item) => {
+    if (!item.isCompleted) return item
+    changed = true
+    return { ...item, isCompleted: false }
+  })
+  return changed ? reset : items
 }
 
 function applyDueResets(data: ChecklistData, now: Date): ChecklistData {

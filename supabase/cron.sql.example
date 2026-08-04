@@ -1,0 +1,46 @@
+-- Replace the placeholders, then run this file once in the Supabase SQL Editor.
+select vault.create_secret('https://YOUR_PROJECT_REF.supabase.co', 'notification_project_url');
+select vault.create_secret('YOUR_PUBLISHABLE_KEY', 'notification_publishable_key');
+select vault.create_secret('YOUR_CRON_SECRET', 'notification_cron_secret');
+
+do $$
+declare
+  existing_job_id bigint;
+begin
+  select jobid into existing_job_id
+  from cron.job
+  where jobname = 'dispatch-flowboard-notifications';
+
+  if existing_job_id is not null then
+    perform cron.unschedule(existing_job_id);
+  end if;
+
+  perform cron.schedule(
+    'dispatch-flowboard-notifications',
+    '* * * * *',
+    $job$
+      select net.http_post(
+        url := (
+          select decrypted_secret
+          from vault.decrypted_secrets
+          where name = 'notification_project_url'
+        ) || '/functions/v1/notification-dispatch',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'apikey', (
+            select decrypted_secret
+            from vault.decrypted_secrets
+            where name = 'notification_publishable_key'
+          ),
+          'x-cron-secret', (
+            select decrypted_secret
+            from vault.decrypted_secrets
+            where name = 'notification_cron_secret'
+          )
+        ),
+        body := jsonb_build_object('scheduled_at', now())
+      );
+    $job$
+  );
+end;
+$$;

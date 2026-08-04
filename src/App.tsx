@@ -20,11 +20,13 @@ import { StorageToast } from './components/StorageToast'
 import { Badge } from './components/base/Badge'
 import { useTranslation } from 'react-i18next'
 import type { RestoreDefaultsControls } from './utils/checklistRestoreBackup'
+import { useNotifications } from './hooks/useNotifications'
 
 function AppContent() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { value: isHiddenSectionOpen, onChange: setIsHiddenSectionOpen } = useLocalStorageBoolean(
     'flowboard-hidden-section-open',
+    'nte-hidden-section-open',
   )
 
   const {
@@ -59,6 +61,8 @@ function AppContent() {
     onDataImport: importFullData,
     syncPort: checklistSyncPort,
   })
+  const notificationLocale = i18n.resolvedLanguage === 'en-US' ? 'en-US' : 'zh-CN'
+  const notificationProps = useNotifications(data, settings.serverRegion, notificationLocale)
   const restoreDefaultsControls = useMemo<RestoreDefaultsControls>(
     () => ({
       onRestoreDefaults: restoreDefaultChecklists,
@@ -132,6 +136,7 @@ function AppContent() {
             restoreDefaultsControls={restoreDefaultsControls}
             onImport={importFullData}
             cloudSyncProps={cloudSyncProps}
+            notificationProps={notificationProps}
           />
 
           {isMobile ? (

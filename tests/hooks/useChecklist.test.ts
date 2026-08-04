@@ -2,46 +2,15 @@ import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { StrictMode } from 'react'
 import { useChecklist } from '../../src/hooks/useChecklist'
-import * as storage from '../../src/utils/storage'
-import { MS } from '../../src/utils/constants'
+import { createChecklistStorageAdapter } from '../../src/utils/storage'
 import { DISPLAY_PREFERENCES_STORAGE_KEY } from '../../src/i18n/displayPreferences'
-import * as restoreBackup from '../../src/utils/checklistRestoreBackup'
-import type { ChecklistStorageAdapter, StoredChecklistSnapshot } from '../../src/utils/storage'
+import { createDefaultChecklistData } from '../../src/utils/defaultData'
 
-const defaultData = storage.loadData()
-
-function createControllableAdapter() {
-  let snapshot: StoredChecklistSnapshot | null = null
-  let shouldFail = false
-  const adapter: ChecklistStorageAdapter = {
-    read: vi.fn(async () => snapshot),
-    save: vi.fn(async (data, knownRevision) => {
-      if (shouldFail) throw new Error('test persistence failure')
-      snapshot = {
-        data,
-        revision: { counter: knownRevision.counter + 1, writerId: 'test' },
-      }
-      return snapshot
-    }),
-    flushNow: vi.fn(),
-    subscribe: vi.fn(() => () => undefined),
-  }
-  return {
-    adapter,
-    failWrites: () => {
-      shouldFail = true
-    },
-    resumeWrites: () => {
-      shouldFail = false
-    },
-  }
-}
+const defaultData = createDefaultChecklistData('zh-CN')
 
 describe('useChecklist', () => {
   beforeEach(() => {
     vi.useFakeTimers()
-    vi.spyOn(storage, 'saveData')
-    vi.spyOn(storage, 'saveDataImmediate')
   })
 
   afterEach(() => {
@@ -164,154 +133,6 @@ describe('useChecklist', () => {
     expect(result.current.data.lastMonthlyReset).toBe('2026-07-29T12:34:56.000Z')
   })
 
-  it('aborts without changing data when the pre-restore backup cannot be saved', async () => {
-    vi.spyOn(restoreBackup, 'saveRestoreBackup').mockReturnValue(false)
-    const { result } = renderHook(() => useChecklist())
-    const before = result.current.data
-    let restoreResult = ''
-
-    await act(async () => {
-      restoreResult = await result.current.restoreDefaultChecklists()
-    })
-
-    expect(restoreResult).toBe('backup-failed')
-    expect(result.current.data).toBe(before)
-    expect(result.current.hasRestoreBackup).toBe(false)
-  })
-
-  it('undoes from the durable backup while preserving current settings', async () => {
-    const { result } = renderHook(() => useChecklist())
-    const customDaily = [{ ...defaultData.daily[0], id: 'custom', text: '恢复前任务' }]
-
-    await act(async () => {
-      result.current.importFullData({ ...defaultData, daily: customDaily })
-      await result.current.restoreDefaultChecklists()
-      result.current.updateSettings({ serverRegion: 'europe' })
-    })
-
-    expect(result.current.hasChangesSinceRestore).toBe(false)
-    let undoResult = ''
-    await act(async () => {
-      undoResult = await result.current.undoRestoreDefaultChecklists()
-    })
-
-    expect(undoResult).toBe('success')
-    expect(result.current.data.daily).toEqual(customDaily)
-    expect(result.current.settings.serverRegion).toBe('europe')
-    expect(result.current.hasRestoreBackup).toBe(false)
-    expect(localStorage.getItem(restoreBackup.RESTORE_BACKUP_STORAGE_KEY)).toBeNull()
-  })
-
-  it('detects checklist edits made after restoring defaults', async () => {
-    const { result } = renderHook(() => useChecklist())
-
-    await act(async () => {
-      await result.current.restoreDefaultChecklists()
-      result.current.addItem('daily', '恢复后的新任务', [])
-    })
-
-    expect(result.current.hasChangesSinceRestore).toBe(true)
-  })
-
-  it('keeps the backup when restoring defaults cannot be persisted', async () => {
-    const controlled = createControllableAdapter()
-    vi.spyOn(storage, 'createChecklistStorageAdapter').mockReturnValue(controlled.adapter)
-    const { result } = renderHook(() => useChecklist())
-    await act(async () => {})
-    controlled.failWrites()
-
-    let restoreResult = ''
-    await act(async () => {
-      restoreResult = await result.current.restoreDefaultChecklists()
-    })
-
-    expect(restoreResult).toBe('persistence-failed')
-    expect(result.current.hasRestoreBackup).toBe(true)
-    expect(localStorage.getItem(restoreBackup.RESTORE_BACKUP_STORAGE_KEY)).not.toBeNull()
-
-    const originalBackup = localStorage.getItem(restoreBackup.RESTORE_BACKUP_STORAGE_KEY)
-    controlled.resumeWrites()
-    await act(async () => {
-      expect(await result.current.restoreDefaultChecklists()).toBe('success')
-    })
-    expect(localStorage.getItem(restoreBackup.RESTORE_BACKUP_STORAGE_KEY)).toBe(originalBackup)
-  })
-
-  it('keeps the backup when an undo cannot be persisted', async () => {
-    const controlled = createControllableAdapter()
-    vi.spyOn(storage, 'createChecklistStorageAdapter').mockReturnValue(controlled.adapter)
-    const { result } = renderHook(() => useChecklist())
-    await act(async () => {})
-
-    act(() => {
-      result.current.importFullData({
-        ...defaultData,
-        daily: [{ ...defaultData.daily[0], id: 'before-failed-undo', text: '恢复前任务' }],
-      })
-    })
-    await act(async () => {})
-
-    await act(async () => {
-      await result.current.restoreDefaultChecklists()
-    })
-    controlled.failWrites()
-
-    let undoResult = ''
-    await act(async () => {
-      undoResult = await result.current.undoRestoreDefaultChecklists()
-    })
-
-    expect(undoResult).toBe('persistence-failed')
-    expect(result.current.hasRestoreBackup).toBe(true)
-    expect(localStorage.getItem(restoreBackup.RESTORE_BACKUP_STORAGE_KEY)).not.toBeNull()
-  })
-
-  it('retries backup cleanup without reapplying an already persisted undo', async () => {
-    const { result } = renderHook(() => useChecklist())
-    const customDaily = [{ ...defaultData.daily[0], id: 'cleanup-retry', text: '恢复前任务' }]
-    act(() => {
-      result.current.importFullData({ ...defaultData, daily: customDaily })
-    })
-    await act(async () => {})
-    await act(async () => {
-      await result.current.restoreDefaultChecklists()
-    })
-    vi.spyOn(restoreBackup, 'clearRestoreBackup').mockReturnValueOnce(false)
-
-    await act(async () => {
-      expect(await result.current.undoRestoreDefaultChecklists()).toBe('cleanup-failed')
-    })
-    expect(result.current.data.daily).toEqual(customDaily)
-    expect(result.current.hasRestoreBackup).toBe(true)
-
-    await act(async () => {
-      expect(await result.current.undoRestoreDefaultChecklists()).toBe('success')
-    })
-    expect(result.current.data.daily).toEqual(customDaily)
-    expect(result.current.hasRestoreBackup).toBe(false)
-  })
-
-  it('loads the durable backup after remount and can still undo', async () => {
-    const customDaily = [{ ...defaultData.daily[0], id: 'before-reload', text: '刷新前任务' }]
-    const first = renderHook(() => useChecklist())
-
-    await act(async () => {
-      first.result.current.importFullData({ ...defaultData, daily: customDaily })
-      await first.result.current.restoreDefaultChecklists()
-    })
-    first.unmount()
-
-    const second = renderHook(() => useChecklist())
-    await act(async () => {})
-    expect(second.result.current.hasRestoreBackup).toBe(true)
-    expect(second.result.current.hasChangesSinceRestore).toBe(false)
-
-    await act(async () => {
-      expect(await second.result.current.undoRestoreDefaultChecklists()).toBe('success')
-    })
-    expect(second.result.current.data.daily).toEqual(customDaily)
-  })
-
   it('marks data as persisted after a change', async () => {
     const { result } = renderHook(() => useChecklist())
 
@@ -335,7 +156,11 @@ describe('useChecklist', () => {
     await act(async () => {})
     unmount()
 
-    expect(storage.loadData().daily.some((item) => item.text === 'StrictMode 持久化')).toBe(true)
+    expect(
+      createChecklistStorageAdapter()
+        .load()
+        .snapshot.data.daily.some((item) => item.text === 'StrictMode 持久化'),
+    ).toBe(true)
   })
 
   it("keeps local changes when another tab's saved checklist arrives", async () => {
@@ -363,14 +188,14 @@ describe('useChecklist', () => {
     act(() => {
       result.current.addItem('daily', '未保存的本地任务', [])
     })
-    vi.mocked(storage.saveData).mockClear()
-    localStorage.setItem('flowboard-checklist', JSON.stringify(remoteData))
+    const remoteSnapshot = { data: remoteData, revision: '999:remote-tab' }
+    localStorage.setItem('flowboard-checklist', JSON.stringify(remoteSnapshot))
 
     await act(async () => {
       window.dispatchEvent(
         new StorageEvent('storage', {
           key: 'flowboard-checklist',
-          newValue: JSON.stringify(remoteData),
+          newValue: JSON.stringify(remoteSnapshot),
         }),
       )
       await Promise.resolve()
@@ -378,11 +203,7 @@ describe('useChecklist', () => {
 
     expect(result.current.data.daily.some((item) => item.text === '未保存的本地任务')).toBe(true)
 
-    act(() => {
-      vi.advanceTimersByTime(MS.STORAGE_DEBOUNCE + 1)
-    })
-
-    expect(storage.saveData).not.toHaveBeenCalled()
+    expect(result.current.data.daily.some((item) => item.id === 'remote')).toBe(true)
   })
 
   it('ignores storage events for unrelated keys', () => {

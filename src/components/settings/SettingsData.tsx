@@ -138,16 +138,18 @@ export function SettingsData({
 
     confirming.remove('undo')
     setPendingOperation('undo')
-    const result = await onUndoRestoreDefaults()
+    const result = await onUndoRestoreDefaults(hasChangesSinceRestore)
     setPendingOperation(null)
     operationError.remove('undo-missing')
     operationError.remove('undo-persistence')
     operationError.remove('undo-cleanup')
     if (result === 'success') {
       resetDone.add('undo')
+    } else if (result === 'changes-detected') {
+      confirming.add('undo')
     } else {
       const failure: RestoreFailure =
-        result === 'backup-missing'
+        result === 'backup-missing' || result === 'conflict'
           ? 'undo-missing'
           : result === 'cleanup-failed'
             ? 'undo-cleanup'
@@ -199,7 +201,6 @@ export function SettingsData({
           onClick={handleRestoreDefaultsClick}
           isLoading={pendingOperation === 'restore'}
           data-restore-defaults-action
-          data-restore-defaults-confirming={isRestoreConfirming || undefined}
           className="w-full h-14 min-h-0 justify-start py-1"
         >
           <RotateCcw className="size-4" />
@@ -241,7 +242,6 @@ export function SettingsData({
               onClick={handleUndoRestoreClick}
               isLoading={pendingOperation === 'undo'}
               data-undo-restore-action
-              data-restore-defaults-confirming={isUndoConfirming || undefined}
               className="w-full h-14 min-h-0 justify-start py-1"
             >
               {isUndoDone ? <CircleCheck className="size-4" /> : <Undo2 className="size-4" />}

@@ -1,18 +1,20 @@
 # Dependencies
 node_modules/
 
-# Build output
+# Generated output
 dist/
+.artifacts/
 
-# Cache
+# Temporary files
+*.tmp
+*.temp
+*.local
+
+# Tool caches
 .vite/
 .eslintcache
 *.tsbuildinfo
-
-# Test coverage
-coverage/
-test-artifacts/
-reports/
+supabase/.temp/
 
 # Logs
 *.log
@@ -23,7 +25,7 @@ npm-debug.log*
 .env.local
 .env.*.local
 
-# IDE / Editor
+# Editors
 .vscode/
 .idea/
 *.swp
@@ -35,17 +37,10 @@ npm-debug.log*
 Thumbs.db
 desktop.ini
 
-# Agent config
+# Local project and agent files
 .agents/
 .codex/
 docs/
 AGENTS.md
 CONTEXT.md
-
-# Design docs
 DESIGN.md
-
-# Temporary files
-*.tmp
-*.temp
-*.local

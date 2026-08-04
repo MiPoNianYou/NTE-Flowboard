@@ -64,3 +64,50 @@ export type ChecklistTransition =
   | { kind: 'update-ui-preferences'; partial: Partial<UiPreferences> }
 
 export type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'syncing' | 'error'
+
+export type NotificationLeadHours = 1 | 3 | 6 | 12
+
+export interface NotificationPreferences {
+  beforeResetEnabled: boolean
+  resetEnabled: boolean
+  leadHours: NotificationLeadHours
+}
+
+export interface NotificationRuleRevisions {
+  beforeReset: string
+  reset: string
+}
+
+interface NotificationCycleStats {
+  visibleTotal: number
+  incomplete: number
+  cycleStartedAt: string
+}
+
+export type NotificationStats = Record<ChecklistCycle, NotificationCycleStats>
+
+export type NotificationSystemStatus =
+  'unsupported' | 'checking' | 'disabled' | 'enabling' | 'enabled' | 'denied' | 'error'
+
+export type NotificationErrorCode =
+  | 'NOTIFICATION_CHECK_FAILED'
+  | 'NOTIFICATION_SYNC_FAILED'
+  | 'NOTIFICATION_ENABLE_FAILED'
+  | 'NOTIFICATION_DISABLE_SYNC_FAILED'
+  | 'NOTIFICATION_DISABLE_FAILED'
+  | 'NOTIFICATION_TEST_FAILED'
+
+export interface NotificationSettingsProps {
+  status: NotificationSystemStatus
+  preferences: NotificationPreferences
+  error: NotificationErrorCode | null
+  testCountdownSeconds: number
+  isTestSending: boolean
+  lastTestSucceeded: boolean
+  testFailed: boolean
+  updatePreferences: (partial: Partial<NotificationPreferences>) => void
+  enable: () => Promise<void>
+  disable: () => Promise<void>
+  refresh: () => Promise<void>
+  sendTest: () => Promise<void>
+}
