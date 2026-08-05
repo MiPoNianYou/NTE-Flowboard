@@ -54,6 +54,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       globals: true,
       include: ['tests/**/*.test.{ts,tsx}'],
+      exclude: ['tests/integration/**/*.real.test.ts'],
       setupFiles: ['tests/setup.ts', 'tests/setupMotion.ts'],
       coverage: {
         provider: 'v8',

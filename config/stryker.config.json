@@ -9,14 +9,12 @@
     "src/utils/checklistTransitions.ts",
     "src/utils/dataMigration.ts",
     "src/utils/serialization.ts",
-    "src/utils/syncPolicy.ts",
     "src/utils/validation.ts"
   ],
   "testFiles": [
     "tests/utils/checklistTransitions.test.ts",
     "tests/utils/dataMigration.test.ts",
     "tests/utils/serialization.test.ts",
-    "tests/utils/syncPolicy.test.ts",
     "tests/utils/validation.test.ts"
   ],
   "coverageAnalysis": "perTest",

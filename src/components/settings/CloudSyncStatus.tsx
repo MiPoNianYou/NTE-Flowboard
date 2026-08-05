@@ -8,43 +8,85 @@ import {
   CloudAlert,
   CloudCheck,
   CloudOff,
-  EyeOff,
   LogOut,
   RefreshCw,
 } from 'lucide-react'
 import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { APPLE_EASE } from '../../utils/motion'
-import { useSettings } from '../../context/SettingsContext'
 import { useDisplayPreferences } from '../../context/DisplayPreferencesContext'
 import { Button } from '../base/Button'
 import { Card } from '../base/Card'
 import { StatusMessage } from '../base/StatusMessage'
+import { SettingRow } from './SettingRow'
 import { SqlCodeBlock } from './SqlCodeBlock'
-import type { CloudSynchronizationCommandResult } from '../../utils/cloudSynchronization'
-
-const UPDATED_AT_PATCH_SQL = `CREATE OR REPLACE FUNCTION set_sync_updated_at()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS sync_data_set_updated_at ON sync_data;
-CREATE TRIGGER sync_data_set_updated_at
-  BEFORE UPDATE ON sync_data
-  FOR EACH ROW
-  EXECUTE FUNCTION set_sync_updated_at();`
+import type {
+  CloudBackgroundSyncStatus,
+  CloudSynchronizationCommandResult,
+} from '../../utils/cloudSynchronization'
+import { BACKGROUND_SYNC_PATCH_SQL } from '../../utils/cloudSyncSql'
 interface CloudSyncStatusProps {
   syncStatus: SyncStatus
+  backgroundSyncStatus: CloudBackgroundSyncStatus
   lastSyncTime: string | null
   syncError: string | null
   onTriggerSync: () => Promise<CloudSynchronizationCommandResult>
   onTeardownSupabase: () => void
   mobile?: boolean
+}
+
+function getBackgroundSyncPresentation(status: CloudBackgroundSyncStatus, t: TFunction) {
+  switch (status) {
+    case 'checking':
+      return {
+        label: t('cloud.backgroundSync.checking'),
+        Icon: RefreshCw,
+        pending: true,
+        tone: 'neutral' as const,
+      }
+    case 'pending':
+      return {
+        label: t('cloud.backgroundSync.pending'),
+        Icon: RefreshCw,
+        pending: true,
+        tone: 'neutral' as const,
+      }
+    case 'conflict':
+      return {
+        label: t('cloud.backgroundSync.conflict'),
+        Icon: CloudAlert,
+        pending: false,
+        tone: 'warning' as const,
+      }
+    case 'upgrade-required':
+      return {
+        label: t('cloud.backgroundSync.upgradeRequired'),
+        Icon: CloudAlert,
+        pending: false,
+        tone: 'warning' as const,
+      }
+    case 'unsupported':
+      return {
+        label: t('cloud.backgroundSync.unsupported'),
+        Icon: CloudOff,
+        pending: false,
+        tone: 'neutral' as const,
+      }
+    case 'blocked':
+      return {
+        label: t('cloud.backgroundSync.blocked'),
+        Icon: CloudOff,
+        pending: false,
+        tone: 'warning' as const,
+      }
+    default:
+      return {
+        label: t('cloud.backgroundSync.ready'),
+        Icon: CloudCheck,
+        pending: false,
+        tone: 'neutral' as const,
+      }
+  }
 }
 
 function formatSyncTime(
@@ -124,6 +166,7 @@ function getSyncPresentation(syncStatus: SyncStatus, isSyncing: boolean, t: TFun
 
 export function CloudSyncStatus({
   syncStatus,
+  backgroundSyncStatus,
   lastSyncTime,
   syncError,
   onTriggerSync,
@@ -131,17 +174,13 @@ export function CloudSyncStatus({
   mobile = false,
 }: CloudSyncStatusProps) {
   const { t } = useTranslation()
-  const { uiPreferences, updateUiPreferences } = useSettings()
   const { locale, timeFormat } = useDisplayPreferences()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDisconnectExpanded, setIsDisconnectExpanded] = useState(false)
   const [isMobilePatchExpanded, setIsMobilePatchExpanded] = useState(false)
-  const [isPatchHideExpanded, setIsPatchHideExpanded] = useState(false)
   const mobilePatchContentId = useId()
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const patchHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDisconnectHoveringRef = useRef(false)
-  const isPatchHideHoveringRef = useRef(false)
 
   const clearDisconnectState = () => {
     if (isDisconnectHoveringRef.current) return
@@ -152,19 +191,9 @@ export function CloudSyncStatus({
     setIsDisconnectExpanded(false)
   }
 
-  const clearPatchHideState = () => {
-    if (isPatchHideHoveringRef.current) return
-    if (patchHideTimerRef.current) {
-      clearTimeout(patchHideTimerRef.current)
-      patchHideTimerRef.current = null
-    }
-    setIsPatchHideExpanded(false)
-  }
-
   useEffect(() => {
     return () => {
       if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current)
-      if (patchHideTimerRef.current) clearTimeout(patchHideTimerRef.current)
     }
   }, [])
 
@@ -205,34 +234,10 @@ export function CloudSyncStatus({
     }
   }
 
-  const handleHidePatchCard = () => {
-    if (isPatchHideExpanded) {
-      clearPatchHideState()
-      updateUiPreferences({ cloudPatchHidden: true })
-      return
-    }
-
-    setIsPatchHideExpanded(true)
-    patchHideTimerRef.current = setTimeout(clearPatchHideState, 3000)
-  }
-
-  const handlePatchHideEnter = () => {
-    isPatchHideHoveringRef.current = true
-    if (patchHideTimerRef.current) {
-      clearTimeout(patchHideTimerRef.current)
-      patchHideTimerRef.current = null
-    }
-  }
-
-  const handlePatchHideLeave = () => {
-    isPatchHideHoveringRef.current = false
-    if (isPatchHideExpanded) {
-      patchHideTimerRef.current = setTimeout(clearPatchHideState, 3000)
-    }
-  }
-
   const syncPresentation = getSyncPresentation(syncStatus, isSyncing, t)
   const StatusIcon = syncPresentation.Icon
+  const backgroundPresentation = getBackgroundSyncPresentation(backgroundSyncStatus, t)
+  const BackgroundIcon = backgroundPresentation.Icon
 
   return (
     <div className="space-y-4">
@@ -311,6 +316,18 @@ export function CloudSyncStatus({
             </motion.div>
           )}
         </AnimatePresence>
+        <div className="border-t border-border">
+          <SettingRow
+            icon={BackgroundIcon}
+            iconClassName={cn(
+              backgroundPresentation.tone === 'warning' && 'text-warning',
+              backgroundPresentation.pending && 'animate-spin',
+            )}
+            label={t('cloud.backgroundSync.title')}
+            description={backgroundPresentation.label}
+            className="px-4 py-3"
+          />
+        </div>
         <div className="flex w-full gap-2 border-t border-border p-3">
           <Button
             variant="primary-soft"
@@ -339,7 +356,7 @@ export function CloudSyncStatus({
         </div>
       </Card>
 
-      {!uiPreferences.cloudPatchHidden && (
+      {backgroundSyncStatus === 'upgrade-required' && (
         <Card
           variant="surface"
           disableHoverScale={mobile}
@@ -375,39 +392,17 @@ export function CloudSyncStatus({
               mobile && isMobilePatchExpanded && 'mobile-settings-divider py-3',
             )}
           >
-            <div className="relative">
-              <div className="min-w-0 flex-1 pr-12">
-                <p className="text-sm font-semibold text-text-primary mb-1">
-                  {t('cloud.patchTitle')}
-                </p>
-                <p>{t('cloud.patchDescription')}</p>
-              </div>
-              <button
-                className={cn(
-                  'danger-confirm-button danger-confirm-button--compact',
-                  isPatchHideExpanded && 'expanded',
-                )}
-                style={{ position: 'absolute', top: 0, right: 0 }}
-                onClick={handleHidePatchCard}
-                onMouseEnter={handlePatchHideEnter}
-                onMouseLeave={handlePatchHideLeave}
-                aria-label={
-                  isPatchHideExpanded ? t('cloud.confirmHidePatch') : t('cloud.hidePatch')
-                }
-              >
-                <span className="sign">
-                  <EyeOff size={18} />
-                </span>
-                <span className="text danger-confirm-text leading-none">
-                  {t('cloud.confirmHide')}
-                </span>
-              </button>
+            <div>
+              <p className="text-sm font-semibold text-text-primary mb-1">
+                {t('cloud.patchTitle')}
+              </p>
+              <p>{t('cloud.patchDescription')}</p>
             </div>
 
             <SqlCodeBlock
               label={t('cloud.patchSqlLabel')}
               copyLabel={t('cloud.copyPatchSql')}
-              content={UPDATED_AT_PATCH_SQL}
+              content={BACKGROUND_SYNC_PATCH_SQL}
             />
           </div>
         </Card>

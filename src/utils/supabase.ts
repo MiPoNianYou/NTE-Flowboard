@@ -23,7 +23,7 @@ function migrateLegacyCloudKey(legacyKey: string, currentKey: string): void {
   localStorage.removeItem(legacyKey)
 }
 
-function buildSupabaseUrl(projectUrlOrId: string): string {
+export function resolveSupabaseUrl(projectUrlOrId: string): string {
   const value = projectUrlOrId.trim()
 
   if (/^https?:\/\//i.test(value)) {
@@ -90,7 +90,7 @@ function getSupabaseClient(config: SupabaseConfig): SupabaseClient {
     cachedConfig?.projectId !== config.projectId ||
     cachedConfig?.anonKey !== config.anonKey
   ) {
-    client = createClient(buildSupabaseUrl(config.projectId), config.anonKey)
+    client = createClient(resolveSupabaseUrl(config.projectId), config.anonKey)
     cachedConfig = config
   }
   return client
@@ -155,7 +155,7 @@ export type ValidateResult = { ok: true } | { ok: false; reason: ValidateReason;
 
 export async function validateConfig(projectUrl: string, anonKey: string): Promise<ValidateResult> {
   try {
-    const url = buildSupabaseUrl(projectUrl)
+    const url = resolveSupabaseUrl(projectUrl)
     const supabaseClient = createClient(url, anonKey, {
       auth: {
         persistSession: false,
@@ -193,24 +193,55 @@ export async function validateConfig(projectUrl: string, anonKey: string): Promi
   }
 }
 
+export interface CloudPushResult {
+  outcome: 'applied' | 'conflict'
+  updatedAt: string | null
+}
+
+export async function detectConditionalWriteCapability(config: SupabaseConfig): Promise<boolean> {
+  const supabaseClient = getSupabaseClient(config)
+  const { data, error } = await supabaseClient.rpc('flowboard_sync_capabilities')
+  if (error) return false
+  return Array.isArray(data) && data.includes('conditional_write_v1')
+}
+
 export async function pushData(
   config: SupabaseConfig,
   data: Record<string, unknown>,
-): Promise<string> {
+  options?: { expectedUpdatedAt: string | null },
+): Promise<CloudPushResult> {
   const supabaseClient = getSupabaseClient(config)
-  const { data: result, error } = await supabaseClient.rpc('upsert_sync', {
-    p_data: JSON.stringify(data, null, 2),
-  })
+  const { data: result, error } = options
+    ? await supabaseClient.rpc('upsert_sync_if_unchanged', {
+        p_data: JSON.stringify(data, null, 2),
+        p_expected_updated_at: options.expectedUpdatedAt,
+      })
+    : await supabaseClient.rpc('upsert_sync', {
+        p_data: JSON.stringify(data, null, 2),
+      })
 
   if (error) {
     throw new SyncError(i18n.t('sync.pushFailed', { message: error.message }), 'PUSH_ERROR')
   }
 
-  if (typeof result !== 'string') {
-    throw new SyncError(i18n.t('sync.pushInvalid'), 'PUSH_ERROR')
+  if (!options && typeof result === 'string') {
+    return { outcome: 'applied', updatedAt: result }
   }
 
-  return result
+  const row = Array.isArray(result) ? result[0] : result
+  if (
+    options &&
+    row &&
+    typeof row === 'object' &&
+    'outcome' in row &&
+    (row.outcome === 'applied' || row.outcome === 'conflict') &&
+    'updated_at' in row &&
+    (typeof row.updated_at === 'string' || row.updated_at === null)
+  ) {
+    return { outcome: row.outcome, updatedAt: row.updated_at }
+  }
+
+  throw new SyncError(i18n.t('sync.pushInvalid'), 'PUSH_ERROR')
 }
 
 export async function pullData(

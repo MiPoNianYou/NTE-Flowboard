@@ -6,12 +6,15 @@ import App from './App'
 import { DisplayPreferencesProvider } from './context/DisplayPreferencesContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { getEffectiveLocale } from './i18n/displayPreferences'
+import { registerAppServiceWorker } from './utils/appServiceWorker'
 
 const initialLocale = getEffectiveLocale()
 document.documentElement.lang = initialLocale
 document
   .querySelector('meta[name="description"]')
   ?.setAttribute('content', i18n.t('meta.description', { lng: initialLocale }))
+
+void registerAppServiceWorker().catch(() => undefined)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

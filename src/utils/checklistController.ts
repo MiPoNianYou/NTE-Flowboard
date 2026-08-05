@@ -31,10 +31,20 @@ interface ChecklistSynchronizationResult {
   skippedOperations: number
 }
 
+export interface ChecklistPendingOperation {
+  version: number
+  transition: ChecklistTransition
+}
+
 export interface ChecklistSynchronizationPort {
   applyRemoteSnapshot: (data: ChecklistData) => Promise<ChecklistSynchronizationResult>
-  captureSnapshot: () => { data: ChecklistData; operationVersion: number }
+  captureSnapshot: () => {
+    data: ChecklistData
+    operationVersion: number
+    operations: ChecklistPendingOperation[]
+  }
   acknowledgeOperationsThrough: (operationVersion: number) => void
+  restorePendingOperations: (operations: ChecklistPendingOperation[]) => void
 }
 
 export interface ChecklistControllerOptions {
@@ -73,11 +83,6 @@ export interface ChecklistController {
   replaceData: (data: ChecklistData) => void
 }
 
-interface PendingOperation {
-  version: number
-  transition: ChecklistTransition
-}
-
 function operationTargetsMissing(data: ChecklistData, transition: ChecklistTransition): boolean {
   if (transition.kind === 'add-item') {
     const existing = data[transition.cycle].find((item) => item.id === transition.item.id)
@@ -104,11 +109,11 @@ function operationTargetsMissing(data: ChecklistData, transition: ChecklistTrans
   return !items.some((item) => item.id === transition.id)
 }
 
-function replayOperations(data: ChecklistData, operations: PendingOperation[]) {
+function replayOperations(data: ChecklistData, operations: ChecklistPendingOperation[]) {
   let merged = data
   let changed = false
   let skippedOperations = 0
-  const retainedOperations: PendingOperation[] = []
+  const retainedOperations: ChecklistPendingOperation[] = []
 
   for (const operation of operations) {
     const transition = operation.transition
@@ -147,7 +152,7 @@ export function createChecklistController({
   let lifecycleVersion = 0
   let needsPersist = false
   let operationVersion = 0
-  let pendingOperations: PendingOperation[] = []
+  let pendingOperations: ChecklistPendingOperation[] = []
   let unsubscribe: (() => void) | null = null
   let unsubscribeRestore: (() => void) | null = null
   let restoreSession: ChecklistRestoreSession | null = null
@@ -452,11 +457,42 @@ export function createChecklistController({
     getRestoreState: () => restoreState,
     syncPort: {
       applyRemoteSnapshot: mergeRemote,
-      captureSnapshot: () => ({ data, operationVersion }),
+      captureSnapshot: () => ({
+        data,
+        operationVersion,
+        operations: structuredClone(pendingOperations),
+      }),
       acknowledgeOperationsThrough: (acknowledgedVersion) => {
         pendingOperations = pendingOperations.filter(
           (operation) => operation.version > acknowledgedVersion,
         )
+      },
+      restorePendingOperations: (operations) => {
+        if (operations.length === 0) return
+        const restored = structuredClone(operations)
+        const operationKey = (operation: ChecklistPendingOperation) =>
+          `${operation.version}:${JSON.stringify(operation.transition)}`
+        const existingKeys = new Set(pendingOperations.map(operationKey))
+        const missingRestored = restored.filter(
+          (operation) => !existingKeys.has(operationKey(operation)),
+        )
+        if (missingRestored.length === 0) {
+          operationVersion = Math.max(
+            operationVersion,
+            ...restored.map((operation) => operation.version),
+          )
+          return
+        }
+        const restoredMax = Math.max(...restored.map((operation) => operation.version), 0)
+        const restoredKeys = new Set(restored.map(operationKey))
+        const current = pendingOperations
+          .filter((operation) => !restoredKeys.has(operationKey(operation)))
+          .map((operation, index) => ({
+            ...operation,
+            version: restoredMax + index + 1,
+          }))
+        pendingOperations = [...restored, ...current]
+        operationVersion = Math.max(operationVersion, restoredMax + current.length)
       },
     },
     updateSettings: (partial) => apply({ kind: 'update-settings', partial }),

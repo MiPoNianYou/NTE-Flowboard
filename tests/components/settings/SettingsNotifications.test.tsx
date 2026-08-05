@@ -131,12 +131,16 @@ describe('SettingsNotifications', () => {
   it('uses compact English copy in the notification status row', async () => {
     await i18n.changeLanguage('en-US')
     try {
-      render(<SettingsNotifications notification={createProps()} isEmbedded />)
+      const { unmount } = render(<SettingsNotifications notification={createProps()} isEmbedded />)
 
-      expect(screen.getByText('Notifications enabled')).toBeInTheDocument()
-      expect(screen.getByText('Applies only to this browser')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Disable' })).toBeInTheDocument()
-      expect(screen.queryByText('System notifications are enabled')).not.toBeInTheDocument()
+      try {
+        expect(screen.getByText('Notifications enabled')).toBeInTheDocument()
+        expect(screen.getByText('Applies only to this browser')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Disable' })).toBeInTheDocument()
+        expect(screen.queryByText('System notifications are enabled')).not.toBeInTheDocument()
+      } finally {
+        unmount()
+      }
     } finally {
       await i18n.changeLanguage('zh-CN')
     }

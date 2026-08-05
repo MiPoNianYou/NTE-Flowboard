@@ -9,6 +9,7 @@ import {
 import type { ChecklistSynchronizationPort } from '../../src/utils/checklistController'
 import { DEFAULT_CHECKLIST_DATA } from '../../src/utils/defaultData'
 import { MS } from '../../src/utils/constants'
+import type { BackgroundSyncAdapter } from '../../src/utils/backgroundSync'
 
 const config = { projectId: 'project', anonKey: 'key' }
 const remoteData: ChecklistData = {
@@ -108,8 +109,12 @@ function createRemote(
 ): CloudSynchronizationRemoteAdapter {
   return {
     validate: vi.fn(async () => ({ ok: true as const })),
+    supportsConditionalWrite: vi.fn(async () => true),
     pull: vi.fn(async () => null),
-    push: vi.fn(async () => '2026-08-04T12:00:00.000Z'),
+    push: vi.fn(async () => ({
+      outcome: 'applied' as const,
+      updatedAt: '2026-08-04T12:00:00.000Z',
+    })),
     subscribe: vi.fn(() => () => undefined),
     reset: vi.fn(),
     classifyError: vi.fn((error) => (error instanceof Error ? error.message : String(error))),
@@ -123,8 +128,25 @@ function createPort(
 ): ChecklistSynchronizationPort {
   return {
     applyRemoteSnapshot: vi.fn(async () => ({ outcome: 'applied' as const, skippedOperations: 0 })),
-    captureSnapshot: vi.fn(() => ({ data: remoteData, operationVersion: 1 })),
+    captureSnapshot: vi.fn(() => ({ data: remoteData, operationVersion: 1, operations: [] })),
     acknowledgeOperationsThrough: vi.fn(),
+    restorePendingOperations: vi.fn(),
+    ...overrides,
+  }
+}
+
+function createBackground(overrides: Partial<BackgroundSyncAdapter> = {}): BackgroundSyncAdapter {
+  return {
+    getRegistrationState: vi.fn(async () => 'ready' as const),
+    subscribeResults: vi.fn(() => () => undefined),
+    load: vi.fn(async () => ({ pending: null, lastResult: null })),
+    stage: vi.fn(async () => ({
+      changeId: crypto.randomUUID(),
+      registration: 'ready' as const,
+    })),
+    acknowledge: vi.fn(async () => false),
+    clearResult: vi.fn(async () => undefined),
+    clear: vi.fn(async () => undefined),
     ...overrides,
   }
 }
@@ -152,6 +174,100 @@ describe('createCloudSynchronization', () => {
     expect(remote.validate).toHaveBeenCalledWith('project', 'key')
     expect(remote.pull).toHaveBeenCalledOnce()
     expect(synchronization.getSnapshot().syncStatus).toBe('connected')
+  })
+
+  it('cancels stale validation when synchronization restarts', async () => {
+    const operations = [
+      {
+        version: 2,
+        transition: {
+          kind: 'set-item-completed' as const,
+          cycle: 'daily' as const,
+          id: 'remote',
+          isCompleted: true,
+        },
+      },
+    ]
+    const background = createBackground({
+      load: vi.fn(async () => ({
+        pending: {
+          id: 'pending-1',
+          supabaseUrl: 'https://project.supabase.co',
+          publishableKey: 'key',
+          data: remoteData,
+          expectedUpdatedAt: null,
+          operationVersion: 2,
+          operations,
+          status: 'pending' as const,
+          queuedAt: '2026-08-04T12:00:00.000Z',
+        },
+        lastResult: null,
+      })),
+    })
+    const port = createPort()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote: createRemote(),
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    synchronization.stop()
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(port.restorePendingOperations).toHaveBeenCalledOnce()
+    synchronization.stop()
+  })
+
+  it('hydrates and acknowledges a background sync result sent to an open page', async () => {
+    let notifyResult: (() => void) | undefined
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({ pending: null, lastResult: null })
+      .mockResolvedValueOnce({
+        pending: null,
+        lastResult: {
+          status: 'applied' as const,
+          changeId: 'pending-1',
+          updatedAt: '2026-08-04T13:00:00.000Z',
+          operationVersion: 2,
+        },
+      })
+    const background = createBackground({
+      load,
+      subscribeResults: vi.fn((listener) => {
+        notifyResult = listener
+        return () => undefined
+      }),
+    })
+    const port = createPort()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote: createRemote(),
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    notifyResult?.()
+    for (let index = 0; index < 5; index += 1) await Promise.resolve()
+
+    expect(port.acknowledgeOperationsThrough).toHaveBeenCalledWith(2)
+    expect(background.clearResult).toHaveBeenCalledOnce()
+    expect(synchronization.getSnapshot()).toMatchObject({
+      hasPendingLocalChanges: false,
+      backgroundSyncStatus: 'ready',
+    })
+    synchronization.stop()
   })
 
   it('returns the validation result from configure', async () => {
@@ -186,7 +302,7 @@ describe('createCloudSynchronization', () => {
         outcome: 'merged' as const,
         skippedOperations: 0,
       })),
-      captureSnapshot: vi.fn(() => ({ data: mergedData, operationVersion: 4 })),
+      captureSnapshot: vi.fn(() => ({ data: mergedData, operationVersion: 4, operations: [] })),
     })
     const remote = createRemote({
       pull: vi.fn(async () => ({
@@ -210,6 +326,7 @@ describe('createCloudSynchronization', () => {
     expect(remote.push).toHaveBeenCalledWith(
       config,
       expect.objectContaining({ daily: mergedData.daily }),
+      { expectedUpdatedAt: '2026-08-04T11:00:00.000Z' },
     )
     expect(port.acknowledgeOperationsThrough).toHaveBeenCalledWith(4)
   })
@@ -328,5 +445,204 @@ describe('createCloudSynchronization', () => {
     await Promise.resolve()
 
     expect(remote.pull).toHaveBeenCalledOnce()
+  })
+
+  it('persists the latest local change immediately when safe background sync is available', async () => {
+    const remote = createRemote({
+      supportsConditionalWrite: vi.fn(async () => true),
+    })
+    const background = createBackground()
+    const port = createPort()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote,
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    const changed = structuredClone(remoteData)
+    changed.daily[0].text = 'Persist before debounce'
+    vi.mocked(port.captureSnapshot).mockReturnValue({
+      data: changed,
+      operationVersion: 2,
+      operations: [
+        {
+          version: 2,
+          transition: {
+            kind: 'edit-item',
+            cycle: 'daily',
+            id: 'remote',
+            text: 'Persist before debounce',
+            tags: [],
+          },
+        },
+      ],
+    })
+
+    synchronization.updateLocalData(changed)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(background.stage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config,
+        data: changed,
+        expectedUpdatedAt: null,
+        operationVersion: 2,
+      }),
+    )
+    expect(synchronization.getSnapshot()).toMatchObject({
+      hasPendingLocalChanges: true,
+      backgroundSyncStatus: 'pending',
+    })
+  })
+
+  it('never falls back to an unconditional write when the database needs upgrading', async () => {
+    const remote = createRemote({
+      supportsConditionalWrite: vi.fn(async () => false),
+    })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background: createBackground(),
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+
+    expect(remote.push).not.toHaveBeenCalled()
+    expect(synchronization.getSnapshot()).toMatchObject({
+      hasPendingLocalChanges: true,
+      backgroundSyncStatus: 'upgrade-required',
+    })
+  })
+
+  it('pulls and retries a conditional write conflict instead of overwriting cloud data', async () => {
+    const newerRemote = {
+      ...remoteData,
+      daily: [{ ...remoteData.daily[0], text: 'Other device edit' }],
+    }
+    const remote = createRemote({
+      supportsConditionalWrite: vi.fn(async () => true),
+      pull: vi
+        .fn()
+        .mockResolvedValueOnce({ data: remoteData, updatedAt: '2026-08-04T11:00:00.000Z' })
+        .mockResolvedValueOnce({ data: newerRemote, updatedAt: '2026-08-04T12:00:00.000Z' }),
+      push: vi
+        .fn()
+        .mockResolvedValueOnce({
+          outcome: 'conflict',
+          updatedAt: '2026-08-04T12:00:00.000Z',
+        })
+        .mockResolvedValueOnce({
+          outcome: 'applied',
+          updatedAt: '2026-08-04T13:00:00.000Z',
+        }),
+    })
+    const port = createPort({
+      applyRemoteSnapshot: vi.fn(async () => ({
+        outcome: 'merged' as const,
+        skippedOperations: 0,
+      })),
+    })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote,
+      background: createBackground(),
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+
+    expect(remote.push).toHaveBeenNthCalledWith(1, config, expect.any(Object), {
+      expectedUpdatedAt: '2026-08-04T11:00:00.000Z',
+    })
+    expect(port.applyRemoteSnapshot).toHaveBeenLastCalledWith(newerRemote)
+    expect(remote.push).toHaveBeenNthCalledWith(2, config, expect.any(Object), {
+      expectedUpdatedAt: '2026-08-04T12:00:00.000Z',
+    })
+  })
+
+  it('restores persisted operations before resolving a background conflict', async () => {
+    const operations = [
+      {
+        version: 3,
+        transition: {
+          kind: 'set-item-completed' as const,
+          cycle: 'daily' as const,
+          id: 'remote',
+          isCompleted: true,
+        },
+      },
+    ]
+    const background = createBackground({
+      load: vi.fn(async () => ({
+        pending: {
+          id: 'pending-1',
+          supabaseUrl: 'https://project.supabase.co',
+          publishableKey: 'key',
+          data: remoteData,
+          expectedUpdatedAt: '2026-08-04T11:00:00.000Z',
+          operationVersion: 3,
+          operations,
+          status: 'conflict' as const,
+          queuedAt: '2026-08-04T12:00:00.000Z',
+        },
+        lastResult: null,
+      })),
+    })
+    const port = createPort()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote: createRemote({ supportsConditionalWrite: vi.fn(async () => true) }),
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(port.restorePendingOperations).toHaveBeenCalledWith(operations)
+  })
+
+  it('clears persisted background work when cloud sync is disconnected', () => {
+    const background = createBackground()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => undefined,
+      onDataImport: vi.fn(),
+      remote: createRemote(),
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.disconnect()
+
+    expect(background.clear).toHaveBeenCalledOnce()
+    expect(synchronization.getSnapshot().backgroundSyncStatus).toBe('inactive')
   })
 })

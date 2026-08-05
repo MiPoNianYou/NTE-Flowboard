@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { findAppServiceWorker, registerAppServiceWorker } from './appServiceWorker'
 import type {
   NotificationPreferences,
   NotificationRuleRevisions,
@@ -8,7 +9,6 @@ import type {
 import type { SupportedLocale } from '../i18n/displayPreferences'
 import type { NotificationPublicConfig } from './notificationConfig'
 
-const SERVICE_WORKER_FILE = 'notification-sw.js'
 const AUTH_STORAGE_KEY = 'flowboard-notification-auth'
 
 interface NotificationSubscriptionPayload {
@@ -83,13 +83,12 @@ export async function ensureAnonymousSession(supabaseClient: SupabaseClient): Pr
 
 export async function registerNotificationServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (!isNotificationBrowserSupported()) throw new Error('NOTIFICATION_UNSUPPORTED')
-  const scope = import.meta.env.BASE_URL
-  return navigator.serviceWorker.register(`${scope}${SERVICE_WORKER_FILE}`, { scope })
+  return registerAppServiceWorker()
 }
 
 export async function findNotificationServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!isNotificationBrowserSupported()) return null
-  return (await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL)) ?? null
+  return findAppServiceWorker()
 }
 
 export async function syncNotificationServiceWorkerState(state: {

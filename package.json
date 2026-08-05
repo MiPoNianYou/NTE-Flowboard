@@ -1,7 +1,7 @@
 {
   "name": "nte-flowboard",
   "private": true,
-  "version": "2.6.0",
+  "version": "2.7.0",
   "type": "module",
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
@@ -34,7 +34,7 @@
     ],
     "ignore": [
       "public/theme-bootstrap.js",
-      "public/notification-sw.js"
+      "public/flowboard-sw.js"
     ]
   },
   "overrides": {

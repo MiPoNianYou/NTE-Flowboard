@@ -10,6 +10,7 @@ import { Input } from '../base/Input'
 import { Card } from '../base/Card'
 import { SqlCodeBlock } from './SqlCodeBlock'
 import type { CloudSynchronizationCommandResult } from '../../utils/cloudSynchronization'
+import { CONDITIONAL_SYNC_SQL } from '../../utils/cloudSyncSql'
 
 function ConnectButtonLabel({ children }: { children: ReactNode }) {
   return (
@@ -57,7 +58,10 @@ AS $$
   RETURNING updated_at;
 $$;
 
--- 5. ${t('cloud.sql.pullFunction')}
+-- 5. ${t('cloud.sql.conditionalPushFunction')}
+${CONDITIONAL_SYNC_SQL}
+
+-- 6. ${t('cloud.sql.pullFunction')}
 CREATE OR REPLACE FUNCTION pull_sync()
 RETURNS TABLE(data TEXT, updated_at TIMESTAMPTZ)
 LANGUAGE sql SECURITY DEFINER
@@ -65,7 +69,7 @@ AS $$
   SELECT data, updated_at FROM sync_data WHERE id = 'NTE Flowboard';
 $$;
 
--- 6. ${t('cloud.sql.updatedAt')}
+-- 7. ${t('cloud.sql.updatedAt')}
 CREATE OR REPLACE FUNCTION set_sync_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -82,7 +86,7 @@ CREATE TRIGGER sync_data_set_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION set_sync_updated_at();
 
--- 7. ${t('cloud.sql.realtime')}
+-- 8. ${t('cloud.sql.realtime')}
 ALTER PUBLICATION supabase_realtime ADD TABLE sync_data;`
 }
 

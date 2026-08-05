@@ -13,8 +13,9 @@ describe('StorageToast', () => {
     vi.useFakeTimers()
     render(<StorageToast />)
     act(() => {
-      toastBus.emit('保存失败', 'error')
+      toastBus.emit('保存失败', 'error', '数据读取失败')
     })
+    expect(screen.getByText('数据读取失败')).toBeInTheDocument()
     expect(screen.getByText('保存失败')).toBeInTheDocument()
   })
 
@@ -55,5 +56,49 @@ describe('StorageToast', () => {
     })
     expect(screen.getByText('第一个')).toBeInTheDocument()
     expect(screen.getByText('第二个')).toBeInTheDocument()
+    expect(screen.getAllByRole('status')[0]).toHaveTextContent('第二个')
+  })
+
+  it('should pause dismissal while the toast is hovered', () => {
+    vi.useFakeTimers()
+    render(<StorageToast />)
+    act(() => {
+      toastBus.emit('悬停期间不消失', 'error')
+    })
+    const toast = screen.getByRole('status')
+
+    act(() => {
+      fireEvent.mouseEnter(toast)
+      vi.advanceTimersByTime(MS.TOAST_DISMISS)
+    })
+    expect(screen.getByText('悬停期间不消失')).toBeInTheDocument()
+
+    act(() => {
+      fireEvent.mouseLeave(toast)
+      vi.advanceTimersByTime(MS.TOAST_DISMISS)
+    })
+    expect(screen.queryByText('悬停期间不消失')).not.toBeInTheDocument()
+  })
+
+  it('keeps a hovered toast paused when another toast arrives', () => {
+    vi.useFakeTimers()
+    render(<StorageToast />)
+    act(() => {
+      toastBus.emit('悬停期间不消失', 'error')
+    })
+    const toast = screen.getByText('悬停期间不消失').closest('[role="status"]') as HTMLElement
+
+    act(() => {
+      fireEvent.mouseEnter(toast)
+      toastBus.emit('新的错误', 'error')
+      vi.advanceTimersByTime(MS.TOAST_DISMISS)
+    })
+    expect(screen.getByText('悬停期间不消失')).toBeInTheDocument()
+
+    act(() => {
+      fireEvent.mouseLeave(toast)
+      vi.advanceTimersByTime(MS.TOAST_DISMISS)
+    })
+    expect(screen.queryByText('悬停期间不消失')).not.toBeInTheDocument()
   })
 })

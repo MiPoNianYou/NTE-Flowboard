@@ -83,6 +83,20 @@ async function waitForMobilePageToSettle(dialog: Locator) {
     .toBe(1)
 }
 
+test('loads static assets from the application base path', async ({ page }) => {
+  await page.goto('/')
+
+  const basePath = new URL(page.url()).pathname
+  await expect(page.locator('script[src$="theme-bootstrap.js"]')).toHaveAttribute(
+    'src',
+    `${basePath}theme-bootstrap.js`,
+  )
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    'href',
+    `${basePath}manifest.webmanifest`,
+  )
+})
+
 test('uses the user environment from the first light-theme frame', async ({ page }, testInfo) => {
   await openFreshPage(page, 'light')
 

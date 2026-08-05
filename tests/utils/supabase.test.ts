@@ -10,6 +10,7 @@ import {
   resetClient,
   SyncError,
   validateConfig,
+  detectConditionalWriteCapability,
   pushData,
   pullData,
   subscribeToChanges,
@@ -172,7 +173,26 @@ describe('pushData', () => {
     const timestamp = '2025-01-15T10:00:00Z'
     mockRpc.mockReturnValue({ data: timestamp, error: null })
     const result = await pushData({ projectId: 'p', anonKey: 'k' }, { daily: [] })
-    expect(result).toBe(timestamp)
+    expect(result).toEqual({ outcome: 'applied', updatedAt: timestamp })
+  })
+
+  it('should perform a conditional write with the last seen timestamp', async () => {
+    mockRpc.mockReturnValue({
+      data: [{ outcome: 'conflict', updated_at: '2025-01-15T11:00:00Z' }],
+      error: null,
+    })
+
+    await expect(
+      pushData(
+        { projectId: 'p', anonKey: 'k' },
+        { daily: [] },
+        { expectedUpdatedAt: '2025-01-15T10:00:00Z' },
+      ),
+    ).resolves.toEqual({ outcome: 'conflict', updatedAt: '2025-01-15T11:00:00Z' })
+    expect(mockRpc).toHaveBeenCalledWith('upsert_sync_if_unchanged', {
+      p_data: JSON.stringify({ daily: [] }, null, 2),
+      p_expected_updated_at: '2025-01-15T10:00:00Z',
+    })
   })
 
   it('should throw SyncError on RPC error', async () => {
@@ -186,6 +206,24 @@ describe('pushData', () => {
     mockRpc.mockReturnValue({ data: 123, error: null })
     await expect(pushData({ projectId: 'p', anonKey: 'k' }, { daily: [] })).rejects.toThrow(
       SyncError,
+    )
+  })
+})
+
+describe('detectConditionalWriteCapability', () => {
+  it('detects the conditional write capability', async () => {
+    mockRpc.mockReturnValue({ data: ['conditional_write_v1'], error: null })
+
+    await expect(detectConditionalWriteCapability({ projectId: 'p', anonKey: 'k' })).resolves.toBe(
+      true,
+    )
+  })
+
+  it('treats a missing capability RPC as unsupported', async () => {
+    mockRpc.mockReturnValue({ data: null, error: { code: 'PGRST202' } })
+
+    await expect(detectConditionalWriteCapability({ projectId: 'p', anonKey: 'k' })).resolves.toBe(
+      false,
     )
   })
 })

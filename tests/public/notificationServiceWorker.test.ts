@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it, vi } from 'vitest'
 
-describe('notification service worker', () => {
+describe('Flowboard service worker notifications', () => {
   it('accepts a scheduled push when the persisted revision matches', async () => {
     const context = {
       clients: {},
@@ -17,7 +17,7 @@ describe('notification service worker', () => {
       buildBody: (payload: unknown, cycles: string[]) => string
     }
 
-    runInNewContext(readFileSync('public/notification-sw.js', 'utf8'), context)
+    runInNewContext(readFileSync('public/flowboard-sw.js', 'utf8'), context)
 
     const payload = {
       notificationType: 'before-reset',
@@ -65,7 +65,7 @@ describe('notification service worker', () => {
       },
     }
 
-    runInNewContext(readFileSync('public/notification-sw.js', 'utf8'), context)
+    runInNewContext(readFileSync('public/flowboard-sw.js', 'utf8'), context)
 
     const payload = {
       title: 'NTE Flowboard',
@@ -99,5 +99,75 @@ describe('notification service worker', () => {
       'NTE Flowboard',
       expect.objectContaining({ tag: 'flowboard-test', renotify: true }),
     )
+  })
+
+  it('sends a conditional background sync request with the queued base version', async () => {
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ outcome: 'applied', updated_at: '2026-08-05T02:00:00.000Z' }],
+    })
+    const context = {
+      clients: {},
+      fetch,
+      indexedDB: {},
+      Promise,
+      self: {
+        addEventListener: vi.fn(),
+        registration: { scope: 'https://flowboard.example/' },
+      },
+    } as unknown as {
+      requestConditionalSync: (pending: Record<string, unknown>) => Promise<unknown>
+      mergeBackgroundResult: (
+        state: Record<string, unknown>,
+        pending: Record<string, unknown>,
+        result: Record<string, unknown>,
+      ) => Record<string, unknown>
+    }
+    runInNewContext(readFileSync('public/flowboard-sw.js', 'utf8'), context)
+
+    await expect(
+      context.requestConditionalSync({
+        supabaseUrl: 'https://project.supabase.co',
+        publishableKey: 'publishable-key',
+        data: { daily: [] },
+        expectedUpdatedAt: '2026-08-05T01:00:00.000Z',
+      }),
+    ).resolves.toEqual({ status: 'applied', updatedAt: '2026-08-05T02:00:00.000Z' })
+    expect(fetch).toHaveBeenCalledWith(
+      'https://project.supabase.co/rest/v1/rpc/upsert_sync_if_unchanged',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          apikey: 'publishable-key',
+          Authorization: 'Bearer publishable-key',
+        }),
+      }),
+    )
+
+    const pending = {
+      id: 'change-1',
+      supabaseUrl: 'https://project.supabase.co',
+      publishableKey: 'publishable-key',
+      operationVersion: 2,
+      status: 'pending',
+    }
+    expect(
+      context.mergeBackgroundResult({ pending, lastResult: null }, pending, {
+        status: 'error',
+        updatedAt: null,
+      }),
+    ).toMatchObject({ pending })
+
+    const newerProjectPending = {
+      ...pending,
+      id: 'change-2',
+      supabaseUrl: 'https://other.supabase.co',
+    }
+    expect(
+      context.mergeBackgroundResult({ pending: newerProjectPending, lastResult: null }, pending, {
+        status: 'applied',
+        updatedAt: '2026-08-05T02:00:00.000Z',
+      }),
+    ).toEqual({ pending: newerProjectPending, lastResult: null })
   })
 })

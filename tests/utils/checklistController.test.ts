@@ -125,6 +125,48 @@ function makeRestoreController(storage: ChecklistStorageAdapter, restore = creat
 }
 
 describe('createChecklistController', () => {
+  it('restores persisted operations so a reopened Checklist can merge a cloud conflict', async () => {
+    const local = data()
+    local.daily[0].isCompleted = true
+    const controller = makeController(
+      adapter({ data: local, revision: revision(1, 'local-storage') }),
+    )
+    await controller.start()
+    controller.syncPort.restorePendingOperations([
+      {
+        version: 4,
+        transition: {
+          kind: 'set-item-completed',
+          cycle: 'daily',
+          id: 'a',
+          isCompleted: true,
+        },
+      },
+    ])
+    controller.syncPort.restorePendingOperations([
+      {
+        version: 4,
+        transition: {
+          kind: 'set-item-completed',
+          cycle: 'daily',
+          id: 'a',
+          isCompleted: true,
+        },
+      },
+    ])
+    const remote = data()
+    remote.daily[0].text = 'Remote text'
+
+    const result = await controller.syncPort.applyRemoteSnapshot(remote)
+
+    expect(result.outcome).toBe('merged')
+    expect(controller.getSnapshot().daily[0]).toMatchObject({
+      text: 'Remote text',
+      isCompleted: true,
+    })
+    expect(controller.syncPort.captureSnapshot().operationVersion).toBe(4)
+  })
+
   it('replays local operations over the synchronous start snapshot', async () => {
     const remote = data()
     remote.daily[0].isCompleted = true

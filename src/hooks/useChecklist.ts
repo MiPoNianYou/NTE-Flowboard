@@ -19,7 +19,9 @@ export function useChecklist() {
         createDefaultData: () => createDefaultChecklistData(getEffectiveLocale()),
       })
       const loaded = adapter.load()
-      if (loaded.error) toastBus.emit(i18n.t('storage.loadFailed'), 'error')
+      if (loaded.error) {
+        toastBus.emit(i18n.t('storage.loadFailed'), 'error', i18n.t('storage.loadFailedTitle'))
+      }
       const controller = createChecklistController({
         initialData: loaded.snapshot.data,
         adapter,
@@ -37,7 +39,11 @@ export function useChecklist() {
           }
         },
         onConflict: (count) =>
-          toastBus.emit(i18n.t('checklist.conflictSkipped', { count }), 'error'),
+          toastBus.emit(
+            i18n.t('checklist.conflictSkipped', { count }),
+            'error',
+            i18n.t('checklist.conflictTitle'),
+          ),
       })
       controller.applyDueResets(new Date())
       return controller

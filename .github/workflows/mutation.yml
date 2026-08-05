@@ -32,6 +32,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Restore Stryker incremental result
+        uses: actions/cache@v4
+        with:
+          path: .artifacts/mutation/stryker-incremental.json
+          key: mutation-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            mutation-${{ runner.os }}-${{ github.ref_name }}-
+
       - name: Run mutation tests
         run: npm run test:mutation
 
@@ -40,6 +48,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mutation-report
-          path: reports/mutation/
+          path: .artifacts/mutation/mutation.html
           retention-days: 14
           if-no-files-found: ignore

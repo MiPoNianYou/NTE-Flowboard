@@ -57,11 +57,13 @@ NTE Flowboard 把周期事项分成每日、每周和每月三份清单；你可
 需要跨设备使用时，在设置中填写你的 Supabase Project URL 与 Publishable Key：
 
 ```text
-本地变更  →  upsert_sync  →  Supabase
-Supabase  →  pull_sync     →  本地状态
+本地变更  →  IndexedDB 待同步队列  →  条件写入 RPC  →  Supabase
+Supabase  →  pull_sync + 冲突合并               →  本地状态
 ```
 
-Project URL 与 Publishable Key 只保存在当前浏览器；Publishable Key 是前端公开凭据，数据访问权限由 Supabase 的 Row Level Security (RLS) 控制；旧项目仍可使用 Anon Key
+支持 Background Sync 的 Chromium 浏览器会在页面关闭后尽力继续补传；其他浏览器会在页面重新打开后恢复同步。旧数据库会在云同步设置中显示一次性升级 SQL，执行后手动同步即可自动启用。
+
+Project URL 与 Publishable Key 只保存在当前浏览器；启用后台补传后，它们也会写入浏览器的 IndexedDB，供同源 Service Worker 调用 Supabase。Publishable Key 是前端公开凭据，数据访问权限由 Supabase 的 Row Level Security (RLS) 控制；旧项目仍可使用 Anon Key
 
 > 配置同步前，请先在 Supabase 项目中启用并验证 RLS；RLS 配置错误时，持有项目公开凭据的人可能读取或写入同步数据
 
@@ -92,7 +94,8 @@ npm run dev
 | `npm run format:check`              | 检查格式                          |
 | `npm run build`                     | 运行 lint、类型检查并生成生产构建 |
 
-真实 Supabase 集成测试默认跳过写入；请使用独立测试项目，并在当前终端设置环境变量后显式启用：
+默认测试不会收集真实 Supabase 集成测试。需要验证 RPC 与 Realtime 时，请使用本地或独立的
+Supabase 测试环境，并在当前终端设置环境变量后显式启用写入：
 
 ```powershell
 $env:SUPABASE_TEST_URL='https://your-project.supabase.co'
@@ -100,6 +103,8 @@ $env:SUPABASE_TEST_PUBLISHABLE_KEY='sb_publishable_...'
 $env:SUPABASE_TEST_ALLOW_WRITE='true'
 npm run test:integration:supabase
 ```
+
+缺少任一环境变量时，专用集成测试命令会直接失败；请勿使用生产项目运行该测试。
 
 测试会临时替换名为 `NTE Flowboard` 的云端记录；完成 RPC 与 Realtime 验证后，测试会恢复原 JSON；恢复操作会刷新该记录的 `updated_at`
 

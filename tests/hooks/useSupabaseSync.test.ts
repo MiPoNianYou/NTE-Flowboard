@@ -16,6 +16,7 @@ const mockedModule = vi.hoisted(() => {
     lastSyncTime: null,
     syncError: null,
     hasPendingLocalChanges: false,
+    backgroundSyncStatus: 'inactive',
   }
   const listeners = new Set<() => void>()
   const synchronization: CloudSynchronization = {
@@ -45,6 +46,7 @@ const mockedModule = vi.hoisted(() => {
         lastSyncTime: null,
         syncError: null,
         hasPendingLocalChanges: false,
+        backgroundSyncStatus: 'inactive',
       }
       listeners.clear()
     },
@@ -98,6 +100,7 @@ describe('useSupabaseSync', () => {
         lastSyncTime: '2026-08-04T12:00:00.000Z',
         syncError: null,
         hasPendingLocalChanges: true,
+        backgroundSyncStatus: 'pending',
       })
     })
 

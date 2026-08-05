@@ -1,5 +1,6 @@
 export interface ToastPayload {
   id: number
+  title: string
   message: string
   type: 'error' | 'warning'
 }
@@ -9,8 +10,8 @@ const TOAST_EVENT = 'storage-toast'
 class ToastBus extends EventTarget {
   private _id = 0
 
-  emit(message: string, type: ToastPayload['type'] = 'error'): void {
-    const detail: ToastPayload = { id: ++this._id, message, type }
+  emit(message: string, type: ToastPayload['type'] = 'error', title = '提示'): void {
+    const detail: ToastPayload = { id: ++this._id, title, message, type }
     this.dispatchEvent(new CustomEvent<ToastPayload>(TOAST_EVENT, { detail }))
   }
 

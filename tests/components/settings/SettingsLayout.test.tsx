@@ -153,9 +153,12 @@ describe('mobile focused field scrolling', () => {
     const requestAnimationFrameSpy = vi.fn()
     vi.stubGlobal('requestAnimationFrame', requestAnimationFrameSpy)
 
-    renderMobileLayout()
+    renderMobileLayout(false, '云同步', {
+      ...configuredCloudSyncProps,
+      backgroundSyncStatus: 'upgrade-required',
+    })
     const callsBeforeFocus = requestAnimationFrameSpy.mock.calls.length
-    fireEvent.focus(screen.getByRole('button', { name: '数据库补丁' }))
+    fireEvent.focus(screen.getByRole('button', { name: '后台同步数据库升级' }))
 
     expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(callsBeforeFocus)
     vi.unstubAllGlobals()

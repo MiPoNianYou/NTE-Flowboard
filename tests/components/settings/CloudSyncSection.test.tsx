@@ -8,18 +8,6 @@ function render(ui: ReactNode) {
   return renderBase(<DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>)
 }
 
-let mockCloudPatchHidden = false
-
-vi.mock('../../../src/context/SettingsContext', () => ({
-  useSettings: () => ({
-    settings: { serverRegion: 'asia', isAutoMoveEnabled: true, shouldConfirmDelete: true },
-    updateSettings: vi.fn(),
-    uiPreferences: { cloudPatchHidden: mockCloudPatchHidden },
-    updateUiPreferences: vi.fn((partial: Record<string, unknown>) => {
-      if ('cloudPatchHidden' in partial) mockCloudPatchHidden = partial.cloudPatchHidden as boolean
-    }),
-  }),
-}))
 const mockNotConfiguredProps = {
   syncStatus: 'disconnected' as const,
   lastSyncTime: null,
@@ -63,7 +51,6 @@ function expectDisclosure(label: string) {
 describe('CloudSyncSection', () => {
   afterEach(() => {
     vi.useRealTimers()
-    mockCloudPatchHidden = false
   })
 
   describe('not configured', () => {
@@ -170,24 +157,19 @@ describe('CloudSyncSection', () => {
   })
 
   describe('configured', () => {
-    it('should hide patch card when cloudPatchHidden is true in ui preferences', () => {
-      mockCloudPatchHidden = true
-
+    it('should hide the upgrade card when conditional writes are available', () => {
       render(<CloudSyncSection {...mockConfiguredProps} />)
 
-      expect(screen.queryByText('数据库补丁')).not.toBeInTheDocument()
+      expect(screen.queryByText('后台同步数据库升级')).not.toBeInTheDocument()
     })
 
-    it('should ignore legacy patch hidden key', () => {
-      localStorage.setItem('flowboard-cloud-patch-hidden', 'true')
-      mockCloudPatchHidden = false
+    it('should show the upgrade card when conditional writes are unavailable', () => {
+      render(<CloudSyncSection {...mockConfiguredProps} backgroundSyncStatus="upgrade-required" />)
 
-      render(<CloudSyncSection {...mockConfiguredProps} />)
-
-      expect(screen.getByText('数据库补丁')).toBeInTheDocument()
+      expect(screen.getByText('后台同步数据库升级')).toBeInTheDocument()
     })
 
-    it('should render connected sync controls and the database patch', () => {
+    it('should render connected sync controls and background sync status', () => {
       render(<CloudSyncSection {...mockConfiguredProps} />)
 
       expect(screen.getByText('已连接')).toBeInTheDocument()
@@ -195,9 +177,9 @@ describe('CloudSyncSection', () => {
       expect(screen.getByText(/上次同步/)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '手动同步' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '断开连接' })).toBeInTheDocument()
-      expect(screen.getByText('数据库补丁')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '执行补丁 SQL' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '隐藏补丁卡片' })).toBeInTheDocument()
+      expect(screen.getByText('后台补传')).toBeInTheDocument()
+      expect(screen.getByText('可在关闭页面后继续补传')).toBeInTheDocument()
+      expect(screen.queryByText('后台同步数据库升级')).not.toBeInTheDocument()
     })
 
     it('should call onTriggerSync when manual sync clicked', async () => {
@@ -247,8 +229,28 @@ describe('CloudSyncSection', () => {
       expect(screen.getByText(summary)).toBeInTheDocument()
     })
 
+    it.each([
+      ['pending', '本地变更正在等待后台补传'],
+      ['conflict', '云端已变化，正在安全合并'],
+      ['unsupported', '当前浏览器将在重新打开页面时继续同步'],
+      ['blocked', '后台同步受阻，重新打开页面时继续同步'],
+    ] as const)('should render %s background sync status', (backgroundSyncStatus, summary) => {
+      render(
+        <CloudSyncSection {...mockConfiguredProps} backgroundSyncStatus={backgroundSyncStatus} />,
+      )
+      expect(screen.getByText(summary)).toBeInTheDocument()
+    })
+
+    it('should use the warning color only for actionable background states', () => {
+      render(<CloudSyncSection {...mockConfiguredProps} backgroundSyncStatus="conflict" />)
+
+      const summary = screen.getByText('云端已变化，正在安全合并')
+      const row = summary.closest('.flex.items-center.justify-between')
+      expect(row?.querySelector('svg')).toHaveClass('text-warning')
+    })
+
     it('should expose the patch SQL as a native disclosure button', () => {
-      render(<CloudSyncSection {...mockConfiguredProps} />)
+      render(<CloudSyncSection {...mockConfiguredProps} backgroundSyncStatus="upgrade-required" />)
       expectDisclosure('执行补丁 SQL')
     })
 
@@ -258,7 +260,7 @@ describe('CloudSyncSection', () => {
         configurable: true,
         value: { writeText },
       })
-      render(<CloudSyncSection {...mockConfiguredProps} />)
+      render(<CloudSyncSection {...mockConfiguredProps} backgroundSyncStatus="upgrade-required" />)
 
       const toggle = screen.getByRole('button', { name: '执行补丁 SQL' })
       const copyButton = screen.getByRole('button', { name: '复制补丁 SQL' })
@@ -271,9 +273,15 @@ describe('CloudSyncSection', () => {
     })
 
     it('should keep the mobile patch card from scaling after it is tapped', () => {
-      const { container } = render(<CloudSyncSection {...mockConfiguredProps} mobile />)
+      const { container } = render(
+        <CloudSyncSection
+          {...mockConfiguredProps}
+          backgroundSyncStatus="upgrade-required"
+          mobile
+        />,
+      )
 
-      const patchToggle = screen.getByRole('button', { name: '数据库补丁' })
+      const patchToggle = screen.getByRole('button', { name: '后台同步数据库升级' })
       const mobileCards = container.querySelectorAll('.mobile-settings-surface')
 
       expect(mobileCards).toHaveLength(2)
@@ -286,43 +294,6 @@ describe('CloudSyncSection', () => {
       expect(document.getElementById(patchToggle.getAttribute('aria-controls')!)).not.toHaveClass(
         'hidden',
       )
-    })
-
-    it('should require a second click before hiding the patch card', () => {
-      render(<CloudSyncSection {...mockConfiguredProps} />)
-
-      const hideButton = screen.getByLabelText('隐藏补丁卡片')
-      fireEvent.click(hideButton)
-
-      expect(screen.getByText('数据库补丁')).toBeInTheDocument()
-      expect(hideButton.className).toContain('expanded')
-      expect(screen.getByText('确认隐藏？').className).toContain('danger-confirm-text')
-    })
-
-    it('should collapse patch hide button after 3 seconds', () => {
-      vi.useFakeTimers()
-      render(<CloudSyncSection {...mockConfiguredProps} />)
-
-      const hideButton = screen.getByLabelText('隐藏补丁卡片')
-      fireEvent.click(hideButton)
-
-      expect(hideButton.className).toContain('expanded')
-
-      act(() => {
-        vi.advanceTimersByTime(3000)
-      })
-
-      expect(hideButton.className).not.toContain('expanded')
-    })
-
-    it('should hide the patch card after confirmation click', () => {
-      render(<CloudSyncSection {...mockConfiguredProps} />)
-
-      const hideButton = screen.getByLabelText('隐藏补丁卡片')
-      fireEvent.click(hideButton)
-      fireEvent.click(screen.getByLabelText('确认隐藏补丁卡片'))
-
-      expect(screen.queryByText('数据库补丁')).not.toBeInTheDocument()
     })
   })
 })

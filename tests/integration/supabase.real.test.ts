@@ -9,25 +9,25 @@ import {
   type SupabaseConfig,
 } from '../../src/utils/supabase'
 
-const projectUrl = process.env.SUPABASE_TEST_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
-const publishableKey =
-  process.env.SUPABASE_TEST_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const projectUrl = process.env.SUPABASE_TEST_URL
+const publishableKey = process.env.SUPABASE_TEST_PUBLISHABLE_KEY
 const allowWrite = process.env.SUPABASE_TEST_ALLOW_WRITE === 'true'
 
-const config: SupabaseConfig | null =
-  projectUrl && publishableKey ? { projectId: projectUrl, anonKey: publishableKey } : null
-const describeReal = config && allowWrite ? describe : describe.skip
-const activeConfig: SupabaseConfig = config ?? {
-  projectId: 'http://127.0.0.1',
-  anonKey: 'disabled-real-integration-test',
+if (!projectUrl || !publishableKey || !allowWrite) {
+  throw new Error(
+    'Supabase integration tests require SUPABASE_TEST_URL, ' +
+      'SUPABASE_TEST_PUBLISHABLE_KEY, and SUPABASE_TEST_ALLOW_WRITE=true',
+  )
 }
+
+const activeConfig: SupabaseConfig = { projectId: projectUrl, anonKey: publishableKey }
 
 type SyncRow = {
   data: string
   updated_at: string
 }
 
-describeReal('Supabase real environment', () => {
+describe('Supabase real environment', () => {
   const client = createClient(activeConfig.projectId, activeConfig.anonKey, {
     auth: {
       persistSession: false,
@@ -135,12 +135,13 @@ describeReal('Supabase real environment', () => {
     try {
       await subscribed
       cloudDataWasChanged = true
-      const pushedAt = await pushData(activeConfig, fixture)
-      expect(Date.parse(pushedAt)).not.toBeNaN()
+      const pushed = await pushData(activeConfig, fixture)
+      expect(pushed.outcome).toBe('applied')
+      expect(Date.parse(pushed.updatedAt!)).not.toBeNaN()
 
       const pulled = await pullData(activeConfig)
       expect(pulled?.data).toEqual(fixture)
-      expect(pulled?.updatedAt).toBe(pushedAt)
+      expect(pulled?.updatedAt).toBe(pushed.updatedAt)
       await eventReceived
     } finally {
       if (eventTimeout) clearTimeout(eventTimeout)
