@@ -169,6 +169,29 @@ describe('CloudSyncSection', () => {
       expect(screen.getByText('后台同步数据库升级')).toBeInTheDocument()
     })
 
+    it('should keep a preserved queue notice separate from the current project upgrade state', () => {
+      const { rerender } = render(
+        <CloudSyncSection
+          {...mockConfiguredProps}
+          backgroundSyncStatus="preserved-other-project"
+        />,
+      )
+
+      expect(screen.getByText('已保留其他项目的待传记录')).toBeInTheDocument()
+      expect(screen.queryByText('后台同步数据库升级')).not.toBeInTheDocument()
+
+      rerender(
+        <LocalUiPreferencesProvider>
+          <CloudSyncSection
+            {...mockConfiguredProps}
+            backgroundSyncStatus="preserved-other-project"
+            requiresDatabaseUpgrade
+          />
+        </LocalUiPreferencesProvider>,
+      )
+      expect(screen.getByText('后台同步数据库升级')).toBeInTheDocument()
+    })
+
     it('should render connected sync controls and background sync status', () => {
       render(<CloudSyncSection {...mockConfiguredProps} />)
 
@@ -196,10 +219,23 @@ describe('CloudSyncSection', () => {
 
       fireEvent.click(button)
       expect(screen.getByText('确认断开？')).toBeInTheDocument()
+      expect(screen.getByText('确认断开云同步')).toBeInTheDocument()
+      expect(screen.getByText('断开后此设备将停止与云端同步')).toBeInTheDocument()
+      expect(screen.queryByText('后台补传')).not.toBeInTheDocument()
       expect(onTeardownSupabase).not.toHaveBeenCalled()
 
       fireEvent.click(button)
       expect(onTeardownSupabase).toHaveBeenCalledOnce()
+    })
+
+    it('should warn about pending uploads in the background sync row before disconnecting', () => {
+      render(<CloudSyncSection {...mockConfiguredProps} hasPendingLocalChanges />)
+
+      fireEvent.click(screen.getByLabelText('断开连接'))
+
+      expect(screen.getByText('有本地变更等待上传')).toBeInTheDocument()
+      expect(screen.getByText('断开后待传记录会被清除')).toBeInTheDocument()
+      expect(screen.getByTestId('disconnect-warning-icon')).toBeInTheDocument()
     })
 
     it('should collapse disconnect button after 3 seconds', () => {
@@ -234,6 +270,9 @@ describe('CloudSyncSection', () => {
       ['conflict', '云端已变化，正在安全合并'],
       ['unsupported', '当前浏览器将在重新打开页面时继续同步'],
       ['blocked', '后台同步受阻，重新打开页面时继续同步'],
+      ['capability-unknown', '暂时无法确认后台补传支持'],
+      ['preserved-other-project', '已保留其他项目的待传记录'],
+      ['preserved-pending', '已保留待传记录'],
     ] as const)('should render %s background sync status', (backgroundSyncStatus, summary) => {
       render(
         <CloudSyncSection {...mockConfiguredProps} backgroundSyncStatus={backgroundSyncStatus} />,

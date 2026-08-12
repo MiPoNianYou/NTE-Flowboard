@@ -10,6 +10,7 @@ import type { ChecklistSynchronizationPort } from '../../src/utils/checklistCont
 import { DEFAULT_CHECKLIST_DATA } from '../../src/utils/defaultData'
 import { MS } from '../../src/utils/constants'
 import type { BackgroundSyncAdapter } from '../../src/utils/backgroundSync'
+import { SyncError } from '../../src/utils/supabase'
 import type { CloudSyncState } from '../../src/utils/supabase'
 
 const config = { projectId: 'project', anonKey: 'key' }
@@ -233,6 +234,8 @@ describe('createCloudSynchronization', () => {
         lastResult: {
           status: 'applied' as const,
           changeId: 'pending-1',
+          supabaseUrl: 'https://project.supabase.co',
+          publishableKey: 'key',
           updatedAt: '2026-08-04T13:00:00.000Z',
           operationVersion: 2,
         },
@@ -266,6 +269,39 @@ describe('createCloudSynchronization', () => {
       hasPendingLocalChanges: false,
       backgroundSyncStatus: 'ready',
     })
+    synchronization.stop()
+  })
+
+  it('does not consume a background result from another project', async () => {
+    const background = createBackground({
+      load: vi.fn(async () => ({
+        pending: null,
+        lastResult: {
+          status: 'applied' as const,
+          changeId: 'other-project-change',
+          supabaseUrl: 'https://other-project.supabase.co',
+          publishableKey: 'other-key',
+          updatedAt: '2026-08-04T13:00:00.000Z',
+          operationVersion: 2,
+        },
+      })),
+    })
+    const port = createPort()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote: createRemote(),
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(port.acknowledgeOperationsThrough).not.toHaveBeenCalled()
+    expect(background.clearResult).not.toHaveBeenCalled()
     synchronization.stop()
   })
 
@@ -570,9 +606,205 @@ describe('createCloudSynchronization', () => {
     })
   })
 
-  it('never falls back to an unconditional write when the database needs upgrading', async () => {
+  it('uses the legacy foreground writer when conditional writes are known to be unavailable', async () => {
     const remote = createRemote({
       supportsConditionalWrite: vi.fn(async () => false),
+    })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background: createBackground(),
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+
+    expect(remote.push).toHaveBeenCalledWith(config, expect.any(Object))
+    expect(synchronization.getSnapshot()).toMatchObject({
+      hasPendingLocalChanges: false,
+      backgroundSyncStatus: 'upgrade-required',
+      requiresDatabaseUpgrade: true,
+    })
+  })
+
+  it('does not stage service-worker work while a database upgrade is required', async () => {
+    const remote = createRemote({ supportsConditionalWrite: vi.fn(async () => false) })
+    const background = createBackground()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+
+    expect(background.stage).not.toHaveBeenCalled()
+  })
+
+  it('stops retrying the legacy writer after the old RPC is confirmed missing', async () => {
+    const remote = createRemote({
+      supportsConditionalWrite: vi.fn(async () => false),
+      push: vi.fn(async () => {
+        throw new SyncError('Could not find upsert_sync', 'PGRST202')
+      }),
+    })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background: createBackground(),
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+    const result = await synchronization.syncNow()
+
+    expect(remote.push).toHaveBeenCalledOnce()
+    expect(result).toEqual({ ok: false, error: '需要先升级同步数据库' })
+    expect(synchronization.getSnapshot()).toMatchObject({
+      syncStatus: 'connected',
+      hasPendingLocalChanges: true,
+      backgroundSyncStatus: 'upgrade-required',
+    })
+  })
+
+  it('keeps an unavailable legacy writer locked after a later capability probe fails', async () => {
+    const capabilityProbe = vi
+      .fn<CloudSynchronizationRemoteAdapter['supportsConditionalWrite']>()
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error('capability probe failed'))
+      .mockResolvedValue(false)
+    const remote = createRemote({
+      supportsConditionalWrite: capabilityProbe,
+      push: vi.fn(async () => {
+        throw new SyncError('Could not find upsert_sync', 'PGRST202')
+      }),
+    })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background: createBackground(),
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+    await synchronization.syncNow()
+    await synchronization.syncNow()
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+
+    expect(remote.push).toHaveBeenCalledOnce()
+    expect(synchronization.getSnapshot().backgroundSyncStatus).toBe('upgrade-required')
+  })
+
+  it('waits for an online capability probe before retrying a legacy write', async () => {
+    const deferredProbe = createDeferred<boolean>()
+    const capabilityProbe = vi
+      .fn<CloudSynchronizationRemoteAdapter['supportsConditionalWrite']>()
+      .mockResolvedValueOnce(false)
+      .mockReturnValueOnce(deferredProbe.promise)
+    const remote = createRemote({ supportsConditionalWrite: capabilityProbe })
+    const runtime = createRuntime()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background: createBackground(),
+      metadata: createMetadata(),
+      runtime: runtime.runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+    vi.mocked(remote.push).mockClear()
+    synchronization.updateLocalData(structuredClone(remoteData))
+
+    runtime.triggerOnline()
+    await Promise.resolve()
+
+    expect(remote.push).not.toHaveBeenCalled()
+    deferredProbe.resolve(false)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(remote.push).toHaveBeenCalledWith(config, expect.any(Object))
+  })
+
+  it('does not reuse an in-flight capability probe after switching projects', async () => {
+    const oldProjectProbe = createDeferred<boolean>()
+    const capabilityProbe = vi
+      .fn<CloudSynchronizationRemoteAdapter['supportsConditionalWrite']>()
+      .mockResolvedValueOnce(false)
+      .mockReturnValueOnce(oldProjectProbe.promise)
+      .mockResolvedValueOnce(false)
+    const remote = createRemote({ supportsConditionalWrite: capabilityProbe })
+    const runtime = createRuntime()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background: createBackground(),
+      metadata: createMetadata(),
+      runtime: runtime.runtime,
+    })
+
+    synchronization.updateLocalData(remoteData)
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    runtime.triggerOnline()
+    await Promise.resolve()
+
+    const configurePromise = synchronization.configure('other-project', 'other-key')
+    await Promise.resolve()
+
+    expect(capabilityProbe).toHaveBeenCalledWith({
+      projectId: 'other-project',
+      anonKey: 'other-key',
+    })
+
+    oldProjectProbe.resolve(true)
+    await configurePromise
+  })
+
+  it('keeps foreground writes disabled when capability probing cannot be verified', async () => {
+    const remote = createRemote({
+      supportsConditionalWrite: vi.fn(async () => {
+        throw new Error('capability probe failed')
+      }),
     })
     const synchronization = createCloudSynchronization({
       initialData: remoteData,
@@ -593,8 +825,183 @@ describe('createCloudSynchronization', () => {
     expect(remote.push).not.toHaveBeenCalled()
     expect(synchronization.getSnapshot()).toMatchObject({
       hasPendingLocalChanges: true,
-      backgroundSyncStatus: 'upgrade-required',
+      backgroundSyncStatus: 'capability-unknown',
+      requiresDatabaseUpgrade: false,
     })
+  })
+
+  it('rehydrates queued operations before requiring a database upgrade', async () => {
+    const operations = [
+      {
+        version: 4,
+        transition: {
+          kind: 'set-item-completed' as const,
+          cycle: 'daily' as const,
+          id: 'remote',
+          isCompleted: true,
+        },
+      },
+    ]
+    const background = createBackground({
+      load: vi.fn(async () => ({
+        pending: {
+          id: 'pending-legacy',
+          supabaseUrl: 'https://project.supabase.co',
+          publishableKey: 'key',
+          data: remoteData,
+          expectedUpdatedAt: null,
+          operationVersion: 4,
+          operations,
+          status: 'pending' as const,
+          queuedAt: '2026-08-04T12:00:00.000Z',
+        },
+        lastResult: null,
+      })),
+    })
+    const port = createPort()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote: createRemote({ supportsConditionalWrite: vi.fn(async () => false) }),
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(port.restorePendingOperations).toHaveBeenCalledWith(operations)
+    expect(background.clear).toHaveBeenCalledOnce()
+    expect(synchronization.getSnapshot().backgroundSyncStatus).toBe('upgrade-required')
+  })
+
+  it('preserves a different project queue without restoring or overwriting it', async () => {
+    const operations = [
+      {
+        version: 4,
+        transition: {
+          kind: 'set-item-completed' as const,
+          cycle: 'daily' as const,
+          id: 'remote',
+          isCompleted: true,
+        },
+      },
+    ]
+    const background = createBackground({
+      load: vi.fn(async () => ({
+        pending: {
+          id: 'other-project',
+          supabaseUrl: 'https://other-project.supabase.co',
+          publishableKey: 'other-key',
+          data: remoteData,
+          expectedUpdatedAt: null,
+          operationVersion: 4,
+          operations,
+          status: 'pending' as const,
+          queuedAt: '2026-08-04T12:00:00.000Z',
+        },
+        lastResult: null,
+      })),
+    })
+    const port = createPort()
+    const remote = createRemote({ supportsConditionalWrite: vi.fn(async () => false) })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => port,
+      onDataImport: vi.fn(),
+      remote,
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+
+    expect(port.restorePendingOperations).not.toHaveBeenCalled()
+    expect(background.clear).not.toHaveBeenCalled()
+    expect(background.stage).not.toHaveBeenCalled()
+    expect(remote.push).not.toHaveBeenCalled()
+    expect(synchronization.getSnapshot().backgroundSyncStatus).toBe('preserved-other-project')
+  })
+
+  it('preserves a matching queue without operations until the database is upgraded', async () => {
+    const background = createBackground({
+      load: vi.fn(async () => ({
+        pending: {
+          id: 'snapshot-only',
+          supabaseUrl: 'https://project.supabase.co',
+          publishableKey: 'key',
+          data: remoteData,
+          expectedUpdatedAt: null,
+          operationVersion: 4,
+          operations: [],
+          status: 'pending' as const,
+          queuedAt: '2026-08-04T12:00:00.000Z',
+        },
+        lastResult: null,
+      })),
+    })
+    const remote = createRemote({ supportsConditionalWrite: vi.fn(async () => false) })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote,
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.updateLocalData(structuredClone(remoteData))
+    await vi.advanceTimersByTimeAsync(MS.PUSH_DEBOUNCE)
+
+    expect(background.clear).not.toHaveBeenCalled()
+    expect(background.stage).not.toHaveBeenCalled()
+    expect(remote.push).not.toHaveBeenCalled()
+    expect(synchronization.getSnapshot().backgroundSyncStatus).toBe('preserved-pending')
+    expect(synchronization.getSnapshot().requiresDatabaseUpgrade).toBe(true)
+  })
+
+  it('keeps a preserved background queue when cloud sync is disconnected', async () => {
+    const background = createBackground({
+      load: vi.fn(async () => ({
+        pending: {
+          id: 'other-project',
+          supabaseUrl: 'https://other-project.supabase.co',
+          publishableKey: 'other-key',
+          data: remoteData,
+          expectedUpdatedAt: null,
+          operationVersion: 4,
+          operations: [],
+          status: 'pending' as const,
+          queuedAt: '2026-08-04T12:00:00.000Z',
+        },
+        lastResult: null,
+      })),
+    })
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => createPort(),
+      onDataImport: vi.fn(),
+      remote: createRemote(),
+      background,
+      metadata: createMetadata(),
+      runtime: createRuntime().runtime,
+    })
+
+    synchronization.start()
+    await vi.advanceTimersByTimeAsync(0)
+    synchronization.disconnect()
+
+    expect(background.clear).not.toHaveBeenCalled()
+    expect(synchronization.getSnapshot().backgroundSyncStatus).toBe('inactive')
   })
 
   it('pulls and retries a conditional write conflict instead of overwriting cloud data', async () => {

@@ -10,6 +10,7 @@ import {
   CloudOff,
   LogOut,
   RefreshCw,
+  TriangleAlert,
 } from 'lucide-react'
 import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
@@ -30,6 +31,8 @@ interface CloudSyncStatusProps {
   backgroundSyncStatus: CloudBackgroundSyncStatus
   lastSyncTime: string | null
   syncError: string | null
+  hasPendingLocalChanges: boolean
+  requiresDatabaseUpgrade: boolean
   onTriggerSync: () => Promise<CloudSynchronizationCommandResult>
   onTeardownSupabase: () => void
   mobile?: boolean
@@ -61,6 +64,27 @@ function getBackgroundSyncPresentation(status: CloudBackgroundSyncStatus, t: TFu
     case 'upgrade-required':
       return {
         label: t('cloud.backgroundSync.upgradeRequired'),
+        Icon: CloudAlert,
+        pending: false,
+        tone: 'warning' as const,
+      }
+    case 'capability-unknown':
+      return {
+        label: t('cloud.backgroundSync.capabilityUnknown'),
+        Icon: CloudAlert,
+        pending: false,
+        tone: 'warning' as const,
+      }
+    case 'preserved-other-project':
+      return {
+        label: t('cloud.backgroundSync.preservedOtherProject'),
+        Icon: CloudAlert,
+        pending: false,
+        tone: 'warning' as const,
+      }
+    case 'preserved-pending':
+      return {
+        label: t('cloud.backgroundSync.preservedPending'),
         Icon: CloudAlert,
         pending: false,
         tone: 'warning' as const,
@@ -169,6 +193,8 @@ export function CloudSyncStatus({
   backgroundSyncStatus,
   lastSyncTime,
   syncError,
+  hasPendingLocalChanges,
+  requiresDatabaseUpgrade,
   onTriggerSync,
   onTeardownSupabase,
   mobile = false,
@@ -236,8 +262,26 @@ export function CloudSyncStatus({
 
   const syncPresentation = getSyncPresentation(syncStatus, isSyncing, t)
   const StatusIcon = syncPresentation.Icon
-  const backgroundPresentation = getBackgroundSyncPresentation(backgroundSyncStatus, t)
-  const BackgroundIcon = backgroundPresentation.Icon
+  const backgroundPresentation = isSyncing
+    ? {
+        label: t('cloud.backgroundSync.manualSyncChecking'),
+        Icon: RefreshCw,
+        pending: true,
+        tone: 'neutral' as const,
+      }
+    : getBackgroundSyncPresentation(backgroundSyncStatus, t)
+  const disconnectPresentation = isDisconnectExpanded
+    ? {
+        label: hasPendingLocalChanges
+          ? t('cloud.disconnectPendingTitle')
+          : t('cloud.disconnectWarningTitle'),
+        description: hasPendingLocalChanges
+          ? t('cloud.disconnectPendingDescription')
+          : t('cloud.disconnectWarningDescription'),
+        Icon: TriangleAlert,
+      }
+    : null
+  const BackgroundIcon = disconnectPresentation?.Icon ?? backgroundPresentation.Icon
 
   return (
     <div className="space-y-4">
@@ -320,11 +364,15 @@ export function CloudSyncStatus({
           <SettingRow
             icon={BackgroundIcon}
             iconClassName={cn(
-              backgroundPresentation.tone === 'warning' && 'text-warning',
-              backgroundPresentation.pending && 'animate-spin',
+              disconnectPresentation && 'text-warning',
+              !disconnectPresentation &&
+                backgroundPresentation.tone === 'warning' &&
+                'text-warning',
+              !disconnectPresentation && backgroundPresentation.pending && 'animate-spin',
             )}
-            label={t('cloud.backgroundSync.title')}
-            description={backgroundPresentation.label}
+            iconTestId={disconnectPresentation ? 'disconnect-warning-icon' : undefined}
+            label={disconnectPresentation?.label ?? t('cloud.backgroundSync.title')}
+            description={disconnectPresentation?.description ?? backgroundPresentation.label}
             className="px-4 py-3"
           />
         </div>
@@ -356,7 +404,7 @@ export function CloudSyncStatus({
         </div>
       </Card>
 
-      {backgroundSyncStatus === 'upgrade-required' && (
+      {(backgroundSyncStatus === 'upgrade-required' || requiresDatabaseUpgrade) && (
         <Card
           variant="surface"
           disableHoverScale={mobile}

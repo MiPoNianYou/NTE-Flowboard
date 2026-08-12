@@ -12,7 +12,9 @@ export interface CloudSyncProps {
   lastSyncTime: string | null
   syncError: string | null
   isConfigured: boolean
+  hasPendingLocalChanges?: boolean
   backgroundSyncStatus?: CloudBackgroundSyncStatus
+  requiresDatabaseUpgrade?: boolean
   onSetupSupabase: (
     projectUrl: string,
     anonKey: string,
@@ -28,7 +30,9 @@ export const CloudSyncSection = memo(function CloudSyncSection({
   lastSyncTime,
   syncError,
   isConfigured,
+  hasPendingLocalChanges = false,
   backgroundSyncStatus = 'ready',
+  requiresDatabaseUpgrade = false,
   onSetupSupabase,
   onTriggerSync,
   onTeardownSupabase,
@@ -50,7 +54,9 @@ export const CloudSyncSection = memo(function CloudSyncSection({
       syncStatus={syncStatus}
       lastSyncTime={lastSyncTime}
       syncError={syncError}
+      hasPendingLocalChanges={hasPendingLocalChanges}
       backgroundSyncStatus={backgroundSyncStatus}
+      requiresDatabaseUpgrade={requiresDatabaseUpgrade}
       onTriggerSync={onTriggerSync}
       onTeardownSupabase={onTeardownSupabase}
       mobile={mobile}

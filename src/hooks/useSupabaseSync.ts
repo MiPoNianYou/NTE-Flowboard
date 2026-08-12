@@ -20,6 +20,7 @@ interface UseSupabaseSyncReturn {
   syncError: string | null
   hasPendingLocalChanges: boolean
   backgroundSyncStatus: ReturnType<CloudSynchronization['getSnapshot']>['backgroundSyncStatus']
+  requiresDatabaseUpgrade: boolean
   setupSupabase: (projectUrl: string, anonKey: string) => Promise<CloudSynchronizationCommandResult>
   triggerSync: () => Promise<CloudSynchronizationCommandResult>
   teardownSupabase: () => void
@@ -67,6 +68,7 @@ export function useSupabaseSync({
     syncError: snapshot.syncError,
     hasPendingLocalChanges: snapshot.hasPendingLocalChanges,
     backgroundSyncStatus: snapshot.backgroundSyncStatus,
+    requiresDatabaseUpgrade: snapshot.requiresDatabaseUpgrade,
     setupSupabase: useCallback(
       (projectUrl, anonKey) => synchronization.configure(projectUrl, anonKey),
       [synchronization],

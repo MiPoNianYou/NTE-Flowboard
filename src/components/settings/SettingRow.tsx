@@ -8,6 +8,7 @@ interface SettingRowProps {
   description?: string
   descriptionClassName?: string
   iconClassName?: string
+  iconTestId?: string
   trailing?: ReactNode
   className?: string
 }
@@ -18,6 +19,7 @@ export function SettingRow({
   description,
   descriptionClassName,
   iconClassName,
+  iconTestId,
   trailing,
   className,
 }: SettingRowProps) {
@@ -26,7 +28,10 @@ export function SettingRow({
       <div className="flex items-center gap-3 flex-1 mr-3">
         {Icon && (
           <div className="size-8 rounded-control bg-surface flex items-center justify-center flex-shrink-0">
-            <Icon className={cn('size-4 text-text-secondary', iconClassName)} />
+            <Icon
+              className={cn('size-4 text-text-secondary', iconClassName)}
+              data-testid={iconTestId}
+            />
           </div>
         )}
         <div className="flex-1">

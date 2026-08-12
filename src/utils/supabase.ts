@@ -296,9 +296,7 @@ export async function validateConfig(projectUrl: string, anonKey: string): Promi
       },
     })
     const { error } = await supabaseClient.rpc('pull_sync').maybeSingle()
-    if (!error || error.code === '42883' || error.code === 'PGRST301') {
-      return { ok: true }
-    }
+    if (!error) return { ok: true }
     if (error.message?.includes('Invalid API key') || error.code === '28P01') {
       return { ok: false, reason: 'auth', detail: error.message }
     }
@@ -311,7 +309,10 @@ export async function validateConfig(projectUrl: string, anonKey: string): Promi
     if (error.code === '42501') {
       return { ok: false, reason: 'table_permission', detail: error.message }
     }
-    if (['42703', 'PGRST204', 'PGRST205'].includes(error.code)) {
+    if (error.code === 'PGRST301') {
+      return { ok: false, reason: 'auth', detail: error.message }
+    }
+    if (['42703', '42883', 'PGRST202', 'PGRST204', 'PGRST205'].includes(error.code)) {
       return { ok: false, reason: 'table_schema', detail: error.message }
     }
     return { ok: false, reason: 'unknown', detail: error.message }
@@ -332,7 +333,13 @@ export interface CloudPushResult {
 export async function detectConditionalWriteCapability(config: SupabaseConfig): Promise<boolean> {
   const supabaseClient = getSupabaseClient(config)
   const { data, error } = await supabaseClient.rpc('flowboard_sync_capabilities')
-  if (error) return false
+  if (error) {
+    if (error.code === '42883' || error.code === 'PGRST202') return false
+    throw new SyncError(
+      i18n.t('sync.capabilityCheckFailed', { message: error.message }),
+      error.code ?? 'CAPABILITY_ERROR',
+    )
+  }
   return Array.isArray(data) && data.includes('conditional_write_v1')
 }
 
@@ -352,7 +359,10 @@ export async function pushData(
       })
 
   if (error) {
-    throw new SyncError(i18n.t('sync.pushFailed', { message: error.message }), 'PUSH_ERROR')
+    throw new SyncError(
+      i18n.t('sync.pushFailed', { message: error.message }),
+      error.code ?? 'PUSH_ERROR',
+    )
   }
 
   if (!options && typeof result === 'string') {

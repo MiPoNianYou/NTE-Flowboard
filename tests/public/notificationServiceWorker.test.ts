@@ -156,7 +156,13 @@ describe('Flowboard service worker notifications', () => {
         status: 'error',
         updatedAt: null,
       }),
-    ).toMatchObject({ pending })
+    ).toMatchObject({
+      pending,
+      lastResult: {
+        supabaseUrl: 'https://project.supabase.co',
+        publishableKey: 'publishable-key',
+      },
+    })
 
     const newerProjectPending = {
       ...pending,

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   loadSupabaseConfig,
   saveSupabaseConfig,
@@ -40,6 +40,10 @@ beforeEach(() => {
   localStorage.clear()
   resetClient()
   vi.clearAllMocks()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('SyncError', () => {
@@ -308,10 +312,28 @@ describe('validateConfig', () => {
     expect(result).toEqual({ ok: true })
   })
 
-  it.each(['42883', 'PGRST301'])('should accept bootstrap RPC error %s', async (code) => {
+  it.each(['42883', 'PGRST202'])('should reject a missing pull RPC error %s', async (code) => {
     mockRpc.mockReturnValue({ maybeSingle: mockMaybeSingle })
     mockMaybeSingle.mockReturnValue({ data: null, error: { code, message: 'not found' } })
-    await expect(validateConfig('test-project', 'test-key')).resolves.toEqual({ ok: true })
+    await expect(validateConfig('test-project', 'test-key')).resolves.toEqual({
+      ok: false,
+      reason: 'table_schema',
+      detail: 'not found',
+    })
+  })
+
+  it('should reject an invalid JWT as an authentication error', async () => {
+    mockRpc.mockReturnValue({ maybeSingle: mockMaybeSingle })
+    mockMaybeSingle.mockReturnValue({
+      data: null,
+      error: { code: 'PGRST301', message: 'invalid JWT' },
+    })
+
+    await expect(validateConfig('test-project', 'test-key')).resolves.toEqual({
+      ok: false,
+      reason: 'auth',
+      detail: 'invalid JWT',
+    })
   })
 
   it('should return false when RPC returns other error', async () => {

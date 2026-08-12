@@ -148,6 +148,8 @@ function mergeBackgroundResult(state, completed, result) {
   state.lastResult = {
     status: result.status,
     changeId: completed.id,
+    supabaseUrl: completed.supabaseUrl,
+    publishableKey: completed.publishableKey,
     updatedAt: result.updatedAt,
     operationVersion: completed.operationVersion,
   }

@@ -16,6 +16,7 @@ import {
   resolveSupabaseUrl,
   saveCloudSyncState,
   saveSupabaseConfig,
+  SyncError,
   subscribeToChanges,
   validateConfig,
   type SupabaseConfig,
@@ -32,6 +33,13 @@ import i18n from '../i18n'
 
 type RetryKind = 'pull' | 'push'
 type SyncIntentKind = 'pull' | 'push' | 'sync'
+type WriteCapability = 'supported' | 'legacy' | 'unavailable' | 'unknown'
+type PreservedBackgroundState = 'none' | 'other-project' | 'snapshot-only'
+type WriteUnavailableMessageKey =
+  | 'cloud.backgroundSync.preservedOtherProject'
+  | 'cloud.backgroundSync.preservedPending'
+  | 'cloud.backgroundSync.capabilityUnknown'
+  | 'cloud.backgroundSync.upgradeRequired'
 
 interface SyncIntent {
   kind: SyncIntentKind
@@ -56,6 +64,9 @@ export type CloudBackgroundSyncStatus =
   | 'pending'
   | 'conflict'
   | 'upgrade-required'
+  | 'capability-unknown'
+  | 'preserved-other-project'
+  | 'preserved-pending'
   | 'unsupported'
   | 'blocked'
 
@@ -66,6 +77,7 @@ export interface CloudSynchronizationSnapshot {
   syncError: string | null
   hasPendingLocalChanges: boolean
   backgroundSyncStatus: CloudBackgroundSyncStatus
+  requiresDatabaseUpgrade: boolean
 }
 
 export type CloudSynchronizationCommandResult = { ok: true } | { ok: false; error: string }
@@ -156,6 +168,7 @@ export function createCloudSynchronization({
     syncError: null,
     hasPendingLocalChanges: false,
     backgroundSyncStatus: config ? 'checking' : 'inactive',
+    requiresDatabaseUpgrade: false,
   }
   let started = false
   let terminalError = false
@@ -167,7 +180,13 @@ export function createCloudSynchronization({
   let validationTimer: ReturnType<typeof setTimeout> | null = null
   let periodicTimer: ReturnType<typeof setInterval> | null = null
   let retryAttempt = 0
-  let conditionalWriteSupported = false
+  let writeCapability: WriteCapability = 'unknown'
+  let writeCapabilityProbe: {
+    config: SupabaseConfig
+    configVersion: number
+    promise: Promise<boolean>
+  } | null = null
+  let preservedBackgroundState: PreservedBackgroundState = 'none'
   let backgroundRegistration: BackgroundSyncRegistrationState = 'unsupported'
   let unsubscribeOnline: (() => void) | null = null
   let unsubscribeVisibility: (() => void) | null = null
@@ -184,7 +203,8 @@ export function createCloudSynchronization({
       next.lastSyncTime === snapshot.lastSyncTime &&
       next.syncError === snapshot.syncError &&
       next.hasPendingLocalChanges === snapshot.hasPendingLocalChanges &&
-      next.backgroundSyncStatus === snapshot.backgroundSyncStatus
+      next.backgroundSyncStatus === snapshot.backgroundSyncStatus &&
+      next.requiresDatabaseUpgrade === snapshot.requiresDatabaseUpgrade
     ) {
       return
     }
@@ -212,11 +232,52 @@ export function createCloudSynchronization({
     return 'ready'
   }
 
+  const backgroundSyncAvailability = (): {
+    status: CloudBackgroundSyncStatus
+    writeUnavailableMessageKey: WriteUnavailableMessageKey | null
+  } => {
+    if (preservedBackgroundState === 'other-project') {
+      return {
+        status: 'preserved-other-project',
+        writeUnavailableMessageKey: 'cloud.backgroundSync.preservedOtherProject',
+      }
+    }
+    if (preservedBackgroundState === 'snapshot-only') {
+      return {
+        status: 'preserved-pending',
+        writeUnavailableMessageKey: 'cloud.backgroundSync.preservedPending',
+      }
+    }
+    if (writeCapability === 'legacy' || writeCapability === 'unavailable') {
+      return {
+        status: 'upgrade-required',
+        writeUnavailableMessageKey: 'cloud.backgroundSync.upgradeRequired',
+      }
+    }
+    if (writeCapability === 'unknown') {
+      return {
+        status: 'capability-unknown',
+        writeUnavailableMessageKey: 'cloud.backgroundSync.capabilityUnknown',
+      }
+    }
+    return { status: registrationStatus(), writeUnavailableMessageKey: null }
+  }
+
+  const backgroundStatusForWriteCapability = () => backgroundSyncAvailability().status
+
+  const shouldPreserveBackgroundState = () => preservedBackgroundState !== 'none'
+
+  const writeUnavailableMessage = () =>
+    i18n.t(
+      backgroundSyncAvailability().writeUnavailableMessageKey ??
+        'cloud.backgroundSync.upgradeRequired',
+    )
+
   const stageBackgroundSnapshot = async (
     activeConfig: SupabaseConfig,
     captured = getChecklistPort()?.captureSnapshot(),
   ): Promise<string | null> => {
-    if (!conditionalWriteSupported) return null
+    if (writeCapability !== 'supported' || shouldPreserveBackgroundState()) return null
     const snapshotToStage = captured ?? {
       data: currentData,
       operationVersion: 0,
@@ -246,21 +307,30 @@ export function createCloudSynchronization({
     try {
       backgroundRegistration = await background.getRegistrationState()
       const stored = await background.load()
+      preservedBackgroundState = 'none'
       const matchesConfig =
         !stored.pending ||
         (stored.pending.supabaseUrl === resolveSupabaseUrl(activeConfig.projectId) &&
           stored.pending.publishableKey === activeConfig.anonKey)
       if (!matchesConfig) {
-        await background.clear()
-        updateSnapshot({ backgroundSyncStatus: registrationStatus() })
+        preservedBackgroundState = 'other-project'
+        updateSnapshot({ backgroundSyncStatus: backgroundStatusForWriteCapability() })
         return false
       }
 
       const checklistPort = getChecklistPort()
-      if (stored.pending?.operations.length) {
-        checklistPort?.restorePendingOperations(stored.pending.operations)
+      const pendingOperations = stored.pending?.operations ?? []
+      if (pendingOperations.length) {
+        checklistPort?.restorePendingOperations(pendingOperations)
       }
-      if (stored.lastResult?.status === 'applied' && stored.lastResult.updatedAt) {
+      const resultMatchesConfig =
+        stored.lastResult?.supabaseUrl === resolveSupabaseUrl(activeConfig.projectId) &&
+        stored.lastResult.publishableKey === activeConfig.anonKey
+      if (
+        resultMatchesConfig &&
+        stored.lastResult?.status === 'applied' &&
+        stored.lastResult.updatedAt
+      ) {
         checklistPort?.acknowledgeOperationsThrough(stored.lastResult.operationVersion)
         lastSeenTime = stored.lastResult.updatedAt
         const syncedAt = runtime.now().toISOString()
@@ -271,14 +341,20 @@ export function createCloudSynchronization({
         })
         updateSnapshot({ lastSyncTime: syncedAt })
       }
-      if (stored.lastResult) await background.clearResult()
+      if (stored.lastResult && resultMatchesConfig) await background.clearResult()
 
-      if (stored.pending) {
+      if (pendingOperations.length) {
+        await background.clear()
         updateSnapshot({
           hasPendingLocalChanges: true,
-          backgroundSyncStatus: stored.pending.status === 'conflict' ? 'conflict' : 'pending',
+          backgroundSyncStatus: backgroundStatusForWriteCapability(),
         })
         return true
+      }
+      if (stored.pending) {
+        preservedBackgroundState = 'snapshot-only'
+        updateSnapshot({ backgroundSyncStatus: backgroundStatusForWriteCapability() })
+        return false
       }
       updateSnapshot({ hasPendingLocalChanges: false, backgroundSyncStatus: registrationStatus() })
       return false
@@ -289,14 +365,50 @@ export function createCloudSynchronization({
     }
   }
 
-  const refreshConditionalWriteCapability = async (activeConfig: SupabaseConfig) => {
-    conditionalWriteSupported = await remote.supportsConditionalWrite(activeConfig)
-    if (!conditionalWriteSupported) {
-      await background.clear().catch(() => undefined)
-      updateSnapshot({ backgroundSyncStatus: 'upgrade-required' })
-      return false
+  const refreshWriteCapability = (activeConfig: SupabaseConfig) => {
+    const probeConfigVersion = configVersion
+    if (
+      writeCapabilityProbe?.config === activeConfig &&
+      writeCapabilityProbe.configVersion === probeConfigVersion
+    ) {
+      return writeCapabilityProbe.promise
     }
-    return true
+
+    const probe = remote
+      .supportsConditionalWrite(activeConfig)
+      .then((supportsConditionalWrite) => {
+        if (config !== activeConfig || configVersion !== probeConfigVersion) return false
+        if (supportsConditionalWrite) {
+          writeCapability = 'supported'
+          updateSnapshot({ requiresDatabaseUpgrade: false })
+          return true
+        }
+        if (writeCapability !== 'unavailable') writeCapability = 'legacy'
+        updateSnapshot({
+          backgroundSyncStatus: backgroundStatusForWriteCapability(),
+          requiresDatabaseUpgrade: true,
+        })
+        return false
+      })
+      .catch(() => {
+        if (config !== activeConfig || configVersion !== probeConfigVersion) return false
+        if (writeCapability !== 'unavailable') writeCapability = 'unknown'
+        updateSnapshot({
+          backgroundSyncStatus: backgroundStatusForWriteCapability(),
+          requiresDatabaseUpgrade: false,
+        })
+        return false
+      })
+      .finally(() => {
+        if (writeCapabilityProbe?.promise === probe) writeCapabilityProbe = null
+      })
+
+    writeCapabilityProbe = {
+      config: activeConfig,
+      configVersion: probeConfigVersion,
+      promise: probe,
+    }
+    return probe
   }
 
   const saveSuccessfulSync = (activeConfig: SupabaseConfig, updatedAt: string) => {
@@ -345,14 +457,30 @@ export function createCloudSynchronization({
     activeConfig: SupabaseConfig,
     activeConfigVersion: number,
   ): Promise<PushAttemptResult> => {
-    if (!conditionalWriteSupported) {
+    if (
+      writeCapabilityProbe?.config === activeConfig &&
+      writeCapabilityProbe.configVersion === activeConfigVersion
+    ) {
+      await writeCapabilityProbe.promise
+    }
+    if (activeConfigVersion !== configVersion) {
+      return { outcome: 'applied', command: { ok: false, error: 'cancelled' } }
+    }
+    if (
+      writeCapability === 'unknown' ||
+      writeCapability === 'unavailable' ||
+      shouldPreserveBackgroundState()
+    ) {
       updateSnapshot({
         syncStatus: 'connected',
-        backgroundSyncStatus: 'upgrade-required',
+        backgroundSyncStatus: backgroundStatusForWriteCapability(),
       })
       return {
         outcome: 'applied',
-        command: { ok: false, error: i18n.t('cloud.backgroundSync.upgradeRequired') },
+        command: {
+          ok: false,
+          error: writeUnavailableMessage(),
+        },
       }
     }
 
@@ -363,9 +491,10 @@ export function createCloudSynchronization({
 
     try {
       const orderedData = toOrderedData(captured?.data ?? currentData)
-      const pushResult = await remote.push(activeConfig, orderedData, {
-        expectedUpdatedAt: lastSeenTime,
-      })
+      const pushResult =
+        writeCapability === 'supported'
+          ? await remote.push(activeConfig, orderedData, { expectedUpdatedAt: lastSeenTime })
+          : await remote.push(activeConfig, orderedData)
       if (activeConfigVersion !== configVersion) {
         return { outcome: 'applied', command: { ok: false, error: 'cancelled' } }
       }
@@ -395,13 +524,36 @@ export function createCloudSynchronization({
       }
       saveSuccessfulSync(activeConfig, pushResult.updatedAt)
       updateSnapshot({
-        backgroundSyncStatus: hasQueuedChange ? 'pending' : registrationStatus(),
+        backgroundSyncStatus:
+          writeCapability === 'legacy'
+            ? 'upgrade-required'
+            : hasQueuedChange
+              ? 'pending'
+              : registrationStatus(),
       })
       runtime.broadcast(pushResult.updatedAt)
       return { outcome: 'applied', command: { ok: true } }
     } catch (error) {
       if (activeConfigVersion !== configVersion) {
         return { outcome: 'applied', command: { ok: false, error: 'cancelled' } }
+      }
+      if (
+        writeCapability === 'legacy' &&
+        error instanceof SyncError &&
+        ['42883', 'PGRST202'].includes(error.code)
+      ) {
+        writeCapability = 'unavailable'
+        updateSnapshot({
+          syncStatus: 'connected',
+          syncError: null,
+          hasPendingLocalChanges: true,
+          backgroundSyncStatus: 'upgrade-required',
+          requiresDatabaseUpgrade: true,
+        })
+        return {
+          outcome: 'applied',
+          command: { ok: false, error: i18n.t('cloud.backgroundSync.upgradeRequired') },
+        }
       }
       fail(error, 'push')
       return {
@@ -556,6 +708,10 @@ export function createCloudSynchronization({
     if (!started || !config || runtime.isDocumentHidden() || terminalError) return
     periodicTimer = runtime.setInterval(() => {
       if (!runtime.isDocumentHidden()) {
+        const activeConfig = config
+        if (activeConfig && writeCapability !== 'supported') {
+          void refreshWriteCapability(activeConfig)
+        }
         void enqueue({ kind: 'pull', forcePull: false, skipFirstImport: false })
       }
     }, MS.PERIODIC_PULL)
@@ -584,11 +740,16 @@ export function createCloudSynchronization({
     if (unsubscribeOnline) return
     unsubscribeOnline = runtime.subscribeOnline(() => {
       if (!config || terminalError) return
-      void enqueue({
-        kind: snapshot.hasPendingLocalChanges ? 'push' : 'pull',
-        forcePull: !snapshot.hasPendingLocalChanges,
-        skipFirstImport: false,
-      })
+      const activeConfig = config
+      void (async () => {
+        if (writeCapability !== 'supported') await refreshWriteCapability(activeConfig)
+        if (!config || config !== activeConfig || terminalError) return
+        void enqueue({
+          kind: snapshot.hasPendingLocalChanges ? 'push' : 'pull',
+          forcePull: !snapshot.hasPendingLocalChanges,
+          skipFirstImport: false,
+        })
+      })()
     })
     unsubscribeVisibility = runtime.subscribeVisibility(() => {
       if (runtime.isDocumentHidden()) {
@@ -596,6 +757,7 @@ export function createCloudSynchronization({
         return
       }
       if (config && !terminalError) {
+        if (writeCapability !== 'supported') void refreshWriteCapability(config)
         void enqueue({ kind: 'pull', forcePull: false, skipFirstImport: false })
       }
       startPeriodicPull()
@@ -607,7 +769,7 @@ export function createCloudSynchronization({
     })
     unsubscribeBackgroundResults = background.subscribeResults(() => {
       const activeConfig = config
-      if (!activeConfig || !conditionalWriteSupported) return
+      if (!activeConfig || writeCapability !== 'supported') return
       void hydrateBackgroundState(activeConfig).then((hasPersistedChange) => {
         if (hasPersistedChange && started && config === activeConfig) {
           void enqueue({ kind: 'sync', forcePull: true, skipFirstImport: false })
@@ -642,11 +804,11 @@ export function createCloudSynchronization({
       return
     }
     terminalError = false
-    const supportsConditionalWrite = await refreshConditionalWriteCapability(activeConfig)
+    await refreshWriteCapability(activeConfig)
     if (!started || activeConfigVersion !== configVersion) return
-    const hasPersistedChange = supportsConditionalWrite
-      ? await hydrateBackgroundState(activeConfig)
-      : false
+    const hasPersistedChange = await hydrateBackgroundState(activeConfig)
+    if (writeCapability !== 'supported')
+      updateSnapshot({ backgroundSyncStatus: backgroundStatusForWriteCapability() })
     if (!started || activeConfigVersion !== configVersion) return
     startRemoteSubscription()
     startPeriodicPull()
@@ -700,7 +862,7 @@ export function createCloudSynchronization({
       localChangeVersion += 1
       updateSnapshot({ hasPendingLocalChanges: true })
       if (!config) return
-      if (conditionalWriteSupported) void stageBackgroundSnapshot(config)
+      if (writeCapability === 'supported') void stageBackgroundSnapshot(config)
       if (terminalError) return
       if (snapshot.syncStatus === 'connected') {
         schedulePush()
@@ -727,7 +889,6 @@ export function createCloudSynchronization({
       resetRetries()
       clearTimer(validationTimer)
       validationTimer = null
-      await background.clear().catch(() => undefined)
       const previousConfig = config
       config = { projectId: projectUrl, anonKey }
       metadata.saveConfig(config)
@@ -750,15 +911,16 @@ export function createCloudSynchronization({
         })
       }
       terminalError = false
-      const supportsConditionalWrite = await refreshConditionalWriteCapability(config)
-      if (supportsConditionalWrite) await hydrateBackgroundState(config)
+      await refreshWriteCapability(config)
+      await hydrateBackgroundState(config)
       updateSnapshot({
         isConfigured: true,
         syncStatus: 'syncing',
         syncError: null,
-        backgroundSyncStatus: supportsConditionalWrite
-          ? snapshot.backgroundSyncStatus
-          : 'upgrade-required',
+        backgroundSyncStatus:
+          writeCapability === 'supported'
+            ? snapshot.backgroundSyncStatus
+            : backgroundStatusForWriteCapability(),
       })
       if (started) {
         startRemoteSubscription()
@@ -771,8 +933,8 @@ export function createCloudSynchronization({
       })
     },
     syncNow: async () => {
-      if (config && !conditionalWriteSupported) {
-        const supportsConditionalWrite = await refreshConditionalWriteCapability(config)
+      if (config && writeCapability !== 'supported') {
+        const supportsConditionalWrite = await refreshWriteCapability(config)
         if (supportsConditionalWrite) await hydrateBackgroundState(config)
       }
       return enqueue({
@@ -782,11 +944,13 @@ export function createCloudSynchronization({
       })
     },
     disconnect: () => {
+      const preserveBackgroundQueue = shouldPreserveBackgroundState()
       configVersion += 1
       config = null
       desiredIntent = null
       terminalError = false
-      conditionalWriteSupported = false
+      writeCapability = 'unknown'
+      preservedBackgroundState = 'none'
       lastSeenTime = null
       clearTimer(pushTimer)
       clearTimer(retryTimer)
@@ -798,7 +962,7 @@ export function createCloudSynchronization({
       stopRemoteSubscription()
       stopPeriodicPull()
       metadata.clearConfig()
-      void background.clear().catch(() => undefined)
+      if (!preserveBackgroundQueue) void background.clear().catch(() => undefined)
       remote.reset()
       updateSnapshot({
         isConfigured: false,
@@ -807,6 +971,7 @@ export function createCloudSynchronization({
         syncError: null,
         hasPendingLocalChanges: false,
         backgroundSyncStatus: 'inactive',
+        requiresDatabaseUpgrade: false,
       })
     },
     clearError: () => updateSnapshot({ syncError: null }),

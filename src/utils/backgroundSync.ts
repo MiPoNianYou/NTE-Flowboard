@@ -26,6 +26,8 @@ interface BackgroundSyncPendingChange {
 interface BackgroundSyncResult {
   status: 'applied' | 'conflict' | 'error'
   changeId: string
+  supabaseUrl?: string
+  publishableKey?: string
   updatedAt: string | null
   operationVersion: number
 }

@@ -17,6 +17,7 @@ const mockedModule = vi.hoisted(() => {
     syncError: null,
     hasPendingLocalChanges: false,
     backgroundSyncStatus: 'inactive',
+    requiresDatabaseUpgrade: false,
   }
   const listeners = new Set<() => void>()
   const synchronization: CloudSynchronization = {
@@ -47,6 +48,7 @@ const mockedModule = vi.hoisted(() => {
         syncError: null,
         hasPendingLocalChanges: false,
         backgroundSyncStatus: 'inactive',
+        requiresDatabaseUpgrade: false,
       }
       listeners.clear()
     },
@@ -101,6 +103,7 @@ describe('useSupabaseSync', () => {
         syncError: null,
         hasPendingLocalChanges: true,
         backgroundSyncStatus: 'pending',
+        requiresDatabaseUpgrade: true,
       })
     })
 
@@ -109,6 +112,7 @@ describe('useSupabaseSync', () => {
       syncStatus: 'connected',
       lastSyncTime: '2026-08-04T12:00:00.000Z',
       hasPendingLocalChanges: true,
+      requiresDatabaseUpgrade: true,
     })
   })
 
