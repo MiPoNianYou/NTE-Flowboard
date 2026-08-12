@@ -1,31 +1,63 @@
 import { useRef, useCallback, useState } from 'react'
 import type { TabType } from '../types'
+import { migrateLegacyStorageValue } from '../utils/legacyStorageMigration'
+import {
+  reportLegacyStorageConflict,
+  reportLegacyStorageFailure,
+} from '../utils/legacyStorageEvents'
 
 type HeightMap = Map<string, number>
 
 const STORAGE_KEY = 'flowboard-item-heights'
 const SAVE_DEBOUNCE = 500
 
+function parseHeights(raw: string): Record<string, Record<string, number>> | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+  const result: Record<string, Record<string, number>> = {}
+  for (const tab of ['daily', 'weekly', 'monthly']) {
+    const values = (parsed as Record<string, unknown>)[tab]
+    if (!values || typeof values !== 'object' || Array.isArray(values)) continue
+    const normalized: Record<string, number> = {}
+    for (const [id, height] of Object.entries(values)) {
+      if (typeof height === 'number' && Number.isFinite(height)) normalized[id] = Math.round(height)
+    }
+    if (Object.keys(normalized).length > 0) result[tab] = normalized
+  }
+  return result
+}
+
 function loadCache(): Map<TabType, HeightMap> {
   const maps = new Map<TabType, HeightMap>()
   try {
-    if (localStorage.getItem(STORAGE_KEY) === null) {
-      const legacy = localStorage.getItem('nte-item-heights')
-      if (legacy !== null) {
-        localStorage.setItem(STORAGE_KEY, legacy)
-        localStorage.removeItem('nte-item-heights')
-      }
-    }
+    migrateLegacyStorageValue(localStorage, {
+      currentKey: STORAGE_KEY,
+      legacyKey: 'nte-item-heights',
+      parse: parseHeights,
+      serialize: JSON.stringify,
+      equals: (left, right) => JSON.stringify(left) === JSON.stringify(right),
+      onConflict: reportLegacyStorageConflict,
+      onFailure: reportLegacyStorageFailure,
+    })
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
-      const parsed = JSON.parse(raw)
+      const parsedValue = parseHeights(raw)
+      if (!parsedValue) {
+        const backupKey = `${STORAGE_KEY}-corrupted-backup`
+        localStorage.setItem(backupKey, raw)
+        if (localStorage.getItem(backupKey) !== raw) throw new Error('height backup failed')
+      }
+      const parsed = parsedValue ?? {}
       for (const tab of ['daily', 'weekly', 'monthly'] as TabType[]) {
-        if (parsed[tab] && typeof parsed[tab] === 'object') {
+        if (parsed[tab]) {
           const map = new Map<string, number>()
           for (const [id, height] of Object.entries(parsed[tab])) {
-            if (typeof height === 'number') {
-              map.set(id, Math.round(height))
-            }
+            map.set(id, height)
           }
           maps.set(tab, map)
         }

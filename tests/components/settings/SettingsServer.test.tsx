@@ -2,11 +2,11 @@ import type { ReactNode } from 'react'
 import { render as renderBase, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SettingsServer } from '../../../src/components/settings/SettingsServer'
-import { DisplayPreferencesProvider } from '../../../src/context/DisplayPreferencesContext'
-import { DISPLAY_PREFERENCES_STORAGE_KEY } from '../../../src/i18n/displayPreferences'
+import { LocalUiPreferencesProvider } from '../../../src/context/LocalUiPreferencesContext'
+import { LOCAL_UI_PREFERENCES_STORAGE_KEY } from '../../../src/utils/localUiPreferences'
 
 function render(ui: ReactNode) {
-  return renderBase(<DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>)
+  return renderBase(<LocalUiPreferencesProvider>{ui}</LocalUiPreferencesProvider>)
 }
 
 const mockUpdateSettings = vi.fn()
@@ -50,7 +50,7 @@ describe('SettingsServer', () => {
 
   it('uses the compact English schedule with a 12-hour reset time', async () => {
     localStorage.setItem(
-      DISPLAY_PREFERENCES_STORAGE_KEY,
+      LOCAL_UI_PREFERENCES_STORAGE_KEY,
       JSON.stringify({ language: 'en-US', timeFormat: '12h' }),
     )
 

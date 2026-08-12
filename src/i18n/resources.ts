@@ -205,6 +205,9 @@ export const zhCN = {
     loadFailedTitle: '数据读取失败',
     saveFailed: '保存数据失败',
     legacyMigrationFailed: '旧数据迁移失败，下次启动将重试',
+    legacyMigrationFailedTitle: '旧数据迁移未完成',
+    legacyConflict: '旧数据与当前数据不一致。当前数据保持不变，旧数据也已保留，方便检查。',
+    legacyConflictTitle: '旧数据冲突',
   },
   sync: {
     failed: '同步失败',
@@ -512,6 +515,10 @@ export const enUS = {
     loadFailedTitle: 'Data read failed',
     saveFailed: 'Could not save data',
     legacyMigrationFailed: 'Legacy data migration failed and will retry next time',
+    legacyMigrationFailedTitle: 'Legacy migration incomplete',
+    legacyConflict:
+      'Legacy data differs from the current data. The current data was left unchanged, and the legacy data was kept for review.',
+    legacyConflictTitle: 'Legacy data conflict',
   },
   sync: {
     failed: 'Sync failed',

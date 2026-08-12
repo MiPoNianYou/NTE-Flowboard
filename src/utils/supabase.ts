@@ -2,6 +2,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { ChecklistData } from '../types'
 import { isChecklistData } from './validation'
 import { mergeChecklistData } from './dataMigration'
+import { migrateLegacyStorageValue, removeStorageKey } from './legacyStorageMigration'
+import { reportLegacyStorageConflict, reportLegacyStorageFailure } from './legacyStorageEvents'
 import i18n from '../i18n'
 
 const SYNC_TABLE = 'sync_data'
@@ -11,16 +13,113 @@ export interface SupabaseConfig {
   anonKey: string
 }
 
-const CONFIG_KEY = 'flowboard-cloud-config'
-const LAST_SYNC_KEY = 'flowboard-cloud-last-sync'
-const LAST_SEEN_KEY = 'flowboard-cloud-last-seen'
+export interface CloudSyncState {
+  projectId: string
+  lastSeenAt: string | null
+  lastSuccessfulSyncAt: string | null
+}
 
-function migrateLegacyCloudKey(legacyKey: string, currentKey: string): void {
-  if (localStorage.getItem(currentKey) !== null) return
-  const legacy = localStorage.getItem(legacyKey)
-  if (legacy === null) return
-  localStorage.setItem(currentKey, legacy)
-  localStorage.removeItem(legacyKey)
+const CONFIG_KEY = 'flowboard-cloud-config'
+const SYNC_STATE_KEY = 'flowboard-cloud-sync-state'
+const LEGACY_LAST_SYNC_KEY = 'flowboard-cloud-last-sync'
+const LEGACY_LAST_SEEN_KEY = 'flowboard-cloud-last-seen'
+const LEGACY_NTE_LAST_SYNC_KEY = 'nte-supabase-last-sync'
+const LEGACY_NTE_LAST_SEEN_KEY = 'nte-supabase-last-seen'
+const LEGACY_SYNC_KEYS = [
+  LEGACY_LAST_SYNC_KEY,
+  LEGACY_LAST_SEEN_KEY,
+  LEGACY_NTE_LAST_SYNC_KEY,
+  LEGACY_NTE_LAST_SEEN_KEY,
+  `${LEGACY_LAST_SYNC_KEY}-corrupted-backup`,
+  `${LEGACY_LAST_SEEN_KEY}-corrupted-backup`,
+] as const
+
+function parseSupabaseConfig(raw: string): SupabaseConfig | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return null
+    const value = parsed as Record<string, unknown>
+    if (
+      typeof value.projectId !== 'string' ||
+      !value.projectId.trim() ||
+      typeof value.anonKey !== 'string' ||
+      !value.anonKey.trim()
+    ) {
+      return null
+    }
+    return { projectId: value.projectId, anonKey: value.anonKey }
+  } catch {
+    return null
+  }
+}
+
+function parseStoredTimestamp(raw: string): string | null {
+  const value = raw.trim()
+  return value && !Number.isNaN(Date.parse(value)) ? raw : null
+}
+
+function normalizedProjectUrl(projectId: string): string | null {
+  try {
+    return resolveSupabaseUrl(projectId)
+  } catch {
+    return projectId.trim() || null
+  }
+}
+
+export function isSameSupabaseProject(left: string, right: string): boolean {
+  return normalizedProjectUrl(left) === normalizedProjectUrl(right)
+}
+
+function parseCloudSyncState(raw: string): CloudSyncState | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return null
+    const value = parsed as Record<string, unknown>
+    if (
+      typeof value.projectId !== 'string' ||
+      !value.projectId.trim() ||
+      (value.lastSeenAt !== null &&
+        (typeof value.lastSeenAt !== 'string' ||
+          parseStoredTimestamp(value.lastSeenAt) === null)) ||
+      (value.lastSuccessfulSyncAt !== null &&
+        (typeof value.lastSuccessfulSyncAt !== 'string' ||
+          parseStoredTimestamp(value.lastSuccessfulSyncAt) === null))
+    ) {
+      return null
+    }
+    return {
+      projectId: value.projectId,
+      lastSeenAt: value.lastSeenAt as string | null,
+      lastSuccessfulSyncAt: value.lastSuccessfulSyncAt as string | null,
+    }
+  } catch {
+    return null
+  }
+}
+
+function removeLegacySyncKeys(): boolean {
+  let removed = true
+  for (const key of LEGACY_SYNC_KEYS) {
+    if (!removeStorageKey(localStorage, key)) removed = false
+  }
+  if (!removed) reportLegacyStorageFailure()
+  return removed
+}
+
+function readLegacyTimestamp(currentKey: string, legacyKey: string): string | null {
+  const currentRaw = localStorage.getItem(currentKey)
+  const legacyRaw = localStorage.getItem(legacyKey)
+  const currentValue = currentRaw === null ? null : parseStoredTimestamp(currentRaw)
+  const legacyValue = legacyRaw === null ? null : parseStoredTimestamp(legacyRaw)
+  return currentValue ?? legacyValue
+}
+
+function cloudSyncStatesEqual(left: CloudSyncState, right: CloudSyncState): boolean {
+  return (
+    isSameSupabaseProject(left.projectId, right.projectId) &&
+    left.lastSeenAt === right.lastSeenAt &&
+    left.lastSuccessfulSyncAt === right.lastSuccessfulSyncAt
+  )
 }
 
 export function resolveSupabaseUrl(projectUrlOrId: string): string {
@@ -34,23 +133,17 @@ export function resolveSupabaseUrl(projectUrlOrId: string): string {
 }
 
 export function loadSupabaseConfig(): SupabaseConfig | null {
-  migrateLegacyCloudKey('nte-supabase-config', CONFIG_KEY)
+  migrateLegacyStorageValue(localStorage, {
+    currentKey: CONFIG_KEY,
+    legacyKey: 'nte-supabase-config',
+    parse: parseSupabaseConfig,
+    serialize: JSON.stringify,
+    equals: (left, right) => left.projectId === right.projectId && left.anonKey === right.anonKey,
+    onConflict: reportLegacyStorageConflict,
+    onFailure: reportLegacyStorageFailure,
+  })
   const raw = localStorage.getItem(CONFIG_KEY)
-  if (!raw) return null
-
-  try {
-    const parsed: unknown = JSON.parse(raw)
-
-    if (typeof parsed === 'object' && parsed !== null) {
-      const parsedObject = parsed as Record<string, unknown>
-      if (typeof parsedObject.projectId === 'string' && typeof parsedObject.anonKey === 'string') {
-        return { projectId: parsedObject.projectId, anonKey: parsedObject.anonKey }
-      }
-    }
-  } catch {
-    return null
-  }
-  return null
+  return raw ? parseSupabaseConfig(raw) : null
 }
 
 export function saveSupabaseConfig(config: SupabaseConfig): void {
@@ -58,27 +151,65 @@ export function saveSupabaseConfig(config: SupabaseConfig): void {
 }
 
 export function clearSyncConfig(): void {
-  localStorage.removeItem(CONFIG_KEY)
-  localStorage.removeItem(LAST_SYNC_KEY)
-  localStorage.removeItem(LAST_SEEN_KEY)
+  removeStorageKey(localStorage, CONFIG_KEY)
+  removeStorageKey(localStorage, 'nte-supabase-config')
+  removeStorageKey(localStorage, SYNC_STATE_KEY)
+  removeLegacySyncKeys()
 }
 
-export function loadLastSyncTime(): string | null {
-  migrateLegacyCloudKey('nte-supabase-last-sync', LAST_SYNC_KEY)
-  return localStorage.getItem(LAST_SYNC_KEY)
+export function loadCloudSyncState(config: SupabaseConfig | null): CloudSyncState | null {
+  try {
+    if (!config) {
+      removeStorageKey(localStorage, SYNC_STATE_KEY)
+      removeLegacySyncKeys()
+      return null
+    }
+
+    const raw = localStorage.getItem(SYNC_STATE_KEY)
+    if (raw !== null) {
+      const state = parseCloudSyncState(raw)
+      if (state && isSameSupabaseProject(state.projectId, config.projectId)) {
+        removeLegacySyncKeys()
+        return state
+      }
+      if (state) {
+        const emptyState: CloudSyncState = {
+          projectId: config.projectId,
+          lastSeenAt: null,
+          lastSuccessfulSyncAt: null,
+        }
+        if (saveCloudSyncState(emptyState)) removeLegacySyncKeys()
+        return emptyState
+      }
+    }
+
+    const state: CloudSyncState = {
+      projectId: config.projectId,
+      lastSeenAt: readLegacyTimestamp(LEGACY_LAST_SEEN_KEY, LEGACY_NTE_LAST_SEEN_KEY),
+      lastSuccessfulSyncAt: readLegacyTimestamp(LEGACY_LAST_SYNC_KEY, LEGACY_NTE_LAST_SYNC_KEY),
+    }
+    if (saveCloudSyncState(state)) removeLegacySyncKeys()
+    return state
+  } catch {
+    reportLegacyStorageFailure()
+    return null
+  }
 }
 
-export function saveLastSyncTime(isoString: string): void {
-  localStorage.setItem(LAST_SYNC_KEY, isoString)
-}
-
-export function loadLastSeenTime(): string | null {
-  migrateLegacyCloudKey('nte-supabase-last-seen', LAST_SEEN_KEY)
-  return localStorage.getItem(LAST_SEEN_KEY)
-}
-
-export function saveLastSeenTime(isoString: string): void {
-  localStorage.setItem(LAST_SEEN_KEY, isoString)
+export function saveCloudSyncState(state: CloudSyncState): boolean {
+  try {
+    localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(state))
+    const raw = localStorage.getItem(SYNC_STATE_KEY)
+    const confirmed = raw === null ? null : parseCloudSyncState(raw)
+    if (!confirmed || !cloudSyncStatesEqual(confirmed, state)) {
+      reportLegacyStorageFailure()
+      return false
+    }
+    return true
+  } catch {
+    reportLegacyStorageFailure()
+    return false
+  }
 }
 
 let client: SupabaseClient | null = null

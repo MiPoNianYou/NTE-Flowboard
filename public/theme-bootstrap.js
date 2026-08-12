@@ -1,5 +1,5 @@
 ;(function () {
-  var displayPreferencesKey = 'flowboard-display-preferences'
+  var localUiPreferencesKey = 'flowboard-display-preferences'
   var legacyThemeKey = 'flowboard-theme-preference'
 
   function resolveEnvironmentTheme() {
@@ -13,7 +13,7 @@
 
   function readTheme() {
     try {
-      var rawPreferences = window.localStorage.getItem(displayPreferencesKey)
+      var rawPreferences = window.localStorage.getItem(localUiPreferencesKey)
       if (rawPreferences) {
         try {
           var preferences = JSON.parse(rawPreferences)

@@ -7,9 +7,13 @@ import { useVisibilityInterval } from './useVisibilityInterval'
 import { generateId } from '../utils/id'
 import { toastBus } from '../utils/toastBus'
 import { createDefaultChecklistData } from '../utils/defaultData'
-import { getEffectiveLocale } from '../i18n/displayPreferences'
+import { getEffectiveLocale } from '../utils/localUiPreferences'
 import { createChecklistRestoreSessionStore } from '../utils/checklistRestoreBackup'
 import i18n from '../i18n'
+import {
+  reportLegacyStorageConflict,
+  reportLegacyStorageFailure,
+} from '../utils/legacyStorageEvents'
 
 export function useChecklist() {
   const controllerRef = useRef<ChecklistController | null>(null)
@@ -20,7 +24,13 @@ export function useChecklist() {
       })
       const loaded = adapter.load()
       if (loaded.error) {
-        toastBus.emit(i18n.t('storage.loadFailed'), 'error', i18n.t('storage.loadFailedTitle'))
+        if (loaded.error === 'legacy-conflict') {
+          reportLegacyStorageConflict()
+        } else if (loaded.error === 'legacy-cleanup-failed') {
+          reportLegacyStorageFailure()
+        } else {
+          toastBus.emit(i18n.t('storage.loadFailed'), 'error', i18n.t('storage.loadFailedTitle'))
+        }
       }
       const controller = createChecklistController({
         initialData: loaded.snapshot.data,

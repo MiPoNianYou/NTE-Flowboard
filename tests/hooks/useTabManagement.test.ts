@@ -34,4 +34,20 @@ describe('useTabManagement', () => {
     expect(result.current.direction).toBe('up')
     expect(localStorage.getItem('flowboard-active-tab')).toBe('weekly')
   })
+
+  it('should migrate a valid legacy tab and remove it', () => {
+    localStorage.setItem('nte-tab', 'monthly')
+    const { result } = renderHook(() => useTabManagement())
+    expect(result.current.activeTab).toBe('monthly')
+    expect(localStorage.getItem('nte-tab')).toBeNull()
+    expect(localStorage.getItem('flowboard-active-tab')).toBe('monthly')
+  })
+
+  it('should keep a conflicting legacy tab', () => {
+    localStorage.setItem('flowboard-active-tab', 'daily')
+    localStorage.setItem('nte-tab', 'monthly')
+    const { result } = renderHook(() => useTabManagement())
+    expect(result.current.activeTab).toBe('daily')
+    expect(localStorage.getItem('nte-tab')).toBe('monthly')
+  })
 })

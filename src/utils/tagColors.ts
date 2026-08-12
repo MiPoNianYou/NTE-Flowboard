@@ -2,6 +2,8 @@ import { colord, extend } from 'colord'
 import a11yPlugin from 'colord/plugins/a11y'
 import labPlugin from 'colord/plugins/lab'
 import { TAG_HEX } from './colors'
+import { migrateLegacyStorageValue } from './legacyStorageMigration'
+import { reportLegacyStorageConflict, reportLegacyStorageFailure } from './legacyStorageEvents'
 
 extend([a11yPlugin, labPlugin])
 
@@ -18,6 +20,7 @@ const LIGHT_BACKGROUND = '#F4F6FB'
 const DARK_BACKGROUND = '#0D0D12'
 
 let cachedMap: Map<string, StoredAssignment> | null = null
+let cachedRaw: string | null = null
 
 function getOptimalAlpha(hex: string, theme: TagTheme): number {
   const luminance = colord(hex).luminance()
@@ -55,43 +58,76 @@ function normalizeAssignment(value: unknown): StoredAssignment | null {
   return null
 }
 
-function loadMap(): Map<string, StoredAssignment> {
-  if (cachedMap) return cachedMap
+function parseTagMap(raw: string): [string, StoredAssignment][] | null {
+  let parsed: unknown
   try {
-    if (localStorage.getItem(STORAGE_KEY) === null) {
-      const legacy = localStorage.getItem('tag-color-map')
-      if (legacy !== null) {
-        localStorage.setItem(STORAGE_KEY, legacy)
-        localStorage.removeItem('tag-color-map')
-      }
-    }
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!Array.isArray(parsed)) return null
+  const entries: [string, StoredAssignment][] = []
+  for (const entry of parsed) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string') continue
+    const assignment = normalizeAssignment(entry[1])
+    if (assignment) entries.push([entry[0], assignment])
+  }
+  return entries
+}
+
+function loadMap(): Map<string, StoredAssignment> {
+  const currentRaw = localStorage.getItem(STORAGE_KEY)
+  const legacyRaw = localStorage.getItem('tag-color-map')
+  if (cachedMap && cachedRaw === currentRaw && legacyRaw === null) return cachedMap
+  try {
+    migrateLegacyStorageValue(localStorage, {
+      currentKey: STORAGE_KEY,
+      legacyKey: 'tag-color-map',
+      parse: (raw) => parseTagMap(raw),
+      serialize: (value) => JSON.stringify(value),
+      equals: (left, right) => JSON.stringify(left) === JSON.stringify(right),
+      onConflict: reportLegacyStorageConflict,
+      onFailure: reportLegacyStorageFailure,
+    })
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed: unknown = JSON.parse(raw)
-      if (Array.isArray(parsed)) {
-        const entries: [string, StoredAssignment][] = []
-        for (const entry of parsed) {
-          if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string') continue
-          const assignment = normalizeAssignment(entry[1])
-          if (assignment) entries.push([entry[0], assignment])
-        }
-        cachedMap = new Map(entries)
-        return cachedMap
+    const parsed = raw ? parseTagMap(raw) : null
+    if (raw !== null && parsed === null) {
+      const backupKey = `${STORAGE_KEY}-corrupted-backup`
+      localStorage.setItem(backupKey, raw)
+      if (localStorage.getItem(backupKey) !== raw) throw new Error('tag-color backup failed')
+    }
+    if (parsed && raw !== null) {
+      const normalizedRaw = JSON.stringify(parsed)
+      if (raw !== normalizedRaw) {
+        localStorage.setItem(`${STORAGE_KEY}-corrupted-backup`, raw)
+        if (localStorage.getItem(`${STORAGE_KEY}-corrupted-backup`) !== raw)
+          throw new Error('tag-color backup verification failed')
+        localStorage.setItem(STORAGE_KEY, normalizedRaw)
+        if (localStorage.getItem(STORAGE_KEY) !== normalizedRaw)
+          throw new Error('tag-color readback failed')
       }
+      cachedMap = new Map(parsed)
+      cachedRaw = localStorage.getItem(STORAGE_KEY)
+      return cachedMap
     }
   } catch {
     void 0
   }
   cachedMap = new Map()
+  cachedRaw = localStorage.getItem(STORAGE_KEY)
   return cachedMap
 }
 
 function saveMap(map: Map<string, StoredAssignment>) {
-  cachedMap = map
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...map]))
+    const raw = JSON.stringify([...map])
+    localStorage.setItem(STORAGE_KEY, raw)
+    if (localStorage.getItem(STORAGE_KEY) !== raw) throw new Error('tag-color readback failed')
+    cachedMap = map
+    cachedRaw = localStorage.getItem(STORAGE_KEY)
   } catch {
-    void 0
+    cachedMap = null
+    cachedRaw = localStorage.getItem(STORAGE_KEY)
   }
 }
 

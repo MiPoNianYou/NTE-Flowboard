@@ -7,7 +7,7 @@ import { SPRING } from '../../utils/motion'
 import { SettingsPage } from './SettingsPage'
 import { Card } from '../base/Card'
 import { useSettings } from '../../context/SettingsContext'
-import { useDisplayPreferences } from '../../context/DisplayPreferencesContext'
+import { useLocalUiPreferences } from '../../context/LocalUiPreferencesContext'
 import { useTranslation } from 'react-i18next'
 
 interface SettingsServerProps {
@@ -19,7 +19,7 @@ interface SettingsServerProps {
 export function SettingsServer({ onBack, isEmbedded, mobile = false }: SettingsServerProps) {
   const { t } = useTranslation()
   const { settings, updateSettings } = useSettings()
-  const { locale, timeFormat } = useDisplayPreferences()
+  const { locale, timeFormat } = useLocalUiPreferences()
   const resetTime = new Intl.DateTimeFormat(locale, {
     hour: 'numeric',
     minute: '2-digit',

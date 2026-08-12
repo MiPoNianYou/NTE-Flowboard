@@ -2,7 +2,7 @@ import type { ComponentProps, ReactNode } from 'react'
 import { act, render as renderBase, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SettingsPanel as BaseSettingsPanel } from '../../src/components/SettingsPanel'
-import { DisplayPreferencesProvider } from '../../src/context/DisplayPreferencesContext'
+import { LocalUiPreferencesProvider } from '../../src/context/LocalUiPreferencesContext'
 import { ThemeProvider } from '../../src/context/ThemeContext'
 import type { ChecklistData } from '../../src/types'
 import * as serialization from '../../src/utils/serialization'
@@ -10,9 +10,9 @@ import i18n from '../../src/i18n'
 
 function render(ui: ReactNode) {
   return renderBase(
-    <ThemeProvider>
-      <DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>
-    </ThemeProvider>,
+    <LocalUiPreferencesProvider>
+      <ThemeProvider>{ui}</ThemeProvider>
+    </LocalUiPreferencesProvider>,
   )
 }
 

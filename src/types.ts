@@ -1,3 +1,15 @@
+export type SupportedLocale = 'zh-CN' | 'en-US'
+export type LanguagePreference = SupportedLocale
+export type TimeFormat = '24h' | '12h'
+export type ThemePreference = 'light' | 'dark'
+
+export interface LocalUiPreferences {
+  theme: ThemePreference
+  language: LanguagePreference
+  timeFormat: TimeFormat
+  hiddenSectionOpen: boolean
+}
+
 export type TagCollectionResult =
   | { kind: 'added'; tags: string[] }
   | { kind: 'empty' | 'duplicate' | 'limit-reached'; tags: string[] }

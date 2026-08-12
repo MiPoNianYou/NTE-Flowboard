@@ -7,6 +7,7 @@ describe('useItemHeights', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     localStorage.removeItem('flowboard-item-heights')
+    localStorage.removeItem('nte-item-heights')
   })
 
   it('should round meaningful changes and ignore sub-pixel noise', () => {
@@ -77,5 +78,21 @@ describe('useItemHeights', () => {
     const { result } = renderHook(() => useItemHeights('daily'))
 
     expect(result.current.getHeight('a')).toBeUndefined()
+  })
+
+  it('should migrate the legacy cache and delete it after verification', () => {
+    localStorage.setItem('nte-item-heights', JSON.stringify({ daily: { legacy: 41.4 } }))
+    const { result } = renderHook(() => useItemHeights('daily'))
+    expect(result.current.getHeight('legacy')).toBe(41)
+    expect(localStorage.getItem('nte-item-heights')).toBeNull()
+  })
+
+  it('should keep a conflicting legacy cache while using the current cache', () => {
+    localStorage.setItem('flowboard-item-heights', JSON.stringify({ daily: { current: 50 } }))
+    localStorage.setItem('nte-item-heights', JSON.stringify({ daily: { legacy: 41 } }))
+    const { result } = renderHook(() => useItemHeights('daily'))
+    expect(result.current.getHeight('current')).toBe(50)
+    expect(result.current.getHeight('legacy')).toBeUndefined()
+    expect(localStorage.getItem('nte-item-heights')).not.toBeNull()
   })
 })

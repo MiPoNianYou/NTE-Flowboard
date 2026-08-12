@@ -1,27 +1,22 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo } from 'react'
 import { flushSync } from 'react-dom'
-import { DISPLAY_PREFERENCES_STORAGE_KEY } from '../i18n/displayPreferences'
-import {
-  readThemePreference,
-  saveThemePreference,
-  type EffectiveTheme,
-  type ThemePreference,
-} from '../theme/themePreferences'
+import { useLocalUiPreferences } from './LocalUiPreferencesContext'
+import type { ThemePreference } from '../types'
 
 interface ThemeContextValue {
   themePreference: ThemePreference
-  effectiveTheme: EffectiveTheme
+  effectiveTheme: ThemePreference
   setThemePreference: (preference: ThemePreference) => void
 }
 
-const THEME_COLORS: Record<EffectiveTheme, string> = {
+const THEME_COLORS: Record<ThemePreference, string> = {
   light: '#f4f6fb',
   dark: '#0d0d12',
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-function applyDocumentTheme(theme: EffectiveTheme): void {
+function applyDocumentTheme(theme: ThemePreference): void {
   const root = document.documentElement
   root.dataset.theme = theme
   root.style.colorScheme = theme
@@ -37,25 +32,12 @@ function hasHoveredScaleCard(): boolean {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themePreference, setThemePreferenceState] = useState(readThemePreference)
+  const { theme: themePreference, setTheme } = useLocalUiPreferences()
   const effectiveTheme = themePreference
 
   useEffect(() => {
     applyDocumentTheme(effectiveTheme)
-    saveThemePreference(themePreference)
-  }, [effectiveTheme, themePreference])
-
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key !== DISPLAY_PREFERENCES_STORAGE_KEY) return
-      const nextPreference = readThemePreference()
-      applyDocumentTheme(nextPreference)
-      setThemePreferenceState(nextPreference)
-    }
-
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
-  }, [])
+  }, [effectiveTheme])
 
   const setThemePreference = useCallback(
     (nextPreference: ThemePreference) => {
@@ -63,8 +45,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
       const commit = () => {
         applyDocumentTheme(nextPreference)
-        saveThemePreference(nextPreference)
-        flushSync(() => setThemePreferenceState(nextPreference))
+        flushSync(() => setTheme(nextPreference))
       }
 
       if (
@@ -77,7 +58,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         commit()
       }
     },
-    [themePreference],
+    [setTheme, themePreference],
   )
 
   const value = useMemo(

@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SettingsGeneral } from '../../../src/components/settings/SettingsGeneral'
-import { DisplayPreferencesProvider } from '../../../src/context/DisplayPreferencesContext'
+import { LocalUiPreferencesProvider } from '../../../src/context/LocalUiPreferencesContext'
 import { ThemeProvider } from '../../../src/context/ThemeContext'
-import { DISPLAY_PREFERENCES_STORAGE_KEY } from '../../../src/i18n/displayPreferences'
+import { LOCAL_UI_PREFERENCES_STORAGE_KEY } from '../../../src/utils/localUiPreferences'
 
 vi.mock('../../../src/context/SettingsContext', () => ({
   useSettings: () => ({
@@ -16,11 +16,11 @@ const mockUpdateSettings = vi.fn()
 
 function renderSettingsGeneral(props: React.ComponentProps<typeof SettingsGeneral>) {
   return render(
-    <ThemeProvider>
-      <DisplayPreferencesProvider>
+    <LocalUiPreferencesProvider>
+      <ThemeProvider>
         <SettingsGeneral {...props} />
-      </DisplayPreferencesProvider>
-    </ThemeProvider>,
+      </ThemeProvider>
+    </LocalUiPreferencesProvider>,
   )
 }
 
@@ -92,7 +92,7 @@ describe('SettingsGeneral', () => {
       Array.from(languageGroup.querySelectorAll('button')).map((choice) => choice.textContent),
     ).toEqual(['Chinese', 'English'])
     expect(themeGroup.getAttribute('aria-label')).toBe('Appearance')
-    expect(JSON.parse(localStorage.getItem(DISPLAY_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
+    expect(JSON.parse(localStorage.getItem(LOCAL_UI_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
       language: 'en-US',
       timeFormat: '24h',
     })
@@ -118,7 +118,7 @@ describe('SettingsGeneral', () => {
     expect(timeFormatGroup.querySelector('[aria-pressed="true"]')).toHaveTextContent('24 小时')
 
     fireEvent.click(screen.getByRole('button', { name: '12 小时' }))
-    expect(JSON.parse(localStorage.getItem(DISPLAY_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
+    expect(JSON.parse(localStorage.getItem(LOCAL_UI_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
       language: 'zh-CN',
       timeFormat: '12h',
     })
@@ -134,7 +134,7 @@ describe('SettingsGeneral', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '深色' }))
 
-    expect(JSON.parse(localStorage.getItem(DISPLAY_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
+    expect(JSON.parse(localStorage.getItem(LOCAL_UI_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
       theme: 'dark',
       language: 'zh-CN',
       timeFormat: '24h',

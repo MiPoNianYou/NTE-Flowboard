@@ -1,5 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
-import type { SupportedLocale } from '../i18n/displayPreferences'
+import type { SupportedLocale } from '../types'
 import type { ChecklistData, NotificationSettingsProps, ServerRegion } from '../types'
 import {
   createNotificationLifecycle,

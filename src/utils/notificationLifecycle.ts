@@ -1,4 +1,4 @@
-import type { SupportedLocale } from '../i18n/displayPreferences'
+import type { SupportedLocale } from '../types'
 import type {
   ChecklistData,
   NotificationErrorCode,
@@ -17,6 +17,8 @@ import {
   rotateNotificationRuleRevision,
   saveNotificationPreferences,
 } from './notificationPreferences'
+import { removeStorageKey } from './legacyStorageMigration'
+import { reportLegacyStorageFailure } from './legacyStorageEvents'
 import {
   deleteNotificationSubscription,
   findNotificationServiceWorker,
@@ -464,7 +466,13 @@ function createNotificationRemoteAdapter(
 
 function createNotificationMetadataAdapter(): NotificationMetadataAdapter {
   const storage = typeof localStorage === 'undefined' ? null : localStorage
-  storage?.removeItem(LEGACY_ENABLED_STORAGE_KEY)
+  if (
+    storage &&
+    !removeStorageKey(storage, LEGACY_ENABLED_STORAGE_KEY) &&
+    storage.getItem(LEGACY_ENABLED_STORAGE_KEY) !== null
+  ) {
+    reportLegacyStorageFailure()
+  }
   return {
     loadPreferences: () => loadNotificationPreferences(storage),
     savePreferences: (preferences) => saveNotificationPreferences(preferences, storage),

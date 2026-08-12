@@ -6,6 +6,7 @@ import { MS } from '../utils/constants'
 import { SPRING } from '../utils/motion'
 import { Button } from './base/Button'
 import { toastBus, type ToastPayload } from '../utils/toastBus'
+import { subscribeLegacyStorageEvents } from '../utils/legacyStorageEvents'
 
 interface ToastCardProps {
   toast: ToastPayload
@@ -112,6 +113,21 @@ export function StorageToast() {
   }, [])
 
   useEffect(() => toastBus.subscribe(addToast), [addToast])
+  useEffect(
+    () =>
+      subscribeLegacyStorageEvents((event) => {
+        if (event === 'conflict') {
+          toastBus.emit(t('storage.legacyConflict'), 'warning', t('storage.legacyConflictTitle'))
+          return
+        }
+        toastBus.emit(
+          t('storage.legacyMigrationFailed'),
+          'warning',
+          t('storage.legacyMigrationFailedTitle'),
+        )
+      }),
+    [t],
+  )
 
   return (
     <div

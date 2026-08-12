@@ -10,6 +10,7 @@ import type { ChecklistSynchronizationPort } from '../../src/utils/checklistCont
 import { DEFAULT_CHECKLIST_DATA } from '../../src/utils/defaultData'
 import { MS } from '../../src/utils/constants'
 import type { BackgroundSyncAdapter } from '../../src/utils/backgroundSync'
+import type { CloudSyncState } from '../../src/utils/supabase'
 
 const config = { projectId: 'project', anonKey: 'key' }
 const remoteData: ChecklistData = {
@@ -36,10 +37,12 @@ function createDeferred<T>() {
 
 function createMetadata(
   initialConfig: typeof config | null = config,
+  initialState: CloudSyncState | null = initialConfig
+    ? { projectId: initialConfig.projectId, lastSeenAt: null, lastSuccessfulSyncAt: null }
+    : null,
 ): CloudSynchronizationMetadataAdapter {
   let storedConfig = initialConfig
-  let lastSyncTime: string | null = null
-  let lastSeenTime: string | null = null
+  let syncState = initialState
   return {
     loadConfig: vi.fn(() => storedConfig),
     saveConfig: vi.fn((next) => {
@@ -47,16 +50,12 @@ function createMetadata(
     }),
     clearConfig: vi.fn(() => {
       storedConfig = null
-      lastSyncTime = null
-      lastSeenTime = null
+      syncState = null
     }),
-    loadLastSyncTime: vi.fn(() => lastSyncTime),
-    saveLastSyncTime: vi.fn((value) => {
-      lastSyncTime = value
-    }),
-    loadLastSeenTime: vi.fn(() => lastSeenTime),
-    saveLastSeenTime: vi.fn((value) => {
-      lastSeenTime = value
+    loadSyncState: vi.fn(() => syncState),
+    saveSyncState: vi.fn((value) => {
+      syncState = value
+      return true
     }),
   }
 }
@@ -292,6 +291,51 @@ describe('createCloudSynchronization', () => {
     })
   })
 
+  it('clears sync state when configure switches to another project', async () => {
+    const metadata = createMetadata()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => undefined,
+      onDataImport: vi.fn(),
+      remote: createRemote(),
+      metadata,
+      runtime: createRuntime().runtime,
+    })
+
+    await synchronization.configure('other-project', 'new-key')
+
+    expect(metadata.saveSyncState).toHaveBeenCalledWith({
+      projectId: 'other-project',
+      lastSeenAt: null,
+      lastSuccessfulSyncAt: null,
+    })
+  })
+
+  it('preserves sync state when configure uses the same canonical project', async () => {
+    const initialState: CloudSyncState = {
+      projectId: 'project',
+      lastSeenAt: '2026-08-04T11:00:00.123456Z',
+      lastSuccessfulSyncAt: '2026-08-04T11:01:00.000Z',
+    }
+    const metadata = createMetadata(config, initialState)
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => undefined,
+      onDataImport: vi.fn(),
+      remote: createRemote(),
+      metadata,
+      runtime: createRuntime().runtime,
+    })
+
+    await synchronization.configure('https://project.supabase.co/', 'new-key')
+
+    expect(metadata.saveSyncState).toHaveBeenCalledWith({
+      projectId: 'https://project.supabase.co/',
+      lastSeenAt: initialState.lastSeenAt,
+      lastSuccessfulSyncAt: initialState.lastSuccessfulSyncAt,
+    })
+  })
+
   it('applies remote data through the Checklist controller seam and pushes a merge', async () => {
     const mergedData = {
       ...remoteData,
@@ -359,6 +403,29 @@ describe('createCloudSynchronization', () => {
     expect(remote.pull).toHaveBeenCalledOnce()
     expect(remote.push).toHaveBeenCalledOnce()
     synchronization.stop()
+  })
+
+  it('does not retry a remote success when local state persistence fails', async () => {
+    const metadata = createMetadata()
+    vi.spyOn(metadata, 'saveSyncState').mockReturnValue(false)
+    const remote = createRemote()
+    const synchronization = createCloudSynchronization({
+      initialData: remoteData,
+      getChecklistPort: () => undefined,
+      onDataImport: vi.fn(),
+      remote,
+      metadata,
+      runtime: createRuntime().runtime,
+      background: createBackground(),
+    })
+    const result = await synchronization.syncNow()
+
+    expect(result).toEqual({ ok: true })
+    expect(remote.push).toHaveBeenCalledOnce()
+    expect(synchronization.getSnapshot()).toMatchObject({
+      syncStatus: 'connected',
+      syncError: null,
+    })
   })
 
   it('retries transient failures but leaves terminal failures idle', async () => {

@@ -3,8 +3,8 @@ import { MotionConfig } from 'motion/react'
 import { useChecklist } from './hooks/useChecklist'
 import { useCloudSyncProps } from './hooks/useCloudSyncProps'
 import { useTabManagement } from './hooks/useTabManagement'
-import { useLocalStorageBoolean } from './hooks/useLocalStorageBoolean'
 import { useIsMobile } from './hooks/useIsMobile'
+import { useLocalUiPreferences } from './context/LocalUiPreferencesContext'
 import { SettingsContext } from './context/SettingsContext'
 
 import { useNextResetLabel } from './hooks/useNextResetLabel'
@@ -24,10 +24,8 @@ import { useNotifications } from './hooks/useNotifications'
 
 function AppContent() {
   const { t, i18n } = useTranslation()
-  const { value: isHiddenSectionOpen, onChange: setIsHiddenSectionOpen } = useLocalStorageBoolean(
-    'flowboard-hidden-section-open',
-    'nte-hidden-section-open',
-  )
+  const { hiddenSectionOpen: isHiddenSectionOpen, setHiddenSectionOpen: setIsHiddenSectionOpen } =
+    useLocalUiPreferences()
 
   const {
     data,

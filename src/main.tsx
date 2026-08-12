@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client'
 import i18n from './i18n'
 import './index.css'
 import App from './App'
-import { DisplayPreferencesProvider } from './context/DisplayPreferencesContext'
+import { LocalUiPreferencesProvider } from './context/LocalUiPreferencesContext'
 import { ThemeProvider } from './context/ThemeContext'
-import { getEffectiveLocale } from './i18n/displayPreferences'
 import { registerAppServiceWorker } from './utils/appServiceWorker'
+import { getEffectiveLocale } from './utils/localUiPreferences'
 
 const initialLocale = getEffectiveLocale()
 document.documentElement.lang = initialLocale
@@ -18,10 +18,10 @@ void registerAppServiceWorker().catch(() => undefined)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <DisplayPreferencesProvider>
+    <LocalUiPreferencesProvider>
+      <ThemeProvider>
         <App />
-      </DisplayPreferencesProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </LocalUiPreferencesProvider>
   </StrictMode>,
 )

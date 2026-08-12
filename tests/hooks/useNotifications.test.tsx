@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChecklistData } from '../../src/types'
 import type { ServerRegion } from '../../src/types'
-import type { SupportedLocale } from '../../src/i18n/displayPreferences'
+import type { SupportedLocale } from '../../src/types'
 import { useNotifications } from '../../src/hooks/useNotifications'
 import type {
   NotificationLifecycle,

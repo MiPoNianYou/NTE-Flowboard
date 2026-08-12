@@ -2,6 +2,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MotionConfig } from 'motion/react'
 import App from '../../src/App'
+import { LocalUiPreferencesProvider } from '../../src/context/LocalUiPreferencesContext'
+import { ThemeProvider } from '../../src/context/ThemeContext'
 
 vi.mock('../../src/utils/supabase')
 
@@ -31,9 +33,19 @@ vi.mock('../../src/utils/tagColors', () => ({
   cleanupRegistry: vi.fn(),
 }))
 
+function renderApp() {
+  return render(
+    <LocalUiPreferencesProvider>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </LocalUiPreferencesProvider>,
+  )
+}
+
 describe('App', () => {
   it('respects the system reduced-motion preference', () => {
-    render(<App />)
+    renderApp()
 
     expect(vi.mocked(MotionConfig)).toHaveBeenLastCalledWith(
       expect.objectContaining({ reducedMotion: 'user' }),
@@ -42,7 +54,7 @@ describe('App', () => {
   })
 
   it('switches between daily, weekly, and monthly tabs', async () => {
-    render(<App />)
+    renderApp()
 
     expect(screen.getByText('添加新任务')).toBeInTheDocument()
     const dailyTab = screen.getByRole('tab', { name: /每日清单/ })
@@ -71,7 +83,7 @@ describe('App', () => {
   })
 
   it('adds a new item via AddItemForm', async () => {
-    render(<App />)
+    renderApp()
 
     await act(async () => {
       fireEvent.click(screen.getByText('添加新任务'))
@@ -90,7 +102,7 @@ describe('App', () => {
   })
 
   it('toggles an item completion state', async () => {
-    render(<App />)
+    renderApp()
 
     await act(async () => {
       fireEvent.click(screen.getByText('添加新任务'))

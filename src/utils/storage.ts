@@ -2,6 +2,8 @@ import type { ChecklistData } from '../types'
 import { migrateDataStructure, mergeChecklistData } from './dataMigration'
 import { createDefaultChecklistData } from './defaultData'
 import { isChecklistData } from './validation'
+import { removeStorageKey } from './legacyStorageMigration'
+import { reportLegacyStorageFailure } from './legacyStorageEvents'
 
 const STORAGE_KEY = 'flowboard-checklist'
 const CORRUPTED_BACKUP_KEY = 'flowboard-corrupted-backup'
@@ -19,7 +21,12 @@ export interface StoredChecklistSnapshot {
 }
 
 type ChecklistLoadStatus = 'loaded' | 'defaulted' | 'migrated' | 'recovered'
-type ChecklistLoadError = 'invalid-checklist' | 'storage-read-failed' | 'corrupted-backup-failed'
+type ChecklistLoadError =
+  | 'invalid-checklist'
+  | 'storage-read-failed'
+  | 'corrupted-backup-failed'
+  | 'legacy-conflict'
+  | 'legacy-cleanup-failed'
 
 interface ChecklistStorageLoadResult {
   status: ChecklistLoadStatus
@@ -49,8 +56,20 @@ interface RevisionParts {
 interface ParsedStoredChecklist {
   snapshot: StoredChecklistSnapshot
   enveloped: boolean
+  migratedStructure: boolean
 }
 
+const LEGACY_AUTO_MOVE_KEYS = ['nte-auto-move-completed', 'flowboard-setting-auto-move'] as const
+const LEGACY_CONFIRM_DELETE_KEYS = [
+  'nte-confirm-delete',
+  'flowboard-setting-confirm-delete',
+] as const
+const LEGACY_SETTINGS_KEYS = ['flowboard-settings', 'flowboard-ui-preferences'] as const
+const LEGACY_STANDALONE_KEYS = [
+  ...LEGACY_AUTO_MOVE_KEYS,
+  ...LEGACY_CONFIRM_DELETE_KEYS,
+  ...LEGACY_SETTINGS_KEYS,
+] as const
 function parseRevision(value: unknown): ChecklistRevision {
   if (typeof value === 'string') {
     const separator = value.indexOf(':')
@@ -94,24 +113,28 @@ function parseStoredChecklist(
   if (!raw) return null
   try {
     const parsed: unknown = JSON.parse(raw)
-    if (isChecklistData(parsed)) {
+    const direct = parseChecklistData(parsed)
+    if (direct) {
       return {
         snapshot: {
-          data: mergeChecklistData(parsed),
+          data: direct.data,
           revision: parseLegacyRevision(legacyRevision),
         },
         enveloped: false,
+        migratedStructure: direct.migrated,
       }
     }
     if (typeof parsed === 'object' && parsed !== null && 'data' in parsed) {
       const envelope = parsed as { data?: unknown; revision?: unknown }
-      if (isChecklistData(envelope.data)) {
+      const envelopeData = parseChecklistData(envelope.data)
+      if (envelopeData) {
         return {
           snapshot: {
-            data: mergeChecklistData(envelope.data),
+            data: envelopeData.data,
             revision: parseRevision(envelope.revision),
           },
           enveloped: true,
+          migratedStructure: envelopeData.migrated,
         }
       }
     }
@@ -119,6 +142,34 @@ function parseStoredChecklist(
     return null
   }
   return null
+}
+
+function parseChecklistData(value: unknown): { data: ChecklistData; migrated: boolean } | null {
+  if (isChecklistData(value)) {
+    return { data: mergeChecklistData(structuredClone(value)), migrated: false }
+  }
+  const migrated = migrateDataStructure(structuredClone(value))
+  if (!isChecklistData(migrated)) return null
+  return { data: mergeChecklistData(migrated), migrated: true }
+}
+
+function parseLegacyChecklist(raw: string): ChecklistData | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return parseChecklistData(parsed)?.data ?? null
+  } catch {
+    return null
+  }
+}
+
+function checklistDataEquals(left: ChecklistData, right: ChecklistData): boolean {
+  const withoutIds = (data: ChecklistData) => ({
+    ...data,
+    daily: data.daily.map(({ id: _id, ...item }) => item),
+    weekly: data.weekly.map(({ id: _id, ...item }) => item),
+    monthly: data.monthly.map(({ id: _id, ...item }) => item),
+  })
+  return JSON.stringify(withoutIds(left)) === JSON.stringify(withoutIds(right))
 }
 
 function parseLegacyRevision(raw: string | null): ChecklistRevision {
@@ -133,27 +184,37 @@ function parseLegacyRevision(raw: string | null): ChecklistRevision {
 function applyLegacyChecklistSettings(storage: Storage, data: ChecklistData): ChecklistData {
   const next = structuredClone(data)
   let changed = false
-  const autoMove =
-    storage.getItem('nte-auto-move-completed') ?? storage.getItem('flowboard-setting-auto-move')
-  const confirmDelete =
-    storage.getItem('nte-confirm-delete') ?? storage.getItem('flowboard-setting-confirm-delete')
-  if (autoMove !== null) {
-    next.settings.isAutoMoveEnabled = autoMove !== 'false'
+  const firstValidBoolean = (keys: readonly string[]) =>
+    keys
+      .map((key) => storage.getItem(key))
+      .find((value) => value === 'true' || value === 'false') ?? null
+  const autoMove = firstValidBoolean(LEGACY_AUTO_MOVE_KEYS)
+  const confirmDelete = firstValidBoolean(LEGACY_CONFIRM_DELETE_KEYS)
+  if (autoMove === 'true' || autoMove === 'false') {
+    next.settings.isAutoMoveEnabled = autoMove === 'true'
     changed = true
   }
-  if (confirmDelete !== null) {
-    next.settings.shouldConfirmDelete = confirmDelete !== 'false'
+  if (confirmDelete === 'true' || confirmDelete === 'false') {
+    next.settings.shouldConfirmDelete = confirmDelete === 'true'
     changed = true
   }
 
   const settings = storage.getItem('flowboard-settings')
   if (settings) {
     try {
-      next.settings = {
-        ...next.settings,
-        ...(JSON.parse(settings) as Partial<ChecklistData['settings']>),
+      const parsed = JSON.parse(settings) as Record<string, unknown>
+      for (const key of ['serverRegion', 'isAutoMoveEnabled', 'shouldConfirmDelete'] as const) {
+        const value = parsed[key]
+        if (
+          (key === 'serverRegion' &&
+            (value === 'asia' || value === 'america' || value === 'europe')) ||
+          ((key === 'isAutoMoveEnabled' || key === 'shouldConfirmDelete') &&
+            typeof value === 'boolean')
+        ) {
+          next.settings[key] = value as never
+          changed = true
+        }
       }
-      changed = true
     } catch {
       // Keep valid checklist settings when standalone legacy JSON is malformed.
     }
@@ -161,11 +222,11 @@ function applyLegacyChecklistSettings(storage: Storage, data: ChecklistData): Ch
   const uiPreferences = storage.getItem('flowboard-ui-preferences')
   if (uiPreferences) {
     try {
-      next.uiPreferences = {
-        ...next.uiPreferences,
-        ...(JSON.parse(uiPreferences) as Partial<ChecklistData['uiPreferences']>),
+      const parsed = JSON.parse(uiPreferences) as Record<string, unknown>
+      if (typeof parsed.cloudPatchHidden === 'boolean') {
+        next.uiPreferences.cloudPatchHidden = parsed.cloudPatchHidden
+        changed = true
       }
-      changed = true
     } catch {
       // Keep valid checklist preferences when standalone legacy JSON is malformed.
     }
@@ -173,19 +234,92 @@ function applyLegacyChecklistSettings(storage: Storage, data: ChecklistData): Ch
   return changed ? next : data
 }
 
-function clearLegacyChecklistKeys(storage: Storage) {
-  for (const key of [
-    LEGACY_DATA_KEY,
-    'nte-corrupted-backup',
-    'nte-auto-move-completed',
-    'nte-confirm-delete',
-    'flowboard-setting-auto-move',
-    'flowboard-setting-confirm-delete',
-    'flowboard-settings',
-    'flowboard-ui-preferences',
-  ]) {
-    storage.removeItem(key)
+function legacyStandaloneSettingsConflict(
+  storage: Storage,
+  data: ChecklistData,
+  cleanup = true,
+): { conflict: boolean; cleanupFailed: boolean } {
+  let conflict = false
+  let cleanupFailed = false
+  const cleanupKey = (key: string) => {
+    if (!removeStorageKey(storage, key)) {
+      cleanupFailed = true
+      reportLegacyStorageFailure()
+    }
   }
+  const compareBoolean = (key: string, current: boolean) => {
+    const raw = storage.getItem(key)
+    if (raw === null) return
+    if (raw !== 'true' && raw !== 'false') {
+      if (cleanup) cleanupKey(key)
+      return
+    }
+    if ((raw === 'true') === current) {
+      if (cleanup) cleanupKey(key)
+      return
+    }
+    conflict = true
+  }
+
+  for (const key of LEGACY_AUTO_MOVE_KEYS) {
+    compareBoolean(key, data.settings.isAutoMoveEnabled)
+  }
+  for (const key of LEGACY_CONFIRM_DELETE_KEYS) {
+    compareBoolean(key, data.settings.shouldConfirmDelete)
+  }
+
+  const compareJson = (
+    key: string,
+    current: Record<string, unknown>,
+    allowedKeys: readonly string[],
+  ) => {
+    const raw = storage.getItem(key)
+    if (raw === null) return
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        if (cleanup) cleanupKey(key)
+        return
+      }
+      const entries = Object.entries(parsed).filter(([entryKey]) => allowedKeys.includes(entryKey))
+      if (entries.length === 0) {
+        if (cleanup) cleanupKey(key)
+        return
+      }
+      const validEntries = entries.every(([entryKey, value]) => {
+        if (entryKey === 'serverRegion')
+          return value === 'asia' || value === 'america' || value === 'europe'
+        return typeof value === 'boolean'
+      })
+      if (!validEntries) {
+        if (cleanup) cleanupKey(key)
+        return
+      }
+      if (entries.every(([entryKey, value]) => current[entryKey] === value)) {
+        if (cleanup) cleanupKey(key)
+      } else {
+        conflict = true
+      }
+    } catch {
+      if (cleanup) cleanupKey(key)
+    }
+  }
+
+  compareJson(LEGACY_SETTINGS_KEYS[0], data.settings as unknown as Record<string, unknown>, [
+    'serverRegion',
+    'isAutoMoveEnabled',
+    'shouldConfirmDelete',
+  ])
+  compareJson(LEGACY_SETTINGS_KEYS[1], data.uiPreferences as unknown as Record<string, unknown>, [
+    'cloudPatchHidden',
+  ])
+  return { conflict, cleanupFailed }
+}
+
+function cleanupLegacyKey(storage: Storage, key: string): boolean {
+  const removed = removeStorageKey(storage, key)
+  if (!removed) reportLegacyStorageFailure()
+  return removed
 }
 
 export function createChecklistStorageAdapter({
@@ -211,11 +345,15 @@ export function createChecklistStorageAdapter({
     const revision = `${counter}:${writerId}` as ChecklistRevision
     const snapshot = { data: structuredClone(data), revision }
     storage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
-    storage.removeItem(LEGACY_REVISION_KEY)
     const confirmed = readStored()?.snapshot
-    if (!confirmed || compareRevisions(confirmed.revision, revision) < 0) {
+    if (
+      !confirmed ||
+      compareRevisions(confirmed.revision, revision) < 0 ||
+      JSON.stringify(confirmed.data) !== JSON.stringify(snapshot.data)
+    ) {
       throw new Error('Checklist revision was superseded during save')
     }
+    cleanupLegacyKey(storage, LEGACY_REVISION_KEY)
     return confirmed
   }
 
@@ -228,28 +366,72 @@ export function createChecklistStorageAdapter({
       }
     }
     try {
-      let migrated = false
-      if (!storage.getItem(STORAGE_KEY)) {
-        const legacyRaw = storage.getItem(LEGACY_DATA_KEY)
-        if (legacyRaw) {
-          const legacyData = migrateDataStructure(JSON.parse(legacyRaw))
-          if (!isChecklistData(legacyData)) throw new Error('Invalid legacy checklist')
-          const migratedData = applyLegacyChecklistSettings(storage, mergeChecklistData(legacyData))
-          const snapshot = write(migratedData, EMPTY_CHECKLIST_REVISION)
-          clearLegacyChecklistKeys(storage)
-          return { status: 'migrated', snapshot, error: null }
+      let cleanupFailed = false
+      const cleanup = (key: string) => {
+        if (!cleanupLegacyKey(storage, key)) cleanupFailed = true
+      }
+      const migrationError = (conflict: boolean): ChecklistLoadError | null =>
+        cleanupFailed ? 'legacy-cleanup-failed' : conflict ? 'legacy-conflict' : null
+      const raw = storage.getItem(STORAGE_KEY)
+      const legacyRaw = storage.getItem(LEGACY_DATA_KEY)
+      const legacyRevisionRaw = storage.getItem(LEGACY_REVISION_KEY)
+      cleanup('nte-corrupted-backup')
+      const legacyData = legacyRaw === null ? null : parseLegacyChecklist(legacyRaw)
+      if (legacyRaw !== null && !legacyData) cleanup(LEGACY_DATA_KEY)
+
+      const parsed = parseStoredChecklist(raw, storage.getItem(LEGACY_REVISION_KEY))
+      if (!parsed && legacyData) {
+        if (raw !== null) {
+          try {
+            storage.setItem(CORRUPTED_BACKUP_KEY, raw)
+            if (storage.getItem(CORRUPTED_BACKUP_KEY) !== raw) {
+              throw new Error('Corrupted checklist backup verification failed')
+            }
+          } catch {
+            return {
+              status: 'recovered',
+              snapshot: { data: createDefaultData(), revision: EMPTY_CHECKLIST_REVISION },
+              error: 'corrupted-backup-failed',
+            }
+          }
+        }
+        const migratedData = applyLegacyChecklistSettings(storage, legacyData)
+        const snapshot = write(migratedData, EMPTY_CHECKLIST_REVISION)
+        cleanup(LEGACY_DATA_KEY)
+        const settingsResult = legacyStandaloneSettingsConflict(storage, snapshot.data, true)
+        cleanup('nte-corrupted-backup')
+        cleanup(LEGACY_REVISION_KEY)
+        cleanupFailed ||= settingsResult.cleanupFailed
+        return {
+          status: 'migrated',
+          snapshot,
+          error: migrationError(settingsResult.conflict),
         }
       }
 
-      const raw = storage.getItem(STORAGE_KEY)
       if (!raw) {
+        const hasStandaloneLegacy =
+          LEGACY_STANDALONE_KEYS.some((key) => storage.getItem(key) !== null) ||
+          legacyRevisionRaw !== null
+        if (hasStandaloneLegacy) {
+          const migratedData = applyLegacyChecklistSettings(storage, createDefaultData())
+          const snapshot = write(migratedData, EMPTY_CHECKLIST_REVISION)
+          const settingsResult = legacyStandaloneSettingsConflict(storage, snapshot.data, true)
+          cleanup('nte-corrupted-backup')
+          cleanup(LEGACY_REVISION_KEY)
+          cleanupFailed ||= settingsResult.cleanupFailed
+          return {
+            status: 'migrated',
+            snapshot,
+            error: migrationError(settingsResult.conflict),
+          }
+        }
         return {
           status: 'defaulted',
           snapshot: { data: createDefaultData(), revision: EMPTY_CHECKLIST_REVISION },
-          error: null,
+          error: migrationError(false),
         }
       }
-      const parsed = readStored()
       if (!parsed) {
         let error: ChecklistLoadError = 'invalid-checklist'
         try {
@@ -264,18 +446,55 @@ export function createChecklistStorageAdapter({
         }
       }
 
-      const withLegacySettings = applyLegacyChecklistSettings(storage, parsed.snapshot.data)
-      if (withLegacySettings !== parsed.snapshot.data) {
-        const snapshot = write(withLegacySettings, parsed.snapshot.revision)
-        clearLegacyChecklistKeys(storage)
-        return { status: 'migrated', snapshot, error: null }
+      let legacyConflict = false
+      const needsWrite = !parsed.enveloped || parsed.migratedStructure
+      if (legacyData) {
+        if (checklistDataEquals(parsed.snapshot.data, legacyData)) {
+          if (!needsWrite) cleanup(LEGACY_DATA_KEY)
+        } else {
+          legacyConflict = true
+        }
       }
-      if (!parsed.enveloped) migrated = true
-      if (migrated) {
+      const settingsResult = legacyStandaloneSettingsConflict(
+        storage,
+        parsed.snapshot.data,
+        !needsWrite,
+      )
+      legacyConflict = settingsResult.conflict || legacyConflict
+      cleanupFailed ||= settingsResult.cleanupFailed
+      if (!needsWrite && storage.getItem(LEGACY_REVISION_KEY) !== null) cleanup(LEGACY_REVISION_KEY)
+      cleanup('nte-corrupted-backup')
+
+      if (needsWrite) {
+        if (parsed.migratedStructure && raw !== null) {
+          storage.setItem(CORRUPTED_BACKUP_KEY, raw)
+          if (storage.getItem(CORRUPTED_BACKUP_KEY) !== raw) {
+            throw new Error('Checklist structure backup verification failed')
+          }
+        }
         const snapshot = write(parsed.snapshot.data, parsed.snapshot.revision)
-        return { status: 'migrated', snapshot, error: null }
+        if (legacyData && checklistDataEquals(parsed.snapshot.data, legacyData)) {
+          cleanup(LEGACY_DATA_KEY)
+        }
+        const migratedSettingsResult = legacyStandaloneSettingsConflict(
+          storage,
+          parsed.snapshot.data,
+          true,
+        )
+        legacyConflict ||= migratedSettingsResult.conflict
+        cleanupFailed ||= migratedSettingsResult.cleanupFailed
+        if (storage.getItem(LEGACY_REVISION_KEY) !== null) cleanup(LEGACY_REVISION_KEY)
+        return {
+          status: 'migrated',
+          snapshot,
+          error: migrationError(legacyConflict),
+        }
       }
-      return { status: 'loaded', snapshot: parsed.snapshot, error: null }
+      return {
+        status: 'loaded',
+        snapshot: parsed.snapshot,
+        error: migrationError(legacyConflict),
+      }
     } catch {
       return {
         status: 'recovered',

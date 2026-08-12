@@ -14,7 +14,7 @@ import {
 import type { SyncStatus } from '../../types'
 import { cn } from '../../utils/cn'
 import { APPLE_EASE } from '../../utils/motion'
-import { useDisplayPreferences } from '../../context/DisplayPreferencesContext'
+import { useLocalUiPreferences } from '../../context/LocalUiPreferencesContext'
 import { Button } from '../base/Button'
 import { Card } from '../base/Card'
 import { StatusMessage } from '../base/StatusMessage'
@@ -174,7 +174,7 @@ export function CloudSyncStatus({
   mobile = false,
 }: CloudSyncStatusProps) {
   const { t } = useTranslation()
-  const { locale, timeFormat } = useDisplayPreferences()
+  const { locale, timeFormat } = useLocalUiPreferences()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDisconnectExpanded, setIsDisconnectExpanded] = useState(false)
   const [isMobilePatchExpanded, setIsMobilePatchExpanded] = useState(false)

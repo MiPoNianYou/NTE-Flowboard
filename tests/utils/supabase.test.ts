@@ -3,10 +3,9 @@ import {
   loadSupabaseConfig,
   saveSupabaseConfig,
   clearSyncConfig,
-  loadLastSyncTime,
-  saveLastSyncTime,
-  loadLastSeenTime,
-  saveLastSeenTime,
+  loadCloudSyncState,
+  saveCloudSyncState,
+  isSameSupabaseProject,
   resetClient,
   SyncError,
   validateConfig,
@@ -18,6 +17,7 @@ import {
 import { createClient } from '@supabase/supabase-js'
 
 const CONFIG_KEY = 'flowboard-cloud-config'
+const SYNC_STATE_KEY = 'flowboard-cloud-sync-state'
 const LAST_SYNC_KEY = 'flowboard-cloud-last-sync'
 const LAST_SEEN_KEY = 'flowboard-cloud-last-seen'
 
@@ -72,6 +72,22 @@ describe('loadSupabaseConfig', () => {
     localStorage.setItem(CONFIG_KEY, storedValue)
     expect(loadSupabaseConfig()).toBeNull()
   })
+
+  it('should migrate a valid legacy config and delete it', () => {
+    localStorage.setItem('nte-supabase-config', JSON.stringify({ projectId: 'p1', anonKey: 'k1' }))
+    expect(loadSupabaseConfig()).toEqual({ projectId: 'p1', anonKey: 'k1' })
+    expect(localStorage.getItem('nte-supabase-config')).toBeNull()
+  })
+
+  it('should keep a conflicting legacy config', () => {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify({ projectId: 'current', anonKey: 'k' }))
+    localStorage.setItem(
+      'nte-supabase-config',
+      JSON.stringify({ projectId: 'legacy', anonKey: 'k' }),
+    )
+    expect(loadSupabaseConfig()).toEqual({ projectId: 'current', anonKey: 'k' })
+    expect(localStorage.getItem('nte-supabase-config')).not.toBeNull()
+  })
 })
 
 describe('saveSupabaseConfig', () => {
@@ -87,26 +103,171 @@ describe('saveSupabaseConfig', () => {
 describe('clearSyncConfig', () => {
   it('should remove all sync-related keys', () => {
     localStorage.setItem(CONFIG_KEY, 'config')
+    localStorage.setItem(SYNC_STATE_KEY, 'state')
     localStorage.setItem(LAST_SYNC_KEY, 'sync')
     localStorage.setItem(LAST_SEEN_KEY, 'seen')
+    localStorage.setItem('nte-supabase-config', 'legacy-config')
+    localStorage.setItem('nte-supabase-last-sync', 'legacy-sync')
+    localStorage.setItem('nte-supabase-last-seen', 'legacy-seen')
 
     clearSyncConfig()
 
     expect(localStorage.getItem(CONFIG_KEY)).toBeNull()
+    expect(localStorage.getItem(SYNC_STATE_KEY)).toBeNull()
     expect(localStorage.getItem(LAST_SYNC_KEY)).toBeNull()
     expect(localStorage.getItem(LAST_SEEN_KEY)).toBeNull()
+    expect(localStorage.getItem('nte-supabase-config')).toBeNull()
+    expect(localStorage.getItem('nte-supabase-last-sync')).toBeNull()
+    expect(localStorage.getItem('nte-supabase-last-seen')).toBeNull()
   })
 })
 
-describe('sync timestamps', () => {
-  it.each([
-    ['last sync', loadLastSyncTime, saveLastSyncTime],
-    ['last seen', loadLastSeenTime, saveLastSeenTime],
-  ] as const)('should round-trip %s', (_name, load, save) => {
-    expect(load()).toBeNull()
-    const time = '2025-01-15T10:00:00Z'
-    save(time)
-    expect(load()).toBe(time)
+describe('cloud sync state', () => {
+  it('compares project IDs and canonical Supabase URLs as the same project', () => {
+    expect(isSameSupabaseProject('project', 'https://project.supabase.co/')).toBe(true)
+    expect(isSameSupabaseProject('project', 'other-project')).toBe(false)
+  })
+
+  it('should round-trip the combined state', () => {
+    const state = {
+      projectId: 'p',
+      lastSeenAt: '2025-01-15T10:00:00.123456Z',
+      lastSuccessfulSyncAt: '2025-01-15T10:01:00Z',
+    }
+
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: null,
+      lastSuccessfulSyncAt: null,
+    })
+    expect(saveCloudSyncState(state)).toBe(true)
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual(state)
+  })
+
+  it('should migrate legacy timestamps and remove all old keys after confirmation', () => {
+    localStorage.setItem('nte-supabase-last-sync', '2025-01-15T10:00:00Z')
+    localStorage.setItem('nte-supabase-last-seen', '2025-01-15T11:00:00Z')
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: '2025-01-15T11:00:00Z',
+      lastSuccessfulSyncAt: '2025-01-15T10:00:00Z',
+    })
+    expect(localStorage.getItem('nte-supabase-last-sync')).toBeNull()
+    expect(localStorage.getItem('nte-supabase-last-seen')).toBeNull()
+  })
+
+  it('should migrate valid values and discard invalid values without backups', () => {
+    localStorage.setItem('flowboard-cloud-last-sync', '2025-01-15T10:00:00Z')
+    localStorage.setItem('nte-supabase-last-sync', 'not-a-time')
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: null,
+      lastSuccessfulSyncAt: '2025-01-15T10:00:00Z',
+    })
+    expect(localStorage.getItem('nte-supabase-last-sync')).toBeNull()
+    expect(localStorage.getItem('flowboard-cloud-last-sync')).toBeNull()
+    expect(localStorage.getItem('flowboard-cloud-last-sync-corrupted-backup')).toBeNull()
+  })
+
+  it('should prefer an existing state and delete conflicting legacy keys', () => {
+    localStorage.setItem(
+      SYNC_STATE_KEY,
+      JSON.stringify({
+        projectId: 'p',
+        lastSeenAt: '2025-01-15T11:00:00Z',
+        lastSuccessfulSyncAt: null,
+      }),
+    )
+    localStorage.setItem('flowboard-cloud-last-seen', '2025-01-15T12:00:00Z')
+
+    expect(loadCloudSyncState({ projectId: 'https://p.supabase.co/', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: '2025-01-15T11:00:00Z',
+      lastSuccessfulSyncAt: null,
+    })
+    expect(localStorage.getItem('flowboard-cloud-last-seen')).toBeNull()
+  })
+
+  it('should reset state when it belongs to another project', () => {
+    localStorage.setItem(
+      SYNC_STATE_KEY,
+      JSON.stringify({
+        projectId: 'other',
+        lastSeenAt: '2025-01-15T11:00:00Z',
+        lastSuccessfulSyncAt: '2025-01-15T11:01:00Z',
+      }),
+    )
+
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: null,
+      lastSuccessfulSyncAt: null,
+    })
+  })
+
+  it('should rebuild a damaged state from valid legacy values without backups', () => {
+    localStorage.setItem(SYNC_STATE_KEY, '{invalid')
+    localStorage.setItem(LAST_SYNC_KEY, '2025-01-15T10:00:00Z')
+    localStorage.setItem(LAST_SEEN_KEY, '2025-01-15T11:00:00Z')
+
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: '2025-01-15T11:00:00Z',
+      lastSuccessfulSyncAt: '2025-01-15T10:00:00Z',
+    })
+    expect(localStorage.getItem(`${SYNC_STATE_KEY}-corrupted-backup`)).toBeNull()
+  })
+
+  it('should preserve legacy values when the replacement write fails', () => {
+    localStorage.setItem(LAST_SYNC_KEY, '2025-01-15T10:00:00Z')
+    const originalSetItem = Storage.prototype.setItem
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+      this: Storage,
+      key,
+      value,
+    ) {
+      if (key === SYNC_STATE_KEY) throw new Error('quota exceeded')
+      return originalSetItem.call(this, key, value)
+    })
+
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: null,
+      lastSuccessfulSyncAt: '2025-01-15T10:00:00Z',
+    })
+    expect(localStorage.getItem(LAST_SYNC_KEY)).toBe('2025-01-15T10:00:00Z')
+    setItem.mockRestore()
+  })
+
+  it('should retain a legacy key when its deletion fails', () => {
+    localStorage.setItem(LAST_SYNC_KEY, '2025-01-15T10:00:00Z')
+    const originalRemoveItem = Storage.prototype.removeItem
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (
+      this: Storage,
+      key,
+    ) {
+      if (key === LAST_SYNC_KEY) throw new Error('storage failure')
+      return originalRemoveItem.call(this, key)
+    })
+
+    expect(loadCloudSyncState({ projectId: 'p', anonKey: 'k' })).toEqual({
+      projectId: 'p',
+      lastSeenAt: null,
+      lastSuccessfulSyncAt: '2025-01-15T10:00:00Z',
+    })
+    expect(localStorage.getItem(LAST_SYNC_KEY)).toBe('2025-01-15T10:00:00Z')
+    removeItem.mockRestore()
+  })
+
+  it('should remove orphaned state and legacy keys without config', () => {
+    localStorage.setItem(SYNC_STATE_KEY, '{}')
+    localStorage.setItem(LAST_SYNC_KEY, '2025-01-15T10:00:00Z')
+    localStorage.setItem(LAST_SEEN_KEY, '2025-01-15T11:00:00Z')
+
+    expect(loadCloudSyncState(null)).toBeNull()
+    expect(localStorage.getItem(SYNC_STATE_KEY)).toBeNull()
+    expect(localStorage.getItem(LAST_SYNC_KEY)).toBeNull()
+    expect(localStorage.getItem(LAST_SEEN_KEY)).toBeNull()
   })
 })
 

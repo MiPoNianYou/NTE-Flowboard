@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { StrictMode } from 'react'
 import { useChecklist } from '../../src/hooks/useChecklist'
 import { createChecklistStorageAdapter } from '../../src/utils/storage'
-import { DISPLAY_PREFERENCES_STORAGE_KEY } from '../../src/i18n/displayPreferences'
+import { LOCAL_UI_PREFERENCES_STORAGE_KEY } from '../../src/utils/localUiPreferences'
 import { createDefaultChecklistData } from '../../src/utils/defaultData'
 
 const defaultData = createDefaultChecklistData('zh-CN')
@@ -90,7 +90,7 @@ describe('useChecklist', () => {
   it('restores default checklists for the current language and preserves settings', async () => {
     vi.setSystemTime(new Date('2026-07-29T12:34:56.000Z'))
     localStorage.setItem(
-      DISPLAY_PREFERENCES_STORAGE_KEY,
+      LOCAL_UI_PREFERENCES_STORAGE_KEY,
       JSON.stringify({ theme: 'dark', language: 'en-US', timeFormat: '12h' }),
     )
     const { result } = renderHook(() => useChecklist())

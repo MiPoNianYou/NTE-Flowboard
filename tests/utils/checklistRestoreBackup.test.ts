@@ -9,6 +9,7 @@ import {
 } from '../../src/utils/checklistRestoreBackup'
 import { createDefaultChecklistData } from '../../src/utils/defaultData'
 import type { ChecklistRevision } from '../../src/utils/storage'
+import { subscribeLegacyStorageEvents } from '../../src/utils/legacyStorageEvents'
 
 const revision = '3:test' as ChecklistRevision
 
@@ -62,6 +63,12 @@ describe('checklist restore session store', () => {
       id: `legacy:${session.createdAt}`,
       checklistRevision: null,
     })
+    expect(JSON.parse(localStorage.getItem(RESTORE_BACKUP_STORAGE_KEY)!)).toMatchObject({
+      version: 2,
+      id: `legacy:${session.createdAt}`,
+      checklistRevision: null,
+    })
+    expect(localStorage.getItem(`${RESTORE_BACKUP_STORAGE_KEY}-v1-backup`)).toBeNull()
   })
 
   it('detects checklist changes but ignores settings changes', () => {
@@ -92,5 +99,50 @@ describe('checklist restore session store', () => {
     expect(failingStore.save(createSession(), null)).toBe(false)
     localStorage.setItem(RESTORE_BACKUP_STORAGE_KEY, JSON.stringify({ version: 2 }))
     expect(createChecklistRestoreSessionStore().load()).toBeNull()
+  })
+
+  it('keeps a version 1 backup when the v2 rewrite cannot be verified', () => {
+    const session = createSession()
+    const legacyRaw = JSON.stringify({
+      version: 1,
+      createdAt: session.createdAt,
+      before: session.before,
+      restored: session.restored,
+    })
+    const failingStorage = {
+      getItem: vi.fn((key: string) => (key === RESTORE_BACKUP_STORAGE_KEY ? legacyRaw : null)),
+      setItem: vi.fn(() => {
+        throw new Error('quota exceeded')
+      }),
+      removeItem: vi.fn(),
+    } as unknown as Storage
+
+    const loaded = createChecklistRestoreSessionStore(failingStorage).load()
+
+    expect(loaded?.version).toBe(2)
+    expect(failingStorage.setItem).toHaveBeenCalledOnce()
+  })
+
+  it('deletes malformed or unknown restore backups', () => {
+    localStorage.setItem(RESTORE_BACKUP_STORAGE_KEY, JSON.stringify({ version: 99 }))
+
+    expect(createChecklistRestoreSessionStore().load()).toBeNull()
+    expect(localStorage.getItem(RESTORE_BACKUP_STORAGE_KEY)).toBeNull()
+  })
+
+  it('reports an incomplete migration when an invalid restore backup cannot be deleted', () => {
+    localStorage.setItem(RESTORE_BACKUP_STORAGE_KEY, JSON.stringify({ version: 99 }))
+    const events: string[] = []
+    const unsubscribe = subscribeLegacyStorageEvents((event) => events.push(event))
+    const originalRemoveItem = Storage.prototype.removeItem
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
+      if (key === RESTORE_BACKUP_STORAGE_KEY) return
+      originalRemoveItem.call(this, key)
+    })
+
+    expect(createChecklistRestoreSessionStore().load()).toBeNull()
+    expect(localStorage.getItem(RESTORE_BACKUP_STORAGE_KEY)).not.toBeNull()
+    expect(events).toContain('failed')
+    unsubscribe()
   })
 })

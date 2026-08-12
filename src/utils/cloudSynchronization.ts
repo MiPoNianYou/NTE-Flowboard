@@ -7,19 +7,19 @@ import {
   classifySyncError,
   clearSyncConfig,
   detectConditionalWriteCapability,
-  loadLastSeenTime,
-  loadLastSyncTime,
+  isSameSupabaseProject,
+  loadCloudSyncState,
   loadSupabaseConfig,
   pullData,
   pushData,
   resetClient,
   resolveSupabaseUrl,
-  saveLastSeenTime,
-  saveLastSyncTime,
+  saveCloudSyncState,
   saveSupabaseConfig,
   subscribeToChanges,
   validateConfig,
   type SupabaseConfig,
+  type CloudSyncState,
   type CloudPushResult,
   type ValidateResult,
 } from './supabase'
@@ -89,10 +89,8 @@ export interface CloudSynchronizationMetadataAdapter {
   loadConfig: () => SupabaseConfig | null
   saveConfig: (config: SupabaseConfig) => void
   clearConfig: () => void
-  loadLastSyncTime: () => string | null
-  saveLastSyncTime: (isoString: string) => void
-  loadLastSeenTime: () => string | null
-  saveLastSeenTime: (isoString: string) => void
+  loadSyncState: (config: SupabaseConfig | null) => CloudSyncState | null
+  saveSyncState: (state: CloudSyncState) => boolean
 }
 
 export interface CloudSynchronizationRuntime {
@@ -149,11 +147,12 @@ export function createCloudSynchronization({
   let dataInitialized = false
   let localChangeVersion = 0
   let ignoreNextDataUpdate = false
-  let lastSeenTime = metadata.loadLastSeenTime()
+  const initialSyncState = metadata.loadSyncState(config)
+  let lastSeenTime = initialSyncState?.lastSeenAt ?? null
   let snapshot: CloudSynchronizationSnapshot = {
     isConfigured: Boolean(config),
     syncStatus: config ? 'connecting' : 'disconnected',
-    lastSyncTime: metadata.loadLastSyncTime(),
+    lastSyncTime: initialSyncState?.lastSuccessfulSyncAt ?? null,
     syncError: null,
     hasPendingLocalChanges: false,
     backgroundSyncStatus: config ? 'checking' : 'inactive',
@@ -264,9 +263,12 @@ export function createCloudSynchronization({
       if (stored.lastResult?.status === 'applied' && stored.lastResult.updatedAt) {
         checklistPort?.acknowledgeOperationsThrough(stored.lastResult.operationVersion)
         lastSeenTime = stored.lastResult.updatedAt
-        metadata.saveLastSeenTime(stored.lastResult.updatedAt)
         const syncedAt = runtime.now().toISOString()
-        metadata.saveLastSyncTime(syncedAt)
+        metadata.saveSyncState({
+          projectId: activeConfig.projectId,
+          lastSeenAt: stored.lastResult.updatedAt,
+          lastSuccessfulSyncAt: syncedAt,
+        })
         updateSnapshot({ lastSyncTime: syncedAt })
       }
       if (stored.lastResult) await background.clearResult()
@@ -297,11 +299,14 @@ export function createCloudSynchronization({
     return true
   }
 
-  const saveSuccessfulSync = (updatedAt: string) => {
+  const saveSuccessfulSync = (activeConfig: SupabaseConfig, updatedAt: string) => {
     const syncedAt = runtime.now().toISOString()
     lastSeenTime = updatedAt
-    metadata.saveLastSeenTime(updatedAt)
-    metadata.saveLastSyncTime(syncedAt)
+    metadata.saveSyncState({
+      projectId: activeConfig.projectId,
+      lastSeenAt: updatedAt,
+      lastSuccessfulSyncAt: syncedAt,
+    })
     updateSnapshot({
       lastSyncTime: syncedAt,
       syncStatus: 'connected',
@@ -388,7 +393,7 @@ export function createCloudSynchronization({
           skipFirstImport: false,
         })
       }
-      saveSuccessfulSync(pushResult.updatedAt)
+      saveSuccessfulSync(activeConfig, pushResult.updatedAt)
       updateSnapshot({
         backgroundSyncStatus: hasQueuedChange ? 'pending' : registrationStatus(),
       })
@@ -451,6 +456,7 @@ export function createCloudSynchronization({
       }
 
       saveSuccessfulSync(
+        activeConfig,
         !lastSeenTime || new Date(result.updatedAt) > new Date(lastSeenTime)
           ? result.updatedAt
           : lastSeenTime,
@@ -722,10 +728,27 @@ export function createCloudSynchronization({
       clearTimer(validationTimer)
       validationTimer = null
       await background.clear().catch(() => undefined)
+      const previousConfig = config
       config = { projectId: projectUrl, anonKey }
       metadata.saveConfig(config)
       remote.reset()
-      lastSeenTime = null
+      const sameConfiguredProject =
+        previousConfig !== null && isSameSupabaseProject(previousConfig.projectId, config.projectId)
+      if (!sameConfiguredProject) {
+        lastSeenTime = null
+        metadata.saveSyncState({
+          projectId: config.projectId,
+          lastSeenAt: null,
+          lastSuccessfulSyncAt: null,
+        })
+        updateSnapshot({ lastSyncTime: null })
+      } else {
+        metadata.saveSyncState({
+          projectId: config.projectId,
+          lastSeenAt: lastSeenTime,
+          lastSuccessfulSyncAt: snapshot.lastSyncTime,
+        })
+      }
       terminalError = false
       const supportsConditionalWrite = await refreshConditionalWriteCapability(config)
       if (supportsConditionalWrite) await hydrateBackgroundState(config)
@@ -849,10 +872,8 @@ function createBrowserMetadataAdapter(): CloudSynchronizationMetadataAdapter {
     loadConfig: loadSupabaseConfig,
     saveConfig: saveSupabaseConfig,
     clearConfig: clearSyncConfig,
-    loadLastSyncTime,
-    saveLastSyncTime,
-    loadLastSeenTime,
-    saveLastSeenTime,
+    loadSyncState: loadCloudSyncState,
+    saveSyncState: saveCloudSyncState,
   }
 }
 

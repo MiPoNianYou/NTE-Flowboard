@@ -4,6 +4,7 @@ import { getTagColors, cleanupRegistry } from '../../src/utils/tagColors'
 
 function clearMap() {
   localStorage.removeItem('flowboard-tag-colors')
+  localStorage.removeItem('tag-color-map')
 }
 
 beforeEach(() => {
@@ -109,5 +110,25 @@ describe('cleanupRegistry', () => {
 
     expect(colors.text).toMatch(/^#[0-9A-Fa-f]{6}$/)
     expect(colors.backgroundColor).toMatch(/^#[0-9A-Fa-f]{8}$/)
+    expect(JSON.parse(localStorage.getItem('flowboard-tag-colors')!)).toEqual([
+      ['legacy', { kind: 'palette', index: 0 }],
+    ])
+  })
+
+  it('should migrate the legacy tag map and remove it after verification', () => {
+    localStorage.setItem('tag-color-map', JSON.stringify([['legacy', 0]]))
+    getTagColors('legacy')
+    expect(localStorage.getItem('tag-color-map')).toBeNull()
+    expect(localStorage.getItem('flowboard-tag-colors')).toContain('legacy')
+  })
+
+  it('should keep a conflicting legacy tag map', () => {
+    localStorage.setItem(
+      'flowboard-tag-colors',
+      JSON.stringify([['current', { kind: 'palette', index: 0 }]]),
+    )
+    localStorage.setItem('tag-color-map', JSON.stringify([['legacy', 1]]))
+    getTagColors('current')
+    expect(localStorage.getItem('tag-color-map')).not.toBeNull()
   })
 })

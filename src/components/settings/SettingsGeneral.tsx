@@ -6,9 +6,8 @@ import { SettingRow } from './SettingRow'
 import { Card } from '../base/Card'
 import type { SettingsPageBaseProps } from './SettingsPage'
 import { useSettings } from '../../context/SettingsContext'
-import { useDisplayPreferences } from '../../context/DisplayPreferencesContext'
-import type { LanguagePreference, TimeFormat } from '../../i18n/displayPreferences'
-import type { ThemePreference } from '../../theme/themePreferences'
+import { useLocalUiPreferences } from '../../context/LocalUiPreferencesContext'
+import type { LanguagePreference, ThemePreference, TimeFormat } from '../../types'
 import { useTheme } from '../../context/ThemeContext'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../utils/cn'
@@ -49,7 +48,7 @@ type SettingsGeneralProps = SettingsPageBaseProps
 export function SettingsGeneral({ onBack, isEmbedded }: SettingsGeneralProps) {
   const { t } = useTranslation()
   const { settings, updateSettings } = useSettings()
-  const { language, timeFormat, setLanguage, setTimeFormat } = useDisplayPreferences()
+  const { language, timeFormat, setLanguage, setTimeFormat } = useLocalUiPreferences()
   const { themePreference, setThemePreference } = useTheme()
 
   return (

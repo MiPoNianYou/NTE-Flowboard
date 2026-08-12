@@ -3,6 +3,10 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { StorageToast } from '../../src/components/StorageToast'
 import { MS } from '../../src/utils/constants'
 import { toastBus } from '../../src/utils/toastBus'
+import {
+  reportLegacyStorageConflict,
+  reportLegacyStorageFailure,
+} from '../../src/utils/legacyStorageEvents'
 
 describe('StorageToast', () => {
   afterEach(() => {
@@ -17,6 +21,16 @@ describe('StorageToast', () => {
     })
     expect(screen.getByText('数据读取失败')).toBeInTheDocument()
     expect(screen.getByText('保存失败')).toBeInTheDocument()
+  })
+
+  it('shows localized legacy migration events emitted before mounting', () => {
+    reportLegacyStorageConflict()
+    reportLegacyStorageFailure()
+
+    render(<StorageToast />)
+
+    expect(screen.getByText('旧数据冲突')).toBeInTheDocument()
+    expect(screen.getByText('旧数据迁移未完成')).toBeInTheDocument()
   })
 
   it('should auto-dismiss after TOAST_DISMISS timeout', () => {

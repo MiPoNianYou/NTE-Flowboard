@@ -3,15 +3,15 @@ import { fireEvent, render as renderBase, screen, waitFor, within } from '@testi
 import { describe, expect, it, vi } from 'vitest'
 import { SettingsLayout } from '../../../src/components/settings/SettingsLayout'
 import type { CloudSyncProps } from '../../../src/components/settings/CloudSyncSection'
-import { DisplayPreferencesProvider } from '../../../src/context/DisplayPreferencesContext'
+import { LocalUiPreferencesProvider } from '../../../src/context/LocalUiPreferencesContext'
 import { ThemeProvider } from '../../../src/context/ThemeContext'
 import type { NotificationSettingsProps } from '../../../src/types'
 
 function render(ui: ReactNode) {
   return renderBase(
-    <ThemeProvider>
-      <DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>
-    </ThemeProvider>,
+    <LocalUiPreferencesProvider>
+      <ThemeProvider>{ui}</ThemeProvider>
+    </LocalUiPreferencesProvider>,
   )
 }
 

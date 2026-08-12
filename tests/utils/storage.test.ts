@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChecklistData } from '../../src/types'
 import { createChecklistStorageAdapter, EMPTY_CHECKLIST_REVISION } from '../../src/utils/storage'
+import { subscribeLegacyStorageEvents } from '../../src/utils/legacyStorageEvents'
 
 function makeChecklistData(overrides: Partial<ChecklistData> = {}): ChecklistData {
   return {
@@ -73,6 +74,15 @@ describe('createChecklistStorageAdapter', () => {
     expect(storage.setItem).not.toHaveBeenCalled()
   })
 
+  it('cleans a residual legacy revision beside a valid envelope', () => {
+    const input = makeChecklistData({ daily: [] })
+    storage.setItem('flowboard-checklist', JSON.stringify({ data: input, revision: '4:current' }))
+    storage.setItem('flowboard-checklist-revision', JSON.stringify({ counter: 2, writerId: 'old' }))
+
+    expect(createAdapter(storage).load().status).toBe('loaded')
+    expect(storage.getItem('flowboard-checklist-revision')).toBeNull()
+  })
+
   it('backs up invalid data and reports recovery without emitting UI effects', () => {
     storage.setItem('flowboard-checklist', '{invalid json')
 
@@ -112,6 +122,134 @@ describe('createChecklistStorageAdapter', () => {
       shouldConfirmDelete: false,
     })
     expect(storage.getItem('nte-checklist-data')).toBeNull()
+    expect(storage.getItem('nte-auto-move-completed')).toBeNull()
+    expect(storage.getItem('nte-confirm-delete')).toBeNull()
+  })
+
+  it('cleans an equivalent legacy checklist when both formats coexist', () => {
+    const input = makeChecklistData()
+    storage.setItem('flowboard-checklist', JSON.stringify({ data: input, revision: '4:current' }))
+    storage.setItem('nte-checklist-data', JSON.stringify(input))
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('loaded')
+    expect(result.error).toBeNull()
+    expect(result.snapshot.data).toEqual(input)
+    expect(storage.getItem('nte-checklist-data')).toBeNull()
+  })
+
+  it('keeps the current checklist and retries when equivalent legacy cleanup fails', () => {
+    const input = makeChecklistData()
+    storage.setItem('flowboard-checklist', JSON.stringify({ data: input, revision: '4:current' }))
+    storage.setItem('nte-checklist-data', JSON.stringify(input))
+    const events: string[] = []
+    const unsubscribe = subscribeLegacyStorageEvents((event) => events.push(event))
+    const originalRemoveItem = vi.mocked(storage.removeItem).getMockImplementation()!
+    vi.mocked(storage.removeItem).mockImplementation((key: string) => {
+      if (key !== 'nte-checklist-data') originalRemoveItem(key)
+    })
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('loaded')
+    expect(result.error).toBe('legacy-cleanup-failed')
+    expect(result.snapshot.data).toEqual(input)
+    expect(storage.getItem('nte-checklist-data')).toBe(JSON.stringify(input))
+    expect(events).toContain('failed')
+    unsubscribe()
+  })
+
+  it('keeps conflicting standalone legacy values after migrating the first valid value', () => {
+    storage.setItem('nte-auto-move-completed', 'true')
+    storage.setItem('flowboard-setting-auto-move', 'false')
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('migrated')
+    expect(result.error).toBe('legacy-conflict')
+    expect(result.snapshot.data.settings.isAutoMoveEnabled).toBe(true)
+    expect(storage.getItem('nte-auto-move-completed')).toBeNull()
+    expect(storage.getItem('flowboard-setting-auto-move')).toBe('false')
+  })
+
+  it('keeps a conflicting legacy checklist and reports the conflict', () => {
+    const current = makeChecklistData()
+    const legacy = makeChecklistData({ daily: [] })
+    storage.setItem('flowboard-checklist', JSON.stringify({ data: current, revision: '4:current' }))
+    storage.setItem('nte-checklist-data', JSON.stringify(legacy))
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('loaded')
+    expect(result.error).toBe('legacy-conflict')
+    expect(result.snapshot.data).toEqual(current)
+    expect(storage.getItem('nte-checklist-data')).toBe(JSON.stringify(legacy))
+  })
+
+  it('backs up an invalid current checklist and rebuilds it from valid legacy data', () => {
+    const legacy = makeChecklistData({ weekly: [] })
+    storage.setItem('flowboard-checklist', '{broken')
+    storage.setItem('nte-checklist-data', JSON.stringify(legacy))
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('migrated')
+    expect(result.error).toBeNull()
+    expect(result.snapshot.data).toEqual(legacy)
+    expect(storage.getItem('flowboard-corrupted-backup')).toBe('{broken')
+    expect(storage.getItem('nte-checklist-data')).toBeNull()
+  })
+
+  it('deletes invalid legacy checklist data while keeping a valid current checklist', () => {
+    const current = makeChecklistData()
+    storage.setItem('flowboard-checklist', JSON.stringify({ data: current, revision: '4:current' }))
+    storage.setItem('nte-checklist-data', '{broken')
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('loaded')
+    expect(result.error).toBeNull()
+    expect(storage.getItem('nte-checklist-data')).toBeNull()
+  })
+
+  it('keeps valid legacy data when the new checklist cannot be written', () => {
+    const legacy = makeChecklistData()
+    storage.setItem('nte-checklist-data', JSON.stringify(legacy))
+    vi.mocked(storage.setItem).mockImplementationOnce(() => {
+      throw new Error('quota exceeded')
+    })
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('recovered')
+    expect(result.error).toBe('storage-read-failed')
+    expect(storage.getItem('nte-checklist-data')).toBe(JSON.stringify(legacy))
+  })
+
+  it('upgrades legacy fields stored under the current checklist key', () => {
+    storage.setItem(
+      'flowboard-checklist',
+      JSON.stringify({
+        daily: [{ text: 'Legacy', completed: true, hidden: false, order: 1 }],
+        weekly: [],
+        custom: [],
+        settings: { autoMoveCompleted: false, confirmDelete: false },
+        lastDailyReset: '2026-07-01T00:00:00.000Z',
+        lastWeeklyReset: '2026-07-01T00:00:00.000Z',
+        lastCustomReset: '2026-07-01T00:00:00.000Z',
+      }),
+    )
+
+    const result = createAdapter(storage).load()
+
+    expect(result.status).toBe('migrated')
+    expect(result.snapshot.data.daily[0]).toEqual(
+      expect.objectContaining({ text: 'Legacy', isCompleted: true, isHidden: false }),
+    )
+    expect(result.snapshot.data.settings).toEqual(
+      expect.objectContaining({ isAutoMoveEnabled: false, shouldConfirmDelete: false }),
+    )
   })
 
   it('upgrades a valid unversioned checklist into the current envelope', () => {

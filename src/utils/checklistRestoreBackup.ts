@@ -1,6 +1,8 @@
 import type { ChecklistContentSnapshot, ChecklistData } from '../types'
 import type { ChecklistRevision } from './storage'
 import { isChecklistContentSnapshot } from './validation'
+import { removeStorageKey } from './legacyStorageMigration'
+import { reportLegacyStorageFailure } from './legacyStorageEvents'
 
 export const RESTORE_BACKUP_STORAGE_KEY = 'flowboard-restore-backup'
 
@@ -58,7 +60,12 @@ function isRevision(value: unknown): value is ChecklistRevision {
   return typeof value === 'string' && /^\d+:/.test(value)
 }
 
-function parseRestoreSession(raw: string | null): ChecklistRestoreSession | null {
+interface ParsedRestoreSession {
+  session: ChecklistRestoreSession
+  migrated: boolean
+}
+
+function parseRestoreSession(raw: string | null): ParsedRestoreSession | null {
   if (!raw) return null
   try {
     const parsed: unknown = JSON.parse(raw)
@@ -83,16 +90,19 @@ function parseRestoreSession(raw: string | null): ChecklistRestoreSession | null
       typeof session.id === 'string' &&
       (session.checklistRevision === null || isRevision(session.checklistRevision))
     ) {
-      return session as ChecklistRestoreSession
+      return { session: session as ChecklistRestoreSession, migrated: false }
     }
     if (session.version === 1) {
       return {
-        version: 2,
-        id: `legacy:${session.createdAt}`,
-        createdAt: session.createdAt,
-        before: session.before,
-        restored: session.restored,
-        checklistRevision: null,
+        session: {
+          version: 2,
+          id: `legacy:${session.createdAt}`,
+          createdAt: session.createdAt,
+          before: session.before,
+          restored: session.restored,
+          checklistRevision: null,
+        },
+        migrated: true,
       }
     }
   } catch {
@@ -134,7 +144,31 @@ export function createChecklistRestoreSessionStore(
   const load = () => {
     if (!storage) return null
     try {
-      return parseRestoreSession(storage.getItem(RESTORE_BACKUP_STORAGE_KEY))
+      const raw = storage.getItem(RESTORE_BACKUP_STORAGE_KEY)
+      const parsed = parseRestoreSession(raw)
+      if (!parsed) {
+        if (raw !== null && !removeStorageKey(storage, RESTORE_BACKUP_STORAGE_KEY)) {
+          reportLegacyStorageFailure()
+        }
+        return null
+      }
+      if (parsed.migrated) {
+        const serialized = JSON.stringify(parsed.session)
+        try {
+          storage.setItem(RESTORE_BACKUP_STORAGE_KEY, serialized)
+          const confirmed = parseRestoreSession(storage.getItem(RESTORE_BACKUP_STORAGE_KEY))
+          if (
+            !confirmed ||
+            confirmed.migrated ||
+            JSON.stringify(confirmed.session) !== serialized
+          ) {
+            return parsed.session
+          }
+        } catch {
+          return parsed.session
+        }
+      }
+      return parsed.session
     } catch {
       return null
     }
@@ -159,8 +193,7 @@ export function createChecklistRestoreSessionStore(
         const current = load()
         if (!current) return 'missing'
         if (current.id !== expectedSessionId) return 'conflict'
-        storage.removeItem(RESTORE_BACKUP_STORAGE_KEY)
-        return load() ? 'failed' : 'success'
+        return removeStorageKey(storage, RESTORE_BACKUP_STORAGE_KEY) ? 'success' : 'failed'
       } catch {
         return 'failed'
       }

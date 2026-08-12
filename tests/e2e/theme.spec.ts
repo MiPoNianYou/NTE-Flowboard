@@ -1,19 +1,19 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
-const DISPLAY_PREFERENCES_STORAGE_KEY = 'flowboard-display-preferences'
+const LOCAL_UI_PREFERENCES_STORAGE_KEY = 'flowboard-display-preferences'
 const LEGACY_THEME_STORAGE_KEY = 'flowboard-theme-preference'
 const CLOUD_CONFIG_STORAGE_KEY = 'flowboard-cloud-config'
 
 async function openFreshPage(page: Page, colorScheme: 'light' | 'dark') {
   await page.emulateMedia({ colorScheme, reducedMotion: 'no-preference' })
   await page.addInitScript(
-    ({ displayPreferencesKey, legacyThemeKey }) => {
+    ({ localUiPreferencesKey, legacyThemeKey }) => {
       const initializedKey = 'flowboard-e2e-environment-initialized'
       const environmentLanguageKey = 'flowboard-e2e-environment-language'
       const environmentHour12Key = 'flowboard-e2e-environment-hour12'
       if (!sessionStorage.getItem(initializedKey)) {
         localStorage.removeItem(legacyThemeKey)
-        localStorage.removeItem(displayPreferencesKey)
+        localStorage.removeItem(localUiPreferencesKey)
         sessionStorage.setItem(environmentLanguageKey, 'zh-CN')
         sessionStorage.setItem(environmentHour12Key, 'false')
         sessionStorage.setItem(initializedKey, 'true')
@@ -34,7 +34,7 @@ async function openFreshPage(page: Page, colorScheme: 'light' | 'dark') {
       }
     },
     {
-      displayPreferencesKey: DISPLAY_PREFERENCES_STORAGE_KEY,
+      localUiPreferencesKey: LOCAL_UI_PREFERENCES_STORAGE_KEY,
       legacyThemeKey: LEGACY_THEME_STORAGE_KEY,
     },
   )
@@ -149,10 +149,15 @@ test('persists explicit display choices when the environment later changes', asy
     .poll(() =>
       page.evaluate(
         (key) => JSON.parse(localStorage.getItem(key) ?? 'null'),
-        DISPLAY_PREFERENCES_STORAGE_KEY,
+        LOCAL_UI_PREFERENCES_STORAGE_KEY,
       ),
     )
-    .toEqual({ theme: 'dark', language: 'en-US', timeFormat: '12h' })
+    .toEqual({
+      theme: 'dark',
+      language: 'en-US',
+      timeFormat: '12h',
+      hiddenSectionOpen: true,
+    })
   await testInfo.attach('theme-dark-settings', {
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
@@ -162,15 +167,15 @@ test('persists explicit display choices when the environment later changes', asy
 test('migrates the legacy theme preference without a light first frame', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' })
   await page.addInitScript(
-    ({ displayPreferencesKey, legacyThemeKey }) => {
+    ({ localUiPreferencesKey, legacyThemeKey }) => {
       localStorage.setItem(legacyThemeKey, 'dark')
       localStorage.setItem(
-        displayPreferencesKey,
+        localUiPreferencesKey,
         JSON.stringify({ language: 'zh-CN', timeFormat: '12h' }),
       )
     },
     {
-      displayPreferencesKey: DISPLAY_PREFERENCES_STORAGE_KEY,
+      localUiPreferencesKey: LOCAL_UI_PREFERENCES_STORAGE_KEY,
       legacyThemeKey: LEGACY_THEME_STORAGE_KEY,
     },
   )
@@ -182,10 +187,15 @@ test('migrates the legacy theme preference without a light first frame', async (
     .poll(() =>
       page.evaluate(
         (key) => JSON.parse(localStorage.getItem(key) ?? 'null'),
-        DISPLAY_PREFERENCES_STORAGE_KEY,
+        LOCAL_UI_PREFERENCES_STORAGE_KEY,
       ),
     )
-    .toEqual({ theme: 'dark', language: 'zh-CN', timeFormat: '12h' })
+    .toEqual({
+      theme: 'dark',
+      language: 'zh-CN',
+      timeFormat: '12h',
+      hiddenSectionOpen: true,
+    })
   await expect
     .poll(() => page.evaluate((key) => localStorage.getItem(key), LEGACY_THEME_STORAGE_KEY))
     .toBeNull()

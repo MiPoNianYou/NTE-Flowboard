@@ -2,10 +2,10 @@ import type { ReactNode } from 'react'
 import { render as renderBase, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { CloudSyncSection } from '../../../src/components/settings/CloudSyncSection'
-import { DisplayPreferencesProvider } from '../../../src/context/DisplayPreferencesContext'
+import { LocalUiPreferencesProvider } from '../../../src/context/LocalUiPreferencesContext'
 
 function render(ui: ReactNode) {
-  return renderBase(<DisplayPreferencesProvider>{ui}</DisplayPreferencesProvider>)
+  return renderBase(<LocalUiPreferencesProvider>{ui}</LocalUiPreferencesProvider>)
 }
 
 const mockNotConfiguredProps = {

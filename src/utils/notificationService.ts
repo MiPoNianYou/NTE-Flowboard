@@ -6,7 +6,7 @@ import type {
   NotificationStats,
   ServerRegion,
 } from '../types'
-import type { SupportedLocale } from '../i18n/displayPreferences'
+import type { SupportedLocale } from '../types'
 import type { NotificationPublicConfig } from './notificationConfig'
 
 const AUTH_STORAGE_KEY = 'flowboard-notification-auth'

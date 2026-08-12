@@ -130,7 +130,24 @@ async function flushMicrotasks() {
 }
 
 describe('createNotificationLifecycle', () => {
-  beforeEach(() => vi.useFakeTimers())
+  beforeEach(() => {
+    vi.useFakeTimers()
+    localStorage.clear()
+  })
+
+  it('removes the retired notification-enabled key when metadata initializes', () => {
+    localStorage.setItem('flowboard-notification-enabled', 'true')
+    createNotificationLifecycle({
+      initialData: data,
+      initialRegion: 'asia',
+      initialLocale: 'zh-CN',
+      config,
+      browser: createBrowser().adapter,
+      remote: createRemote(),
+      runtime: createRuntime().runtime,
+    })
+    expect(localStorage.getItem('flowboard-notification-enabled')).toBeNull()
+  })
 
   it('derives enabled state from the actual browser subscription', async () => {
     const subscription = createSubscription('https://push.example/current')

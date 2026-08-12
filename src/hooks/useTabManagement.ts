@@ -1,22 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { TabType } from '../types'
 import { TAB_ORDER } from '../utils/constants'
+import { migrateLegacyStorageValue } from '../utils/legacyStorageMigration'
+import {
+  reportLegacyStorageConflict,
+  reportLegacyStorageFailure,
+} from '../utils/legacyStorageEvents'
+
+const parseTab = (raw: string): TabType | null =>
+  raw === 'daily' || raw === 'weekly' || raw === 'monthly' ? raw : null
 
 export type TabDirection = 'down' | 'up'
 
 export function useTabManagement() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
-    if (localStorage.getItem('flowboard-active-tab') === null) {
-      const legacy = localStorage.getItem('nte-tab')
-      if (legacy !== null) {
-        localStorage.setItem('flowboard-active-tab', legacy)
-        localStorage.removeItem('nte-tab')
-      }
-    }
-    const saved = localStorage.getItem('flowboard-active-tab')
-    return saved === 'daily' || saved === 'weekly' || saved === 'monthly'
-      ? (saved as TabType)
-      : 'daily'
+    migrateLegacyStorageValue(localStorage, {
+      currentKey: 'flowboard-active-tab',
+      legacyKey: 'nte-tab',
+      parse: parseTab,
+      serialize: (value) => value,
+      equals: Object.is,
+      onConflict: reportLegacyStorageConflict,
+      onFailure: reportLegacyStorageFailure,
+    })
+    return parseTab(localStorage.getItem('flowboard-active-tab') ?? '') ?? 'daily'
   })
 
   const prevTabRef = useRef<TabType>(activeTab)

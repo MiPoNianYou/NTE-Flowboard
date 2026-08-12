@@ -5,7 +5,7 @@ import type {
   BehaviorSettings,
   UiPreferences,
 } from '../types'
-import type { SupportedLocale } from '../i18n/displayPreferences'
+import type { SupportedLocale } from '../types'
 
 export const SERVER_REGIONS: Record<ServerRegion, { label: string; description: string }> = {
   asia: { label: '亚太服', description: 'UTC+8 (固定)' },

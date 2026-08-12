@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, vi } from 'vitest'
-import { DISPLAY_PREFERENCES_STORAGE_KEY } from '../src/i18n/displayPreferences'
+import { LOCAL_UI_PREFERENCES_STORAGE_KEY } from '../src/utils/localUiPreferences'
 import i18n from '../src/i18n'
 
 class MockResizeObserver {
@@ -19,8 +19,13 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 
 beforeEach(() => {
   localStorage.setItem(
-    DISPLAY_PREFERENCES_STORAGE_KEY,
-    JSON.stringify({ theme: 'dark', language: 'zh-CN', timeFormat: '24h' }),
+    LOCAL_UI_PREFERENCES_STORAGE_KEY,
+    JSON.stringify({
+      theme: 'dark',
+      language: 'zh-CN',
+      timeFormat: '24h',
+      hiddenSectionOpen: true,
+    }),
   )
   void i18n.changeLanguage('zh-CN')
 })
