@@ -3,7 +3,7 @@ import type { TabType, ChecklistData, NotificationSettingsProps } from '../types
 import type { CloudSyncProps } from './settings/CloudSyncSection'
 import { SettingsPanel } from './SettingsPanel'
 import { OfflineIndicator } from './OfflineIndicator'
-import ShinkuLogo from '../assets/shinku-logo.png'
+import NanallyIcon from '../assets/nanally-icon.png'
 import { useTranslation } from 'react-i18next'
 import type { RestoreDefaultsControls } from '../utils/checklistRestoreBackup'
 
@@ -34,7 +34,7 @@ export const Header = memo(function Header({
           rel="noopener noreferrer"
           aria-label="GitHub"
         >
-          <img src={ShinkuLogo} alt="Shinku" className="w-8 h-8 md:w-10 md:h-10" />
+          <img src={NanallyIcon} alt="Nanally" className="w-8 h-8 md:w-10 md:h-10" />
         </a>
         <div>
           <h1 className="text-lg md:text-xl font-semibold text-text-primary">NTE Flowboard</h1>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./src/assets/shinku-logo.png" width="108" alt="NTE Flowboard 的 Shinku 图标" />
+  <img src="./src/assets/nanally-icon.png" width="108" alt="NTE Flowboard 的 Nanally 图标" />
 </p>
 
 <h1 align="center">NTE Flowboard</h1>
