@@ -23,7 +23,7 @@ test('persists a completed checklist item after reloading the page', async ({ pa
   ).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('edits and hides a task from compact item actions without horizontal overflow', async ({
+test('edits and archives a task from compact item actions without horizontal overflow', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 })
@@ -38,7 +38,7 @@ test('edits and hides a task from compact item actions without horizontal overfl
   await page.getByRole('button', { name: 'Add', exact: true }).click()
 
   await page.getByText(taskName, { exact: true }).click()
-  const actionButtons = ['Edit', 'Hide', 'Delete'].map((name) =>
+  const actionButtons = ['Edit', 'Archive', 'Delete'].map((name) =>
     page.getByRole('button', { name, exact: true }),
   )
   for (const button of actionButtons) {
@@ -55,13 +55,13 @@ test('edits and hides a task from compact item actions without horizontal overfl
   await expect(page.getByText(updatedName, { exact: true })).toBeVisible()
 
   await page.getByText(updatedName, { exact: true }).click()
-  await page.getByRole('button', { name: 'Hide', exact: true }).click()
+  await page.getByRole('button', { name: 'Archive', exact: true }).click()
   await expect(page.getByRole('button', { name: `Mark “${updatedName}” as complete` })).toHaveCount(
     0,
   )
-  await expect(page.getByRole('button', { name: 'Hidden tasks (1)' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Archived tasks (1)' })).toBeVisible()
   await expect(page.getByText(updatedName, { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Show', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Unarchive', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )

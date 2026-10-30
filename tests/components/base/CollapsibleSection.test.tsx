@@ -5,12 +5,12 @@ import { CollapsibleSection } from '../../../src/components/base/CollapsibleSect
 describe('CollapsibleSection', () => {
   it('connects the disclosure button to inert collapsed content', () => {
     render(
-      <CollapsibleSection label="隐藏任务">
+      <CollapsibleSection label="归档任务">
         <button type="button">恢复任务</button>
       </CollapsibleSection>,
     )
 
-    const toggle = screen.getByRole('button', { name: '隐藏任务' })
+    const toggle = screen.getByRole('button', { name: '归档任务' })
     const contentId = toggle.getAttribute('aria-controls')
     const content = document.getElementById(contentId!)
 
@@ -31,12 +31,12 @@ describe('CollapsibleSection', () => {
   it('reports controlled state and delegates toggling', () => {
     const onToggle = vi.fn()
     render(
-      <CollapsibleSection label="隐藏任务" isOpen onToggle={onToggle}>
+      <CollapsibleSection label="归档任务" isOpen onToggle={onToggle}>
         <span>内容</span>
       </CollapsibleSection>,
     )
 
-    const toggle = screen.getByRole('button', { name: '隐藏任务' })
+    const toggle = screen.getByRole('button', { name: '归档任务' })
     const content = document.getElementById(toggle.getAttribute('aria-controls')!)
 
     expect(toggle).toHaveAttribute('aria-expanded', 'true')

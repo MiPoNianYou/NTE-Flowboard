@@ -146,7 +146,7 @@ describe('ChecklistItemRow', () => {
     fireEvent.click(screen.getByText('测试任务'))
 
     expect(screen.getByRole('button', { name: '编辑' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '隐藏' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '归档' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '删除' })).toBeInTheDocument()
   })
 
@@ -210,7 +210,7 @@ describe('ChecklistItemRow', () => {
   it('should call onHide when hide button is clicked', () => {
     const onHide = vi.fn()
     renderRow({ onHide })
-    const hideButton = screen.getByRole('button', { name: /隐藏/ })
+    const hideButton = screen.getByRole('button', { name: /归档/ })
     fireEvent.click(hideButton)
     expect(onHide).toHaveBeenCalledWith('daily', 'test1')
   })
